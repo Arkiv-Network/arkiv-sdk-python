@@ -51,6 +51,7 @@ from .types import (
     WatchLogsHandle,
 )
 from .utils import rlp_encode_transaction
+from .wallet import (create_wallet, decrypt_wallet, WalletError)
 
 __all__: Sequence[str] = [
     # Exports from .types
@@ -73,6 +74,10 @@ __all__: Sequence[str] = [
     # Exports from .constants
     "GOLEM_BASE_ABI",
     "STORAGE_ADDRESS",
+    # Exports from .wallet
+    "create_wallet",
+    "decrypt_wallet",
+    "WalletError",
     # Exports from this file
     "GolemBaseClient",
     # Re-exports

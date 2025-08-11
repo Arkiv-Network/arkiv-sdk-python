@@ -13,6 +13,9 @@ from golem_base_sdk import (
     GolemBaseDelete,
     GolemBaseExtend,
     GolemBaseUpdate,
+    create_wallet,
+    decrypt_wallet,
+    WalletError,
 )
 from xdg import BaseDirectory
 
@@ -59,11 +62,20 @@ INSTANCE_URLS = {
 
 async def run_example(instance: str) -> None:  # noqa: PLR0915
     """Run the example."""
-    async with await anyio.open_file(
-        BaseDirectory.xdg_config_home + "/golembase/private.key",
-        "rb",
-    ) as private_key_file:
-        key_bytes = await private_key_file.read(32)
+    try:
+        create_wallet()
+    except WalletError as e:
+        print(f"Error: {e}")
+    except KeyboardInterrupt:
+        print("\nOperation cancelled by user.")
+
+    try:
+        key_bytes = decrypt_wallet()
+    except WalletError as e:
+        print(f"Error: {e}")
+    except KeyboardInterrupt:
+        print("\nOperation cancelled by user.")
+
 
     client = await GolemBaseClient.create(
         rpc_url=INSTANCE_URLS[instance]["rpc"],
