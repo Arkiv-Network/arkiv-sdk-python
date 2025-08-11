@@ -5,7 +5,6 @@ import asyncio
 import logging
 import logging.config
 
-import anyio
 from golem_base_sdk import (
     Annotation,
     GolemBaseClient,
@@ -13,11 +12,10 @@ from golem_base_sdk import (
     GolemBaseDelete,
     GolemBaseExtend,
     GolemBaseUpdate,
+    WalletError,
     create_wallet,
     decrypt_wallet,
-    WalletError,
 )
-from xdg import BaseDirectory
 
 logging.config.dictConfig(
     {
