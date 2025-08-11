@@ -1,13 +1,18 @@
+"""Wallet module for creating and decrypting Ethereum wallets."""
+
 import getpass
 import json
 from pathlib import Path
-from xdg import BaseDirectory
+from typing import cast
+
 from eth_account import Account
+from xdg import BaseDirectory
 
 WALLET_PATH = Path(BaseDirectory.xdg_config_home) / "golembase" / "wallet.json"
 
 class WalletError(Exception):
     """Base class for wallet-related errors."""
+
     pass
 
 def decrypt_wallet() -> bytes:
@@ -19,14 +24,17 @@ def decrypt_wallet() -> bytes:
         keyfile_json = json.load(f)
         try:
             print(f"Attempting to decrypt wallet at '{WALLET_PATH}'")
-            private_key = Account.decrypt(keyfile_json, getpass.getpass("Enter wallet password: "))
+            private_key = Account.decrypt(
+                    keyfile_json,
+                    getpass.getpass("Enter wallet password: ")
+                )
         except ValueError as e:
             raise WalletError("Incorrect password or corrupted wallet file.") from e
 
-        return private_key
+        return cast(bytes, private_key)
 
 def create_wallet() -> None:
-    """Creates a new wallet if one does not already exist."""
+    """Create a new wallet if one does not already exist."""
     if WALLET_PATH.exists():
         print(f"WARNING: A wallet already exists at '{WALLET_PATH}'")
         return None

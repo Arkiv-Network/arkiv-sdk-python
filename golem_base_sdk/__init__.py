@@ -51,7 +51,11 @@ from .types import (
     WatchLogsHandle,
 )
 from .utils import rlp_encode_transaction
-from .wallet import (create_wallet, decrypt_wallet, WalletError)
+from .wallet import (
+    WalletError,
+    create_wallet,
+    decrypt_wallet,
+)
 
 __all__: Sequence[str] = [
     # Exports from .types

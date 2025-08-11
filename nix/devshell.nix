@@ -12,6 +12,7 @@ perSystem.devshell.mkShell {
   packages = [
     virtualenvDev
     pkgs.uv
+    pkgs.ruff
   ];
 
   env = [
