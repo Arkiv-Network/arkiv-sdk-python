@@ -13,7 +13,6 @@ from golem_base_sdk import (
     GolemBaseExtend,
     GolemBaseUpdate,
     WalletError,
-    create_wallet,
     decrypt_wallet,
 )
 
@@ -66,7 +65,6 @@ async def run_example(instance: str) -> None:  # noqa: PLR0915
         print(f"Error: {e}")
     except KeyboardInterrupt:
         print("\nOperation cancelled by user.")
-
 
     client = await GolemBaseClient.create(
         rpc_url=INSTANCE_URLS[instance]["rpc"],

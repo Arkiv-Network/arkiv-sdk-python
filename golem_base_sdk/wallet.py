@@ -25,9 +25,9 @@ def decrypt_wallet() -> bytes:
         keyfile_json = json.load(f)
 
         if not sys.stdin.isatty():
-            password = sys.stdin.read().rstrip("\n")
+            password = sys.stdin.read().rstrip()
         else:
-            password = getpass.getpass("Enter wallet password: ")
+            password = getpass.getpass("Enter password to decrypt wallet: ")
 
         try:
             print(f"Attempting to decrypt wallet at '{WALLET_PATH}'")
@@ -38,22 +38,3 @@ def decrypt_wallet() -> bytes:
 
         return cast(bytes, private_key)
 
-def create_wallet() -> None:
-    """Create a new wallet if one does not already exist."""
-    if WALLET_PATH.exists():
-        print(f"WARNING: A wallet already exists at '{WALLET_PATH}'")
-        return None
-
-    password = getpass.getpass("Enter wallet password: ")
-    confirm = getpass.getpass("Confirm wallet password: ")
-    if password != confirm:
-        raise WalletError("Passwords do not match.")
-
-    account = Account.create()
-    encrypted = account.encrypt(password)
-
-    WALLET_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with WALLET_PATH.open("w") as f:
-        json.dump(encrypted, f)
-
-    print(f"Wallet created at '{WALLET_PATH}'")
