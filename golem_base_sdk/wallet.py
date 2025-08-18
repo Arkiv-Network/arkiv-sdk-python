@@ -2,6 +2,7 @@
 
 import getpass
 import json
+import sys
 from pathlib import Path
 from typing import cast
 
@@ -22,12 +23,16 @@ def decrypt_wallet() -> bytes:
 
     with WALLET_PATH.open("r") as f:
         keyfile_json = json.load(f)
+
+        if not sys.stdin.isatty():
+            password = sys.stdin.read().rstrip("\n")
+        else:
+            password = getpass.getpass("Enter wallet password: ")
+
         try:
             print(f"Attempting to decrypt wallet at '{WALLET_PATH}'")
-            private_key = Account.decrypt(
-                    keyfile_json,
-                    getpass.getpass("Enter wallet password: ")
-                )
+            private_key = Account.decrypt(keyfile_json, password)
+            print("Successfully decrypted wallet")
         except ValueError as e:
             raise WalletError("Incorrect password or corrupted wallet file.") from e
 
