@@ -60,7 +60,7 @@ INSTANCE_URLS = {
 async def run_example(instance: str) -> None:  # noqa: PLR0915
     """Run the example."""
     try:
-        key_bytes = decrypt_wallet()
+        key_bytes = await decrypt_wallet()
     except WalletError as e:
         print(f"Error: {e}")
     except KeyboardInterrupt:

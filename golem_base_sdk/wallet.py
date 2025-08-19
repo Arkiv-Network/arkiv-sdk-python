@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 from typing import cast
 
+import anyio
 from eth_account import Account
 from xdg import BaseDirectory
 
@@ -16,13 +17,16 @@ class WalletError(Exception):
 
     pass
 
-def decrypt_wallet() -> bytes:
+async def decrypt_wallet() -> bytes:
     """Decrypts the wallet and returns the private key bytes."""
     if not WALLET_PATH.exists():
         raise WalletError(f"Expected wallet file to exist at '{WALLET_PATH}'")
 
-    with WALLET_PATH.open("r") as f:
-        keyfile_json = json.load(f)
+    async with await anyio.open_file(
+        WALLET_PATH,
+        "r",
+    ) as f:
+        keyfile_json = json.loads(await f.read())
 
         if not sys.stdin.isatty():
             password = sys.stdin.read().rstrip()
