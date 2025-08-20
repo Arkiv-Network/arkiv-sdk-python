@@ -5,7 +5,6 @@ import asyncio
 import logging
 import logging.config
 
-import anyio
 from golem_base_sdk import (
     Annotation,
     GolemBaseClient,
@@ -13,8 +12,9 @@ from golem_base_sdk import (
     GolemBaseDelete,
     GolemBaseExtend,
     GolemBaseUpdate,
+    WalletError,
+    decrypt_wallet,
 )
-from xdg import BaseDirectory
 
 logging.config.dictConfig(
     {
@@ -59,11 +59,12 @@ INSTANCE_URLS = {
 
 async def run_example(instance: str) -> None:  # noqa: PLR0915
     """Run the example."""
-    async with await anyio.open_file(
-        BaseDirectory.xdg_config_home + "/golembase/private.key",
-        "rb",
-    ) as private_key_file:
-        key_bytes = await private_key_file.read(32)
+    try:
+        key_bytes = await decrypt_wallet()
+    except WalletError as e:
+        print(f"Error: {e}")
+    except KeyboardInterrupt:
+        print("\nOperation cancelled by user.")
 
     client = await GolemBaseClient.create(
         rpc_url=INSTANCE_URLS[instance]["rpc"],

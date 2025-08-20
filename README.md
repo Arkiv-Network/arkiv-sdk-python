@@ -20,7 +20,7 @@ The repo also contains an example application to showcase how you can use this S
 
 (Note: As an alternative to installing the demo CLI, you can build the [actual CLI](https://github.com/Golem-Base/golembase-op-geth/blob/main/cmd/golembase/README.md) as it's included in the golembase-op-geth repo.)
 
-When you create a user, it will generate a private key file called `private.key` and store it in:
+When you create a user, it will generate a private key file called `wallet.json` and store it in:
 
 * `~/.config/golembase/` on **Linux**
 * `~/Library/Application Support/golembase/` on **macOS**

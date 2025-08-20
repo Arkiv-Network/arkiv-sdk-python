@@ -56,13 +56,13 @@ jobs:
 
       - name: Create and fund an account
         run: |
-          go run ./cmd/golembase account create
-          go run ./cmd/golembase account fund
+          printf "password" | go run ./cmd/golembase account create
+          printf "password" | go run ./cmd/golembase account fund
         working-directory: ./gb-op-geth
 
       - name: Run the example SDK app
         run: >
-          nix develop --no-write-lock-file --reference-lock-file ../flake.lock --command
+          printf "password" | nix develop --no-write-lock-file --reference-lock-file ../flake.lock --command
           ./result/bin/main --instance local
         working-directory: ./example
 
