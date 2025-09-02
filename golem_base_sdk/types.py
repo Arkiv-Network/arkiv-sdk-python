@@ -68,7 +68,7 @@ class GolemBaseCreate:
     """Class to represent a create operation in Golem Base."""
 
     data: bytes
-    ttl: int
+    btl: int
     string_annotations: Sequence[Annotation[str]]
     numeric_annotations: Sequence[Annotation[int]]
 
@@ -79,7 +79,7 @@ class GolemBaseUpdate:
 
     entity_key: EntityKey
     data: bytes
-    ttl: int
+    btl: int
     string_annotations: Sequence[Annotation[str]]
     numeric_annotations: Sequence[Annotation[int]]
 

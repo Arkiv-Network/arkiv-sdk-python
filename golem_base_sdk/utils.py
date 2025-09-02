@@ -29,7 +29,7 @@ def rlp_encode_transaction(tx: GolemBaseTransaction) -> bytes:
         list(
             map(
                 lambda el: [
-                    el.ttl,
+                    el.btl,
                     el.data,
                     list(map(format_annotation, el.string_annotations)),
                     list(map(format_annotation, el.numeric_annotations)),
@@ -42,7 +42,7 @@ def rlp_encode_transaction(tx: GolemBaseTransaction) -> bytes:
             map(
                 lambda el: [
                     el.entity_key.generic_bytes,
-                    el.ttl,
+                    el.btl,
                     el.data,
                     list(map(format_annotation, el.string_annotations)),
                     list(map(format_annotation, el.numeric_annotations)),
