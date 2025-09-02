@@ -79,7 +79,7 @@ The `main` function demonstrates how to create, extend, and query entities:
 
 - Subscribes to log events from the network (create, update, delete, extend).
 
-- Creates an entity with data `"hello"`, TTL of `60`, and an annotation of `("foo", "bar")`.
+- Creates an entity with data `"hello"`, BTL of `60`, and an annotation of `("foo", "bar")`.
 
 - Prints various metadata and state:
 

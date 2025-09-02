@@ -1,6 +1,7 @@
 """Utility methods."""
 
 import logging
+from typing import TypeVar
 
 import rlp
 
@@ -15,8 +16,10 @@ logger = logging.getLogger(__name__)
 
 def rlp_encode_transaction(tx: GolemBaseTransaction) -> bytes:
     """Encode a Golem Base transaction in RLP."""
+    # TODO: use new generic syntax once we can bump to python 3.12 or higher
+    T = TypeVar("T")
 
-    def format_annotation[T](annotation: Annotation[T]) -> tuple[str, T]:
+    def format_annotation(annotation: Annotation[T]) -> tuple[str, T]:
         return (annotation.key, annotation.value)
 
     # Turn the transaction into a simple list of basic types that can be
@@ -26,7 +29,7 @@ def rlp_encode_transaction(tx: GolemBaseTransaction) -> bytes:
         list(
             map(
                 lambda el: [
-                    el.ttl,
+                    el.btl,
                     el.data,
                     list(map(format_annotation, el.string_annotations)),
                     list(map(format_annotation, el.numeric_annotations)),
@@ -39,7 +42,7 @@ def rlp_encode_transaction(tx: GolemBaseTransaction) -> bytes:
             map(
                 lambda el: [
                     el.entity_key.generic_bytes,
-                    el.ttl,
+                    el.btl,
                     el.data,
                     list(map(format_annotation, el.string_annotations)),
                     list(map(format_annotation, el.numeric_annotations)),

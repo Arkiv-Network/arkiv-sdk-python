@@ -4,8 +4,9 @@ from collections.abc import Callable, Coroutine, Sequence
 from dataclasses import dataclass
 from typing import (
     Any,
+    Generic,
     NewType,
-    override,
+    TypeVar,
 )
 
 from eth_typing import ChecksumAddress, HexStr
@@ -27,8 +28,9 @@ class GenericBytes:
         """Convert this instance to a `eth_typing.ChecksumAddress`."""
         return AsyncWeb3.to_checksum_address(self.as_hex_string())
 
-    @override
+    # @override
     def __repr__(self) -> str:
+        """Encode bytes as a string."""
         return f"{type(self).__name__}({self.as_hex_string()})"
 
     @staticmethod
@@ -44,15 +46,20 @@ EntityKey = NewType("EntityKey", GenericBytes)
 Address = NewType("Address", GenericBytes)
 
 
+# TODO: use new generic syntax once we can bump to python 3.12 or higher
+V = TypeVar("V")
+
+
 @dataclass(frozen=True)
-class Annotation[V]:
+class Annotation(Generic[V]):
     """Class to represent generic annotations."""
 
     key: str
     value: V
 
-    @override
+    # @override
     def __repr__(self) -> str:
+        """Encode annotation as a string."""
         return f"{type(self).__name__}({self.key} -> {self.value})"
 
 
@@ -61,7 +68,7 @@ class GolemBaseCreate:
     """Class to represent a create operation in Golem Base."""
 
     data: bytes
-    ttl: int
+    btl: int
     string_annotations: Sequence[Annotation[str]]
     numeric_annotations: Sequence[Annotation[int]]
 
@@ -72,7 +79,7 @@ class GolemBaseUpdate:
 
     entity_key: EntityKey
     data: bytes
-    ttl: int
+    btl: int
     string_annotations: Sequence[Annotation[str]]
     numeric_annotations: Sequence[Annotation[int]]
 
