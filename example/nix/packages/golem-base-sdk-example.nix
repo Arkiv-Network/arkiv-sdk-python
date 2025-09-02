@@ -20,7 +20,7 @@ let
 
   pythonSet =
     (pkgs.callPackage inputs.pyproject-nix.build.packages {
-      python = pkgs.python312;
+      python = pkgs.python310;
     }).overrideScope
       (
         lib.composeManyExtensions [

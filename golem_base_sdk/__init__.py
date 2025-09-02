@@ -740,10 +740,9 @@ class GolemBaseClient(GolemBaseROClient):
                 await self.http_client().eth.call(txData)
             except Web3RPCError as e:
                 if e.rpc_response:
+                    error = e.rpc_response["error"]["message"]
                     raise Exception(
-                        f"Error while processing transaction: {
-                            e.rpc_response['error']['message']
-                        }"
+                        f"Error while processing transaction: {error}"
                     ) from e
                 else:
                     raise e
