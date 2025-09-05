@@ -732,7 +732,7 @@ requires-dist = [
     { name = "anyio", specifier = ">=4.10.0" },
     { name = "pyxdg", specifier = ">=0.28" },
     { name = "rlp", specifier = ">=1.2.0" },
-    { name = "web3", specifier = ">=4.7.2" },
+    { name = "web3", specifier = ">=7.0.0" },
 ]
 
 [package.metadata.requires-dev]
