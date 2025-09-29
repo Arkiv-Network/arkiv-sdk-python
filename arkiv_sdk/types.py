@@ -1,4 +1,4 @@
-"""Golem Base SDK Types."""
+"""Arkiv SDK Types."""
 
 from collections.abc import Callable, Coroutine, Sequence
 from dataclasses import dataclass
@@ -64,8 +64,8 @@ class Annotation(Generic[V]):
 
 
 @dataclass(frozen=True)
-class GolemBaseCreate:
-    """Class to represent a create operation in Golem Base."""
+class ArkivCreate:
+    """Class to represent a create operation in Arkiv."""
 
     data: bytes
     btl: int
@@ -74,8 +74,8 @@ class GolemBaseCreate:
 
 
 @dataclass(frozen=True)
-class GolemBaseUpdate:
-    """Class to represent an update operation in Golem Base."""
+class ArkivUpdate:
+    """Class to represent an update operation in Arkiv."""
 
     entity_key: EntityKey
     data: bytes
@@ -85,45 +85,45 @@ class GolemBaseUpdate:
 
 
 @dataclass(frozen=True)
-class GolemBaseDelete:
-    """Class to represent a delete operation in Golem Base."""
+class ArkivDelete:
+    """Class to represent a delete operation in Arkiv."""
 
     entity_key: EntityKey
 
 
 @dataclass(frozen=True)
-class GolemBaseExtend:
-    """Class to represent a BTL extend operation in Golem Base."""
+class ArkivExtend:
+    """Class to represent a BTL extend operation in Arkiv."""
 
     entity_key: EntityKey
     number_of_blocks: int
 
 
 @dataclass(frozen=True)
-class GolemBaseTransaction:
+class ArkivTransaction:
     """
-    Class to represent a transaction in Golem Base.
+    Class to represent a transaction in Arkiv.
 
     A transaction consist of one or more
-    `GolemBaseCreate`,
-    `GolemBaseUpdate`,
-    `GolemBaseDelete` and
-    `GolemBaseExtend`
+    `ArkivCreate`,
+    `ArkivUpdate`,
+    `ArkivDelete` and
+    `ArkivExtend`
     operations.
     """
 
     def __init__(
         self,
         *,
-        creates: Sequence[GolemBaseCreate] | None = None,
-        updates: Sequence[GolemBaseUpdate] | None = None,
-        deletes: Sequence[GolemBaseDelete] | None = None,
-        extensions: Sequence[GolemBaseExtend] | None = None,
+        creates: Sequence[ArkivCreate] | None = None,
+        updates: Sequence[ArkivUpdate] | None = None,
+        deletes: Sequence[ArkivDelete] | None = None,
+        extensions: Sequence[ArkivExtend] | None = None,
         gas: int | None = None,
         maxFeePerGas: Wei | None = None,
         maxPriorityFeePerGas: Wei | None = None,
     ):
-        """Initialise the GolemBaseTransaction instance."""
+        """Initialise the ArkivTransaction instance."""
         object.__setattr__(self, "creates", creates or [])
         object.__setattr__(self, "updates", updates or [])
         object.__setattr__(self, "deletes", deletes or [])
@@ -132,10 +132,10 @@ class GolemBaseTransaction:
         object.__setattr__(self, "maxFeePerGas", maxFeePerGas)
         object.__setattr__(self, "maxPriorityFeePerGas", maxPriorityFeePerGas)
 
-    creates: Sequence[GolemBaseCreate]
-    updates: Sequence[GolemBaseUpdate]
-    deletes: Sequence[GolemBaseDelete]
-    extensions: Sequence[GolemBaseExtend]
+    creates: Sequence[ArkivCreate]
+    updates: Sequence[ArkivUpdate]
+    deletes: Sequence[ArkivDelete]
+    extensions: Sequence[ArkivExtend]
     gas: int | None
     maxFeePerGas: Wei | None
     maxPriorityFeePerGas: Wei | None
@@ -143,7 +143,7 @@ class GolemBaseTransaction:
 
 @dataclass(frozen=True)
 class CreateEntityReturnType:
-    """The return type of a Golem Base create operation."""
+    """The return type of a Arkiv create operation."""
 
     expiration_block: int
     entity_key: EntityKey
@@ -151,7 +151,7 @@ class CreateEntityReturnType:
 
 @dataclass(frozen=True)
 class UpdateEntityReturnType:
-    """The return type of a Golem Base update operation."""
+    """The return type of a Arkiv update operation."""
 
     expiration_block: int
     entity_key: EntityKey
@@ -159,7 +159,7 @@ class UpdateEntityReturnType:
 
 @dataclass(frozen=True)
 class ExtendEntityReturnType:
-    """The return type of a Golem Base extend operation."""
+    """The return type of a Arkiv extend operation."""
 
     old_expiration_block: int
     new_expiration_block: int
@@ -167,8 +167,8 @@ class ExtendEntityReturnType:
 
 
 @dataclass(frozen=True)
-class GolemBaseTransactionReceipt:
-    """The return type of a Golem Base transaction."""
+class ArkivTransactionReceipt:
+    """The return type of a Arkiv transaction."""
 
     creates: Sequence[CreateEntityReturnType]
     updates: Sequence[UpdateEntityReturnType]
@@ -189,7 +189,7 @@ class EntityMetadata:
 
 @dataclass(frozen=True)
 class QueryEntitiesResult:
-    """A class representing the return value of a Golem Base query."""
+    """A class representing the return value of a Arkiv query."""
 
     entity_key: EntityKey
     storage_value: bytes
@@ -198,7 +198,7 @@ class QueryEntitiesResult:
 @dataclass(frozen=True)
 class WatchLogsHandle:
     """
-    Class returned by `GolemBaseClient.watch_logs`.
+    Class returned by `ArkivClient.watch_logs`.
 
     Allows you to unsubscribe from the associated subscription.
     """

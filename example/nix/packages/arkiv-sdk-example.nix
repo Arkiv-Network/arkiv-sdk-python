@@ -33,10 +33,10 @@ let
 
   editableOverlay = workspace.mkEditablePyprojectOverlay {
     # This env var needs to be set to the root of the repo in the shell that runs the
-    # application, otherwise python will not import golem_base_sdk from the right place
+    # application, otherwise python will not import arkiv_sdk from the right place
     root = "$REPO_ROOT/example";
     # Only enable editable for this package
-    members = [ "golem-base-sdk" ];
+    members = [ "arkiv-sdk" ];
   };
 
   editablePythonSet = pythonSet.overrideScope (
@@ -45,7 +45,7 @@ let
 
       # Apply fixups for building an editable package of your workspace packages
       (final: prev: {
-        golem-base-sdk = prev.golem-base-sdk.overrideAttrs (old: {
+        arkiv-sdk = prev.arkiv-sdk.overrideAttrs (old: {
           # We need the editables build system added here
           nativeBuildInputs =
             old.nativeBuildInputs
@@ -57,13 +57,13 @@ let
     ]
   );
 
-  virtualenv = editablePythonSet.mkVirtualEnv "golem-base-sdk-example-env" workspace.deps.default;
-  virtualenvDev = editablePythonSet.mkVirtualEnv "golem-base-sdk-example-env" workspace.deps.all;
+  virtualenv = editablePythonSet.mkVirtualEnv "arkiv-sdk-example-env" workspace.deps.default;
+  virtualenvDev = editablePythonSet.mkVirtualEnv "arkiv-sdk-example-env" workspace.deps.all;
 in
 
 mkApplication {
   venv = virtualenv;
-  package = pythonSet.golem-base-sdk-example.overrideAttrs (prevAttrs: {
+  package = pythonSet.arkiv-sdk-example.overrideAttrs (prevAttrs: {
     nativeCheckInputs = [
       pkgs.mypy
       pkgs.ruff
@@ -72,8 +72,8 @@ mkApplication {
     doCheck = true;
 
     checkPhase = ''
-      mypy golem_base_sdk_example
-      ruff check --no-cache golem_base_sdk_example
+      mypy arkiv_sdk_example
+      ruff check --no-cache arkiv_sdk_example
     '';
 
     passthru = (prevAttrs.passthru or { }) // {
