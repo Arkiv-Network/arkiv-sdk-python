@@ -2,7 +2,7 @@
 
 This is part of the [Arkiv](https://github.com/Arkiv-Network) project, which is designed as a Layer2 Network deployed on Ethereum, acting as a gateway to various Layer 3 Database Chains (DB-Chains).
 
-> **For an overview of Golem Base, check out our [Litepaper](https://golem-base.io/wp-content/uploads/2025/03/GolemBase-Litepaper.pdf).**
+> **For an overview of Arkiv, check out our [Litepaper](https://golem-base.io/wp-content/uploads/2025/03/GolemBase-Litepaper.pdf).**
 
 # Arkiv SDK for Python
 
