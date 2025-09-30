@@ -5,7 +5,7 @@
 }:
 
 let
-  inherit (perSystem.self.golem-base-sdk-example.passthru) virtualenvDev;
+  inherit (perSystem.self.arkiv-sdk-example.passthru) virtualenvDev;
 in
 
 perSystem.devshell.mkShell {

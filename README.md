@@ -1,14 +1,14 @@
-# Golem Base
+# Arkiv
 
-This is part of the [Golem Base](https://github.com/Golem-Base) project, which is designed as a Layer2 Network deployed on Ethereum, acting as a gateway to various Layer 3 Database Chains (DB-Chains).
+This is part of the [Arkiv](https://github.com/Arkiv-Network) project, which is designed as a Layer2 Network deployed on Ethereum, acting as a gateway to various Layer 3 Database Chains (DB-Chains).
 
 > **For an overview of Golem Base, check out our [Litepaper](https://golem-base.io/wp-content/uploads/2025/03/GolemBase-Litepaper.pdf).**
 
-# GolemBase SDK for Python
+# Arkiv SDK for Python
 
-This SDK allows you to use [GolemBase](https://github.com/Golem-Base) from Python. It is available [on PyPI](https://pypi.org/project/golem-base-sdk/).
+This SDK allows you to use [Arkiv](https://github.com/Arkiv-Network) from Python. It is available [on PyPI](https://pypi.org/project/arkiv-sdk).
 
-We also publish [generated documentation](https://golem-base.github.io/python-sdk/).
+We also publish [generated documentation](https://arkiv-network.github.io/arkiv-sdk-python/).
 
 The repo also contains an example application to showcase how you can use this SDK.
 
@@ -39,8 +39,8 @@ golembase-demo-cli account fund 10
 Here's how you can get going with the SDK. First, create a new folder to hold your project:
 
 ```bash
-mkdir golem-sdk-practice
-cd golem-sdk-practice
+mkdir arkiv-sdk-practice
+cd arkiv-sdk-practice
 ```
 
 Then create and activate a virtual environment:
@@ -50,21 +50,21 @@ python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
-Next, install the GolemBase SDK from PyPI:
+Next, install the Arkiv SDK from PyPI:
 
 ```bash
-pip install golem-base-sdk
+pip install arkiv-sdk
 ```
 
-You can find some [base starter code here](https://github.com/Golem-Base/python-sdk/tree/main/example); copy the `__init__.py` into your project folder.
+You can find some [base starter code here](https://github.com/Arkiv-Network/arkiv-sdk-python/tree/main/example); copy the `__init__.py` into your project folder.
 
 This is a basic Python application that:
 
-- Imports several items from the SDK (`golem_base_sdk`), including:
+- Imports several items from the SDK (`arkiv_sdk`), including:
 
-   * `GolemBaseClient`: A class that creates a client to interact with GolemBase
-   * `GolemBaseCreate`: A class representing a create transaction in GolemBase
-   * `GolemBaseExtend`: A class for extending entity lifetime
+   * `ArkivClient`: A class that creates a client to interact with Arkiv
+   * `ArkivCreate`: A class representing a create transaction in Arkiv
+   * `ArkivExtend`: A class for extending entity lifetime
    * `Annotation`: A class for key-value annotations
 
 - Reads the private key, which it locates using the `xdg` module.
@@ -75,7 +75,7 @@ This is a basic Python application that:
 
 The `main` function demonstrates how to create, extend, and query entities:
 
-- Creates a client object that connects to the GolemBase network (e.g., Kaolin testnet) using `rpc` and `ws` URLs, and your private key.
+- Creates a client object that connects to the Arkiv network (e.g., Kaolin testnet) using `rpc` and `ws` URLs, and your private key.
 
 - Subscribes to log events from the network (create, update, delete, extend).
 
@@ -99,6 +99,6 @@ The `main` function demonstrates how to create, extend, and query entities:
 You can also, from this cloned repo, build the SDK and run the example using [Nix](https://nixos.org):
 
 ```bash
-nix build .#golem-base-sdk-example
+nix build .#arkiv-sdk-example
 ./result/bin/main
 ```

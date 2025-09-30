@@ -3,7 +3,7 @@ requires = ["flit_core >=3.11,<4"]
 build-backend = "flit_core.buildapi"
 
 [project]
-name = "golem-base-sdk"
+name = "arkiv-sdk"
 authors = [
     {name = "rvdp", email = "online@well-founded.dev"},
 ]
@@ -21,10 +21,10 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/Golem-Base/"
-Documentation = "https://golem-base.github.io/python-sdk/golem_base_sdk.html"
-Repository = "https://github.com/Golem-Base/python-sdk"
-Issues = "https://github.com/Golem-Base/python-sdk/issues"
+Homepage = "https://github.com/Arkiv-Network/"
+Documentation = "https://arkiv-network.github.io/arkiv-sdk-python/arkiv_sdk.html"
+Repository = "https://github.com/Arkiv-Network/arkiv-sdk-python"
+Issues = "https://github.com/Arkiv-Network/arkiv-sdk-python/issues"
 
 [tool.ruff.lint]
 select = [

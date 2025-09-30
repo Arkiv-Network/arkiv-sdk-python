@@ -1,4 +1,4 @@
-name: Python Golem Base SDK CI
+name: Arkiv SDK CI
 
 on:
   push:
@@ -22,19 +22,18 @@ jobs:
 
       - name: Build the SDK
         run: >
-          nix build .#golem-base-sdk --no-write-lock-file
+          nix build .#arkiv-sdk --no-write-lock-file
 
       - name: Build the SDK dist
         run: >
-          nix build .#golem-base-sdk.dist --no-write-lock-file
+          nix build .#arkiv-sdk.dist --no-write-lock-file
 
       - name: Build the example SDK app
         run: >
-          nix build .#golem-base-sdk-example --no-write-lock-file --reference-lock-file
-          ../flake.lock
+          nix build .#arkiv-sdk-example --no-write-lock-file --reference-lock-file ../flake.lock
         working-directory: ./example
 
-      - name: Check out the gb-op-geth repo
+      - name: Check out the op-geth repo
         uses: actions/checkout@v4
         with:
           repository: Golem-Base/golembase-op-geth
@@ -47,7 +46,7 @@ jobs:
           cache-dependency-path: |
             gb-op-geth/go.sum
 
-      - name: Run a gb-op-geth container
+      - name: Run a op-geth container
         run: >
           docker run -d -p 8545:8545 -e GITHUB_ACTIONS=true -e CI=true
           quay.io/golemnetwork/gb-op-geth:latest --dev --http --http.api
@@ -62,11 +61,11 @@ jobs:
 
       - name: Run the example SDK app
         run: >
-          printf "password" | nix develop --no-write-lock-file --reference-lock-file ../flake.lock --command
-          ./result/bin/main --instance local
+          printf "password" | nix develop --no-write-lock-file --reference-lock-file ../flake.lock
+          --command ./result/bin/main --instance local
         working-directory: ./example
 
       - name: Build the docs files
         id: build
         run: |
-          nix develop --command pdoc golem_base_sdk -o docs
+          nix develop --command pdoc arkiv_sdk -o docs

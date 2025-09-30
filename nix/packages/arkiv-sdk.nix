@@ -28,7 +28,7 @@ let
           map (lib.path.append ../..) [
             "uv.lock"
             "pyproject.toml"
-            "golem_base_sdk"
+            "arkiv_sdk"
             "LICENSE"
             "README.md"
           ]
@@ -60,10 +60,10 @@ let
             ]
           );
 
-      virtualenv = pythonSet.mkVirtualEnv "golem-base-sdk-env" workspace.deps.default;
-      virtualenvDev = pythonSet.mkVirtualEnv "golem-base-sdk-env" workspace.deps.all;
+      virtualenv = pythonSet.mkVirtualEnv "arkiv-sdk-env" workspace.deps.default;
+      virtualenvDev = pythonSet.mkVirtualEnv "arkiv-sdk-env" workspace.deps.all;
 
-      self = pythonSet.golem-base-sdk.overrideAttrs (prevAttrs: {
+      self = pythonSet.arkiv-sdk.overrideAttrs (prevAttrs: {
         nativeCheckInputs = [
           mypy
           ruff
@@ -72,8 +72,8 @@ let
         doCheck = true;
 
         checkPhase = ''
-          mypy golem_base_sdk
-          ruff check --no-cache golem_base_sdk
+          mypy arkiv_sdk
+          ruff check --no-cache arkiv_sdk
         '';
 
         passthru =
@@ -93,7 +93,7 @@ let
           (prevAttrs.passthru or { })
           // {
             dist = symlinkJoin {
-              name = "golem-base-sdk";
+              name = "arkiv-sdk";
               paths = [
                 wheel
                 sdist

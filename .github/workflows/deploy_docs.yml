@@ -34,7 +34,7 @@ jobs:
       - name: Build static files
         id: build
         run: |
-          nix develop --command pdoc golem_base_sdk -o docs
+          nix develop --command pdoc arkiv_sdk -o docs
 
       - name: Upload static files as artefact
         id: deployment

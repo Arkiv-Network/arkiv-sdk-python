@@ -1,4 +1,4 @@
-"""Constants used in the Golem Base SDK."""
+"""Constants used in the Arkiv SDK."""
 
 from collections.abc import Sequence
 from typing import Any, Final
@@ -12,7 +12,7 @@ STORAGE_ADDRESS: Final[Address] = Address(
     GenericBytes.from_hex_string("0x0000000000000000000000000000000060138453")
 )
 
-GOLEM_BASE_ABI: Final[Sequence[dict[str, Any]]] = [
+ARKIV_ABI: Final[Sequence[dict[str, Any]]] = [
     {
         "anonymous": False,
         "inputs": [

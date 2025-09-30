@@ -1,4 +1,4 @@
-"""GolemBase Python SDK."""
+"""Arkiv Python SDK."""
 
 import asyncio
 import base64
@@ -29,23 +29,23 @@ from web3.utils.subscriptions import (
 )
 
 from .constants import (
-    GOLEM_BASE_ABI,
+    ARKIV_ABI,
     STORAGE_ADDRESS,
 )
 from .types import (
     Address,
     Annotation,
+    ArkivCreate,
+    ArkivDelete,
+    ArkivExtend,
+    ArkivTransaction,
+    ArkivTransactionReceipt,
+    ArkivUpdate,
     CreateEntityReturnType,
     EntityKey,
     EntityMetadata,
     ExtendEntityReturnType,
     GenericBytes,
-    GolemBaseCreate,
-    GolemBaseDelete,
-    GolemBaseExtend,
-    GolemBaseTransaction,
-    GolemBaseTransactionReceipt,
-    GolemBaseUpdate,
     QueryEntitiesResult,
     UpdateEntityReturnType,
     WatchLogsHandle,
@@ -65,23 +65,23 @@ __all__: Sequence[str] = [
     "EntityMetadata",
     "ExtendEntityReturnType",
     "GenericBytes",
-    "GolemBaseCreate",
-    "GolemBaseDelete",
-    "GolemBaseExtend",
-    "GolemBaseTransaction",
-    "GolemBaseTransactionReceipt",
-    "GolemBaseUpdate",
+    "ArkivCreate",
+    "ArkivDelete",
+    "ArkivExtend",
+    "ArkivTransaction",
+    "ArkivTransactionReceipt",
+    "ArkivUpdate",
     "QueryEntitiesResult",
     "UpdateEntityReturnType",
     "WatchLogsHandle",
     # Exports from .constants
-    "GOLEM_BASE_ABI",
+    "ARKIV_ABI",
     "STORAGE_ADDRESS",
     # Exports from .wallet
     "decrypt_wallet",
     "WalletError",
     # Exports from this file
-    "GolemBaseClient",
+    "ArkivClient",
     # Re-exports
     "Wei",
 ]
@@ -91,8 +91,8 @@ logger = logging.getLogger(__name__)
 """@private"""
 
 
-class GolemBaseHttpClient(AsyncWeb3):
-    """Subclass of AsyncWeb3 with added Golem Base methods."""
+class ArkivHttpClient(AsyncWeb3):
+    """Subclass of AsyncWeb3 with added Arkiv methods."""
 
     def __init__(self, rpc_url: str):
         super().__init__(
@@ -178,11 +178,11 @@ class GolemBaseHttpClient(AsyncWeb3):
         )
 
     async def get_entity_count(self) -> int:
-        """Get the total entity count in Golem Base."""
+        """Get the total entity count in Arkiv."""
         return cast(int, await self.eth.get_entity_count())  # type: ignore[attr-defined]
 
     async def get_all_entity_keys(self) -> Sequence[EntityKey]:
-        """Get all entity keys in Golem Base."""
+        """Get all entity keys in Arkiv."""
         return list(
             map(
                 lambda e: EntityKey(GenericBytes.from_hex_string(e)),
@@ -202,7 +202,7 @@ class GolemBaseHttpClient(AsyncWeb3):
         )
 
     async def query_entities(self, query: str) -> Sequence[QueryEntitiesResult]:
-        """Get all entities that satisfy the given Golem Base query."""
+        """Get all entities that satisfy the given Arkiv query."""
         return list(
             map(
                 lambda result: QueryEntitiesResult(
@@ -213,22 +213,20 @@ class GolemBaseHttpClient(AsyncWeb3):
         )
 
 
-class GolemBaseROClient:
-    _http_client: GolemBaseHttpClient
+class ArkivROClient:
+    _http_client: ArkivHttpClient
     _ws_client: AsyncWeb3
-    _golem_base_contract: AsyncContract
+    _arkiv_contract: AsyncContract
     _background_tasks: set[asyncio.Task[None]]
 
     @staticmethod
-    async def create_ro_client(rpc_url: str, ws_url: str) -> "GolemBaseROClient":
+    async def create_ro_client(rpc_url: str, ws_url: str) -> "ArkivROClient":
         """
-        Create a `GolemBaseClient` instance.
+        Create an `ArkivClient` instance.
 
         This is the preferred method to create an instance.
         """
-        return GolemBaseROClient(
-            rpc_url, await GolemBaseROClient._create_ws_client(ws_url)
-        )
+        return ArkivROClient(rpc_url, await ArkivROClient._create_ws_client(ws_url))
 
     @staticmethod
     async def _create_ws_client(ws_url: str) -> "AsyncWeb3":
@@ -236,8 +234,8 @@ class GolemBaseROClient:
         return ws_client
 
     def __init__(self, rpc_url: str, ws_client: AsyncWeb3) -> None:
-        """Initialise the GolemBaseClient instance."""
-        self._http_client = GolemBaseHttpClient(rpc_url)
+        """Initialise the ArkivClient instance."""
+        self._http_client = ArkivHttpClient(rpc_url)
         self._ws_client = ws_client
 
         # Keep references to async tasks we created
@@ -280,16 +278,16 @@ class GolemBaseROClient:
 
         # https://github.com/pylint-dev/pylint/issues/3162
         # pylint: disable=no-member
-        self.golem_base_contract = self.http_client().eth.contract(
+        self.arkiv_contract = self.http_client().eth.contract(
             address=STORAGE_ADDRESS.as_address(),
-            abi=GOLEM_BASE_ABI,
+            abi=ARKIV_ABI,
         )
-        for event in self.golem_base_contract.all_events():
+        for event in self.arkiv_contract.all_events():
             logger.debug(
                 "Registered event %s with hash %s", event.signature, event.topic
             )
 
-    def http_client(self) -> GolemBaseHttpClient:
+    def http_client(self) -> ArkivHttpClient:
         """Get the underlying web3 http client."""
         return self._http_client
 
@@ -327,11 +325,11 @@ class GolemBaseROClient:
         return await self.http_client().get_entities_to_expire_at_block(block_number)
 
     async def get_entity_count(self) -> int:
-        """Get the total entity count in Golem Base."""
+        """Get the total entity count in Arkiv."""
         return await self.http_client().get_entity_count()
 
     async def get_all_entity_keys(self) -> Sequence[EntityKey]:
-        """Get all entity keys in Golem Base."""
+        """Get all entity keys in Arkiv."""
         return await self.http_client().get_all_entity_keys()
 
     async def get_entities_of_owner(
@@ -341,7 +339,7 @@ class GolemBaseROClient:
         return await self.http_client().get_entities_of_owner(owner)
 
     async def query_entities(self, query: str) -> Sequence[QueryEntitiesResult]:
-        """Get all entities that satisfy the given Golem Base query."""
+        """Get all entities that satisfy the given Arkiv query."""
         return await self.http_client().query_entities(query)
 
     async def watch_logs(
@@ -354,7 +352,7 @@ class GolemBaseROClient:
         extend_callback: Callable[[ExtendEntityReturnType], None] | None = None,
     ) -> WatchLogsHandle:
         """
-        Subscribe to events on Golem Base.
+        Subscribe to events on Arkiv.
 
         You can pass in four different callbacks, and the right one will
         be invoked for every create, update, delete, and extend operation.
@@ -367,7 +365,7 @@ class GolemBaseROClient:
             # TypeDicts cannot be checked at runtime
             log_receipt = typing.cast(LogReceipt, handler_context.result)
             logger.debug("New log: %s", log_receipt)
-            res = await self._process_golem_base_log_receipt(log_receipt)
+            res = await self._process_arkiv_log_receipt(log_receipt)
 
             if create_callback:
                 for create in res.creates:
@@ -384,8 +382,8 @@ class GolemBaseROClient:
 
         def create_subscription(topic: HexStr) -> LogsSubscription:
             return LogsSubscription(
-                label=f"Golem Base subscription to topic {topic} with label {label}",
-                address=self.golem_base_contract.address,
+                label=f"Arkiv subscription to topic {topic} with label {label}",
+                address=self.arkiv_contract.address,
                 topics=[topic],
                 handler=log_handler,
                 # optional `handler_context` args to help parse a response
@@ -405,7 +403,7 @@ class GolemBaseROClient:
         events = list(
             map(
                 lambda event_name: create_subscription(
-                    self.golem_base_contract.get_event_by_name(event_name).topic
+                    self.arkiv_contract.get_event_by_name(event_name).topic
                 ),
                 event_names,
             )
@@ -441,16 +439,16 @@ class GolemBaseROClient:
 
             task.add_done_callback(task_done)
 
-    async def _process_golem_base_log_receipt(
+    async def _process_arkiv_log_receipt(
         self,
         log_receipt: LogReceipt,
-    ) -> GolemBaseTransactionReceipt:
+    ) -> ArkivTransactionReceipt:
         # Read the first entry of the topics array,
         # which is the hash of the event signature, identifying the event
         topic = AsyncWeb3.to_hex(log_receipt["topics"][0])
         # Look up the corresponding event
         # If there is no such event in the ABI, it probably needs to be added
-        event = self.golem_base_contract.get_event_by_topic(topic)
+        event = self.arkiv_contract.get_event_by_topic(topic)
         # Use the event to process the whole log
         event_data = event.process_log(log_receipt)
 
@@ -503,16 +501,16 @@ class GolemBaseROClient:
                     )
                 )
 
-        return GolemBaseTransactionReceipt(
+        return ArkivTransactionReceipt(
             creates=creates,
             updates=updates,
             deletes=deletes,
             extensions=extensions,
         )
 
-    async def _process_golem_base_receipt(
+    async def _process_arkiv_receipt(
         self, receipt: TxReceipt
-    ) -> GolemBaseTransactionReceipt:
+    ) -> ArkivTransactionReceipt:
         # There doesn't seem to be a method for this in the web3 lib.
         # The only option in the lib is to iterate over the events in the ABI
         # and call process_receipt on each of them to try and decode the logs.
@@ -521,9 +519,9 @@ class GolemBaseROClient:
         # we do here.
         async def process_receipt(
             receipt: TxReceipt,
-        ) -> AsyncGenerator[GolemBaseTransactionReceipt, None]:
+        ) -> AsyncGenerator[ArkivTransactionReceipt, None]:
             for log in receipt["logs"]:
-                yield await self._process_golem_base_log_receipt(log)
+                yield await self._process_arkiv_log_receipt(log)
 
         creates: list[CreateEntityReturnType] = []
         updates: list[UpdateEntityReturnType] = []
@@ -536,7 +534,7 @@ class GolemBaseROClient:
             deletes.extend(res.deletes)
             extensions.extend(res.extensions)
 
-        return GolemBaseTransactionReceipt(
+        return ArkivTransactionReceipt(
             creates=creates,
             updates=updates,
             deletes=deletes,
@@ -544,43 +542,41 @@ class GolemBaseROClient:
         )
 
 
-class GolemBaseClient(GolemBaseROClient):
+class ArkivClient(ArkivROClient):
     """
-    The Golem Base client used to interact with Golem Base.
+    The Arkiv client used to interact with Arkiv.
 
     Many useful methods are implemented directly on this type, while more
     generic ethereum methods can be accessed through the underlying
     web3 client that you can access with the
-    `GolemBaseClient.http_client()`
+    `ArkivClient.http_client()`
     method.
     """
 
     @staticmethod
     async def create_rw_client(
         rpc_url: str, ws_url: str, private_key: bytes
-    ) -> "GolemBaseClient":
+    ) -> "ArkivClient":
         """
-        Create a read-write Golem Base client.
+        Create a read-write Arkiv client.
 
         This is the preferred method to create an instance.
         """
-        return GolemBaseClient(
-            rpc_url, await GolemBaseROClient._create_ws_client(ws_url), private_key
+        return ArkivClient(
+            rpc_url, await ArkivROClient._create_ws_client(ws_url), private_key
         )
 
     @staticmethod
-    async def create(
-        rpc_url: str, ws_url: str, private_key: bytes
-    ) -> "GolemBaseClient":
+    async def create(rpc_url: str, ws_url: str, private_key: bytes) -> "ArkivClient":
         """
-        Create a read-write Golem Base client.
+        Create a read-write Arkiv client.
 
-        This method is deprecated in favour of `GolemBaseClient.create_rw_client()`.
+        This method is deprecated in favour of `ArkivClient.create_rw_client()`.
         """
-        return await GolemBaseClient.create_rw_client(rpc_url, ws_url, private_key)
+        return await ArkivClient.create_rw_client(rpc_url, ws_url, private_key)
 
     def __init__(self, rpc_url: str, ws_client: AsyncWeb3, private_key: bytes) -> None:
-        """Initialise the GolemBaseClient instance."""
+        """Initialise the ArkivClient instance."""
         super().__init__(rpc_url, ws_client)
 
         # Set up the ethereum account
@@ -604,13 +600,13 @@ class GolemBaseClient(GolemBaseROClient):
 
     async def create_entities(
         self,
-        creates: Sequence[GolemBaseCreate],
+        creates: Sequence[ArkivCreate],
         *,
         gas: int | None = None,
         maxFeePerGas: Wei | None = None,
         maxPriorityFeePerGas: Wei | None = None,
     ) -> Sequence[CreateEntityReturnType]:
-        """Create entities in Golem Base."""
+        """Create entities in Arkiv."""
         return (
             await self.send_transaction(
                 creates=creates,
@@ -622,13 +618,13 @@ class GolemBaseClient(GolemBaseROClient):
 
     async def update_entities(
         self,
-        updates: Sequence[GolemBaseUpdate],
+        updates: Sequence[ArkivUpdate],
         *,
         gas: int | None = None,
         maxFeePerGas: Wei | None = None,
         maxPriorityFeePerGas: Wei | None = None,
     ) -> Sequence[UpdateEntityReturnType]:
-        """Update entities in Golem Base."""
+        """Update entities in Arkiv."""
         return (
             await self.send_transaction(
                 updates=updates,
@@ -640,13 +636,13 @@ class GolemBaseClient(GolemBaseROClient):
 
     async def delete_entities(
         self,
-        deletes: Sequence[GolemBaseDelete],
+        deletes: Sequence[ArkivDelete],
         *,
         gas: int | None = None,
         maxFeePerGas: Wei | None = None,
         maxPriorityFeePerGas: Wei | None = None,
     ) -> Sequence[EntityKey]:
-        """Delete entities from Golem Base."""
+        """Delete entities from Arkiv."""
         return (
             await self.send_transaction(
                 deletes=deletes,
@@ -658,13 +654,13 @@ class GolemBaseClient(GolemBaseROClient):
 
     async def extend_entities(
         self,
-        extensions: Sequence[GolemBaseExtend],
+        extensions: Sequence[ArkivExtend],
         *,
         gas: int | None = None,
         maxFeePerGas: Wei | None = None,
         maxPriorityFeePerGas: Wei | None = None,
     ) -> Sequence[ExtendEntityReturnType]:
-        """Extend the BTL of entities in Golem Base."""
+        """Extend the BTL of entities in Arkiv."""
         return (
             await self.send_transaction(
                 extensions=extensions,
@@ -677,21 +673,21 @@ class GolemBaseClient(GolemBaseROClient):
     async def send_transaction(
         self,
         *,
-        creates: Sequence[GolemBaseCreate] | None = None,
-        updates: Sequence[GolemBaseUpdate] | None = None,
-        deletes: Sequence[GolemBaseDelete] | None = None,
-        extensions: Sequence[GolemBaseExtend] | None = None,
+        creates: Sequence[ArkivCreate] | None = None,
+        updates: Sequence[ArkivUpdate] | None = None,
+        deletes: Sequence[ArkivDelete] | None = None,
+        extensions: Sequence[ArkivExtend] | None = None,
         gas: int | None = None,
         maxFeePerGas: Wei | None = None,
         maxPriorityFeePerGas: Wei | None = None,
-    ) -> GolemBaseTransactionReceipt:
+    ) -> ArkivTransactionReceipt:
         """
-        Send a generic transaction to Golem Base.
+        Send a generic transaction to Arkiv.
 
         This transaction can contain multiple create, update, delete and
         extend operations.
         """
-        tx = GolemBaseTransaction(
+        tx = ArkivTransaction(
             creates=creates,
             updates=updates,
             deletes=deletes,
@@ -700,11 +696,11 @@ class GolemBaseClient(GolemBaseROClient):
             maxFeePerGas=maxFeePerGas,
             maxPriorityFeePerGas=maxPriorityFeePerGas,
         )
-        return await self._send_gb_transaction(tx)
+        return await self._send_arkiv_transaction(tx)
 
-    async def _send_gb_transaction(
-        self, tx: GolemBaseTransaction
-    ) -> GolemBaseTransactionReceipt:
+    async def _send_arkiv_transaction(
+        self, tx: ArkivTransaction
+    ) -> ArkivTransactionReceipt:
         txData: TxParams = {
             # https://github.com/pylint-dev/pylint/issues/3162
             # pylint: disable=no-member
@@ -747,4 +743,4 @@ class GolemBaseClient(GolemBaseROClient):
                 else:
                     raise e
 
-        return await self._process_golem_base_receipt(receipt)
+        return await self._process_arkiv_receipt(receipt)

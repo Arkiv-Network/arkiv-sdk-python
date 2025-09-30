@@ -7,15 +7,15 @@ import rlp
 
 from .types import (
     Annotation,
-    GolemBaseTransaction,
+    ArkivTransaction,
 )
 
 logger = logging.getLogger(__name__)
 """@private"""
 
 
-def rlp_encode_transaction(tx: GolemBaseTransaction) -> bytes:
-    """Encode a Golem Base transaction in RLP."""
+def rlp_encode_transaction(tx: ArkivTransaction) -> bytes:
+    """Encode an Arkiv transaction in RLP."""
     # TODO: use new generic syntax once we can bump to python 3.12 or higher
     T = TypeVar("T")
 

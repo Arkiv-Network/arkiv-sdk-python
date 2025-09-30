@@ -3,7 +3,7 @@ requires = ["flit_core >=3.11,<4"]
 build-backend = "flit_core.buildapi"
 
 [project]
-name = "golem-base-sdk-example"
+name = "arkiv-sdk-example"
 authors = [
     {name = "rvdp", email = "online@well-founded.dev"},
 ]
@@ -15,12 +15,12 @@ classifiers = ["Private :: Do Not Upload"]
 
 dependencies = [
     "anyio>=4.9.0",
-    "golem-base-sdk",
+    "arkiv-sdk",
     "pyxdg>=0.28",
 ]
 
 [project.scripts]
-main = "golem_base_sdk_example:main"
+main = "arkiv_sdk_example:main"
 
 [tool.ruff.lint]
 select = [
@@ -78,7 +78,7 @@ strict = false
 report_progress = true
 
 [tool.uv.sources]
-golem-base-sdk = { path = "../", editable = true }
+arkiv-sdk = { path = "../", editable = true }
 
 [dependency-groups]
 dev = [
