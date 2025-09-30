@@ -1,95 +1,69 @@
-[build-system]
-requires = ["flit_core >=3.11,<4"]
-build-backend = "flit_core.buildapi"
-
 [project]
-name = "golem-base-sdk"
-authors = [
-    {name = "rvdp", email = "online@well-founded.dev"},
-]
-version = "0.1.0"
+name = "arkiv-sdk"
+version = "1.0.0a1"
+description = "Python SDK for Arkiv networks - Web3.py + Entities"
 readme = "README.md"
-license = "GPL-3.0-only"
-requires-python = ">=3.10"
-dynamic = ["description"]
-
+requires-python = ">=3.12"
 dependencies = [
-  "anyio>=4.10.0",
-  "pyxdg>=0.28",
-  "rlp>=1.2.0",
-  "web3>=7.0.0",
+    "web3>=7.13.0,<7.14.0",
+    "pytest>=8.4.2",
 ]
 
-[project.urls]
-Homepage = "https://github.com/Golem-Base/"
-Documentation = "https://golem-base.github.io/python-sdk/golem_base_sdk.html"
-Repository = "https://github.com/Golem-Base/python-sdk"
-Issues = "https://github.com/Golem-Base/python-sdk/issues"
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[dependency-groups]
+# Testing infrastructure
+test = [
+    "testcontainers==4.13.1",
+    "websockets>=13.0",
+]
+
+# Code quality and linting
+lint = [
+    "mypy>=1.13.0",
+    "ruff==0.13.2",
+    "pre-commit>=4.0.0",
+]# Development utilities
+dev = [
+    "pytest-cov>=7.0.0",
+    "python-dotenv>=1.0.0",
+]
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore:The @wait_container_is_ready decorator is deprecated.*:DeprecationWarning:testcontainers.*",
+    "ignore:websockets.legacy is deprecated;.*",
+]
+
+[tool.mypy]
+# Strict type checking configuration
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+no_implicit_reexport = true
+show_error_codes = true
+show_column_numbers = true
+
+# Per-module options
+[[tool.mypy.overrides]]
+module = [
+    "testcontainers.*",
+    "websockets.*",
+]
+ignore_missing_imports = true
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
 
 [tool.ruff.lint]
-select = [
-    # pycodestyle
-    "E",
-    # Pyflakes
-    "F",
-    # pyupgrade
-    "UP",
-    # flake8-bugbear
-    "B",
-    # flake8-simplify
-    "SIM",
-    # isort
-    "I",
-    "ASYNC",
-    "PL",
-    "D"
-]
-ignore = [
-  "D203",
-  "D212"
-]
-
-fixable = ["ALL"]
-unfixable = []
-
-[tool.ruff.lint.pylint]
-max-args = 10
+select = ["E", "W", "F", "I", "B", "C4", "UP", "RUF"]
+ignore = ["E501"]
 
 [tool.ruff.format]
 quote-style = "double"
-indent-style = "space"
-
-[tool.mypy]
-strict = false
-disallow_any_generics = true
-disallow_incomplete_defs = true
-disallow_untyped_calls = true
-disallow_untyped_decorators = true
-disallow_untyped_defs = true
-follow_imports = "normal"
-ignore_missing_imports = true
-no_implicit_reexport = true
-check_untyped_defs = true
-show_error_codes = true
-show_error_context = true
-strict_equality = true
-strict_optional = true
-warn_redundant_casts = true
-warn_return_any = true
-# For some reason, we get a lot of errors from this in the nix build,
-# but fixing those leads to errors in the editor.
-# TODO: figure out why that is
-warn_unused_ignores = false
-
-[tool.pylsp-mypy]
-enabled = true
-live_mode = true
-strict = false
-report_progress = true
-
-[dependency-groups]
-dev = [
-    "pdoc>=15.0.3",
-    "pylsp-mypy>=0.7.0",
-    "python-lsp-server>=1.12.2",
-]

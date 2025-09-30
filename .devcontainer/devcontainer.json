@@ -1,0 +1,43 @@
+{
+    "name": "Arkiv SDK For Python",
+    "build": {
+        "dockerfile": "Dockerfile"
+    },
+    "features": {
+        "ghcr.io/devcontainers/features/github-cli:1": {}
+    },
+    "mounts": [
+        "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+    ],
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "git.editor": "nano",
+                "files.insertFinalNewline": true,
+                "files.trimTrailingWhitespace": true,
+                "python.defaultInterpreterPath": "/workspace/./.venv/bin/python",
+                "python.terminal.activateEnvironment": true,
+                "python.formatting.provider": "ruff",
+                "python.analysis.extraPaths": ["./src", "./tests"],
+                "python.autoComplete.extraPaths": ["./src", "./tests"],
+                "[python]": {
+                    "editor.codeActionsOnSave": {
+                        "source.fixAll": "explicit",
+                        "source.organizeImports": "explicit"
+                    },
+                    "editor.formatOnSave": true,
+                    "editor.tabSize": 4
+                }
+            },
+            "extensions": [
+                "ms-python.python",
+                "ms-python.vscode-pylance",
+                "charliermarsh.ruff",
+                "ms-azuretools.vscode-docker",
+                "tamasfe.even-better-toml",
+                "redhat.vscode-yaml"
+            ]
+        }
+    },
+    "postCreateCommand": "uv sync --all-groups && git config --global core.editor nano"
+}

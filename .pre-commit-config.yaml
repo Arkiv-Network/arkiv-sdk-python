@@ -1,0 +1,38 @@
+# Pre-commit hooks for code quality and consistency
+repos:
+  # Ruff for linting and formatting
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.13.2
+    hooks:
+      # Run the linter
+      - id: ruff
+        args: [--fix]
+      # Run the formatter
+      - id: ruff-format
+
+  # MyPy for type checking
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.18.2
+    hooks:
+      - id: mypy
+        additional_dependencies:
+          - types-requests
+          - pytest
+          - testcontainers
+          - web3==7.13.0
+        args: [--strict]
+        # Only check source files, not tests (to avoid import issues)
+        files: ^src/
+
+  # Basic hooks for file quality
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: mixed-line-ending
+        args: ['--fix=lf']

@@ -1,104 +1,181 @@
-# Golem Base
+# Arkiv SDK
 
-This is part of the [Golem Base](https://github.com/Golem-Base) project, which is designed as a Layer2 Network deployed on Ethereum, acting as a gateway to various Layer 3 Database Chains (DB-Chains).
+Arkiv is a permissioned storage system for decentralized apps, supporting flexible entities with binary data, annotations, and metadata.
 
-> **For an overview of Golem Base, check out our [Litepaper](https://golem-base.io/wp-content/uploads/2025/03/GolemBase-Litepaper.pdf).**
+The Arkiv SDK is the official Python library for interacting with Arkiv networks. It offers a type-safe, developer-friendly API for managing entities, querying data, subscribing to events, and offchain verification—ideal for both rapid prototyping and production use.
 
-# GolemBase SDK for Python
+## SDK Architecture
 
-This SDK allows you to use [GolemBase](https://github.com/Golem-Base) from Python. It is available [on PyPI](https://pypi.org/project/golem-base-sdk/).
+### Principles
 
-We also publish [generated documentation](https://golem-base.github.io/python-sdk/).
+SDK should be directly derived from one of the most well known and more recent client libraries.
 
-The repo also contains an example application to showcase how you can use this SDK.
+Highlevel goals:
+1. Go with the flow of the language and the library.
+2. Whatever works for the library should also work for the SDK
+3. Feels like "Library + Entities".
 
-**Tip:** For getting up and running quickly, we recommend the following two steps:
+### Underlying Library
 
-- Start golembase-op-geth through its [docker-compose](https://github.com/Golem-Base/golembase-op-geth/blob/main/RUN_LOCALLY.md).
+As underlying library we use [Web3.py](https://github.com/ethereum/web3.py) (no good alternatives).
 
-- [Install the demo CLI](https://github.com/Golem-Base/golembase-demo-cli?tab=readme-ov-file#installation) and [create a user](https://github.com/Golem-Base/golembase-demo-cli?tab=readme-ov-file#quickstart).
+### Naming
 
-(Note: As an alternative to installing the demo CLI, you can build the [actual CLI](https://github.com/Golem-Base/golembase-op-geth/blob/main/cmd/golembase/README.md) as it's included in the golembase-op-geth repo.)
+Github "Home": `arkiv-network`
+| Language | Element    | Name           | Comment                 |
+|----------|------------|----------------|-------------------------|
+| Python   | Repository | `arkiv-sdk-python` | Golem Base repo: `python-sdk` move and rename to `arkiv-python-beta` |
+| Python   | PIP        | `pip install arkiv-sdk`   | or `pip install arkiv` as `arkiv` is not available for Rust |
 
-When you create a user, it will generate a private key file called `wallet.json` and store it in:
 
-* `~/.config/golembase/` on **Linux**
-* `~/Library/Application Support/golembase/` on **macOS**
-* `%LOCALAPPDATA%\golembase\` on **Windows**
+### Arkiv Client
 
-(This is a standard folder as per the [XDG specification](https://specifications.freedesktop.org/basedir-spec/latest/).)
+Goal: Make Arkiv feel like "web3.py + entities", maintaining the familiar developer experience that Python web3 developers.
 
-You will also need to fund the account. You can do so by typing:
+A `client.entities.*` approach for consistency with web3.py's module pattern. It clearly communicates that arkiv is a module extension just like eth, net, etc.
 
+Here's a "Hello World!" example showing how to use the Python Arkiv SDK:
+
+```python
+from web3 import HTTPProvider
+from arkiv import Arkiv
+from arkiv.account import NamedAccount
+
+with open ('wallet_alice.json', 'r') as f:
+    wallet = f.read()
+
+# Initialize Arkiv client (extends Web3)
+provider = HTTPProvider('https://kaolin.hoodi.arkiv.network/rpc')
+account = NamedAccount.from_wallet('Alice', wallet, 's3cret')
+client = Arkiv(provider, account = account)
+
+# Check connection
+print(f"Connected: {client.is_connected()}")
+
+# Create entity with data and annotations
+entity_key, tx_hash = client.arkiv.create_entity(
+    payload=b"Hello World!",
+    annotations={"type": "greeting", "version": 1},
+    btl = 1000
+)
+print(f"Created entity: {entity_key}")
+
+# Get individual entity and print its details
+entity = client.arkiv.get_entity(entity_key)
+print(f"Entity: {entity}")
+
+# TODO
+# Clean up - delete entities
+print("\n=== Cleanup ===")
+client.arkiv.delete_entity(entity_key)
+print("Entities deleted")
+
+# Verify deletion
+exists = client.arkiv.exists(entity_key1)
+print(f"Entity 1 exists? {exists}")
 ```
-golembase-demo-cli account fund 10
-```
 
-## Getting Started Example
+Arkiv extensions
+```python
+from arkiv import Arkiv
+from arkiv.account import NamedAccount
 
-Here's how you can get going with the SDK. First, create a new folder to hold your project:
+account = NamedAccount.from_wallet('Alice', wallet, 's3cret')
+client = Arkiv(provider, account = account)
+
+entity_key, tx_hash = client.arkiv.create_entity(
+    payload=b"Hello World!",
+    annotations={"type": "greeting", "version": 1},
+    btl = 1000
+)
+
+entity = client.arkiv.get_entity(entity_key)
+````
+
+Web3 standard
+```python
+from web3 import HTTPProvider
+provider = HTTPProvider('https://kaolin.hoodi.arkiv.network/rpc')
+
+# Arkiv 'is a' Web3 client
+client = Arkiv(provider)
+balance = client.eth.get_balance(client.eth.default_account)
+client.eth.get_transaction(tx_hash)
+````
+
+# Development Guide
+
+## Code Quality and Type Safety
+
+This project uses comprehensive linting and type checking to maintain high code quality:
+
+### Tools Used
+
+- **MyPy**: Static type checker with strict configuration
+- **Ruff**: Fast linter and formatter (replaces black, isort, flake8, etc.)
+- **Pre-commit**: Automated quality checks on git commits
+
+### Quick Commands
 
 ```bash
-mkdir golem-sdk-practice
-cd golem-sdk-practice
+# Run all quality checks
+./scripts/check-all.sh
+
+# Individual tools
+uv run ruff check . --fix    # Lint and auto-fix
+uv run ruff format .         # Format code
+uv run mypy src/ tests/      # Type check
+uv run pytest tests/ -v     # Run tests
+uv run pytest --cov=src   # Run code coverage
 ```
 
-Then create and activate a virtual environment:
+### Pre-commit Hooks
 
+Pre-commit hooks run automatically on `git commit` and will:
+- Fix linting issues with ruff
+- Format code consistently
+- Run type checking with mypy
+- Check file formatting (trailing whitespace, etc.)
+
+To run pre-commit manually:
 ```bash
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+uv run pre-commit run --all-files
 ```
 
-Next, install the GolemBase SDK from PyPI:
+### Type Hints Best Practices
 
-```bash
-pip install golem-base-sdk
+1. **Always use type hints** for function parameters and return values
+2. **Use specific types** instead of `Any` when possible
+3. **Import types** from `typing` or `collections.abc` as needed
+4. **Use Union types** for multiple acceptable types: `str | int`
+5. **Generic containers**: `list[str]`, `dict[str, int]`, etc.
+
+### Example Type-Safe Code
+
+```python
+from collections.abc import Generator
+from typing import Any
+
+def process_data(items: list[dict[str, Any]]) -> Generator[str, None, None]:
+    """Process data items and yield formatted strings."""
+    for item in items:
+        if isinstance(item.get("name"), str):
+            yield f"Processing: {item['name']}"
 ```
 
-You can find some [base starter code here](https://github.com/Golem-Base/python-sdk/tree/main/example); copy the `__init__.py` into your project folder.
+### MyPy Configuration
 
-This is a basic Python application that:
+The project uses strict mypy settings:
+- `strict = true` - Enable all strict checks
+- `no_implicit_reexport = true` - Require explicit re-exports
+- `warn_return_any = true` - Warn about returning Any values
+- Missing imports are ignored for third-party libraries without type stubs
 
-- Imports several items from the SDK (`golem_base_sdk`), including:
+### Ruff Configuration
 
-   * `GolemBaseClient`: A class that creates a client to interact with GolemBase
-   * `GolemBaseCreate`: A class representing a create transaction in GolemBase
-   * `GolemBaseExtend`: A class for extending entity lifetime
-   * `Annotation`: A class for key-value annotations
-
-- Reads the private key, which it locates using the `xdg` module.
-
-- Sets up logging with the standard Python `logging` module.
-
-- The `main()` function follows, which is where the bulk of the example code runs.
-
-The `main` function demonstrates how to create, extend, and query entities:
-
-- Creates a client object that connects to the GolemBase network (e.g., Kaolin testnet) using `rpc` and `ws` URLs, and your private key.
-
-- Subscribes to log events from the network (create, update, delete, extend).
-
-- Creates an entity with data `"hello"`, BTL of `60`, and an annotation of `("foo", "bar")`.
-
-- Prints various metadata and state:
-
-   * The latest block
-   * Entity count before and after creation
-   * Entity metadata
-   * Storage value
-   * Entity expiration info
-   * Query results by annotation
-
-- Extends the created entity’s lifetime using `client.extend_entities`.
-
-- Lists entities owned by your account, and all known entity keys.
-
-## Building and Running from sources
-
-You can also, from this cloned repo, build the SDK and run the example using [Nix](https://nixos.org):
-
-```bash
-nix build .#golem-base-sdk-example
-./result/bin/main
-```
+Ruff is configured to:
+- Use 88 character line length (Black-compatible)
+- Target Python 3.12+ features
+- Enable comprehensive rule sets (pycodestyle, pyflakes, isort, etc.)
+- Auto-fix issues where possible
+- Format with double quotes and trailing commas
