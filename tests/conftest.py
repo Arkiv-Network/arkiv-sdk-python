@@ -15,8 +15,9 @@ from web3 import Web3
 
 from arkiv import Arkiv
 from arkiv.account import NamedAccount
+from tests.node_container import create_container_node
 
-from .node_container import create_container_node
+from .utils import create_account
 
 # Environment variable names for external node configuration
 RPC_URL_ENV = "RPC_URL"
@@ -132,65 +133,11 @@ def arkiv_client_http(
 def account_1(arkiv_node: tuple[DockerContainer | None, str, str]) -> NamedAccount:
     """Provide the first (alice) account."""
     container, _, _ = arkiv_node
-    return _create_account(1, ALICE, container)
+    return create_account(1, ALICE, container)
 
 
 @pytest.fixture(scope="session")
 def account_2(arkiv_node: tuple[DockerContainer | None, str, str]) -> NamedAccount:
     """Provide the second (bob) account."""
     container, _, _ = arkiv_node
-    return _create_account(2, BOB, container)
-
-
-def _create_account(
-    index: int, name: str, container: DockerContainer | None
-) -> NamedAccount:
-    """Create a named account from env vars or generate a new one."""
-    wallet_file = os.getenv(f"{WALLET_FILE_ENV_PREFIX}_{index}")
-    wallet_password = os.getenv(f"{WALLET_PASSWORD_ENV_PREFIX}_{index}")
-
-    if not wallet_file or not wallet_password:
-        account = NamedAccount.create(name)
-        if type(container) is DockerContainer:
-            _fund_account(container, account)
-
-        return account
-
-    wallet_json = _load_wallet_json(wallet_file)
-    return NamedAccount.from_wallet(name, wallet_json, wallet_password)
-
-
-def _load_wallet_json(wallet_file: str) -> str:
-    """Load account from encrypted wallet file."""
-    wallet_path = Path(wallet_file)
-
-    if not wallet_path.exists():
-        raise FileNotFoundError(f"Wallet file not found: {wallet_file}")
-
-    with wallet_path.open() as f:
-        wallet_json = f.read()
-
-    return wallet_json
-
-
-def _fund_account(arkivContainer: DockerContainer, account: NamedAccount) -> None:
-    """Fixture to create and fund a test account in the Arkiv node."""
-    # Get the private key (as hex)
-    acct_address = account.address
-    acct_private_key = account.key.hex()
-
-    # Import account inside the container
-    exit_code, output = arkivContainer.exec(
-        ["golembase", "account", "import", "--key", acct_private_key]
-    )
-    assert exit_code == 0, f"Account import failed: {output.decode()}"
-
-    # Fund account inside the container
-    exit_code, output = arkivContainer.exec(["golembase", "account", "fund"])
-    assert exit_code == 0, f"Account funding failed: {output.decode()}"
-    logger.info(f"Imported and funded account: {acct_address}")
-
-    # Printing account balance
-    exit_code, output = arkivContainer.exec(["golembase", "account", "balance"])
-    assert exit_code == 0, f"Account balance check failed: {output.decode()}"
-    logger.info(f"Account balance: {output.decode().strip()}, exit_code: {exit_code}")
+    return create_account(2, BOB, container)

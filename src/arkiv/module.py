@@ -43,12 +43,12 @@ class ArkivModule:
         # Attach custom Arkiv RPC methods to the eth object
         self.client.eth.attach_methods(FUNCTIONS_ABI)
         for method_name in FUNCTIONS_ABI.keys():
-            logger.info(f"Custom RPC method: eth.{method_name}")
+            logger.debug(f"Custom RPC method: eth.{method_name}")
 
         # Create contract instance for events (using EVENTS_ABI)
         self.contract = client.eth.contract(address=STORAGE_ADDRESS, abi=EVENTS_ABI)
         for event in self.contract.all_events():
-            logger.info(f"Entity event {event.topic}: {event.signature}")
+            logger.debug(f"Entity event {event.topic}: {event.signature}")
 
     def is_available(self) -> bool:
         """Check if Arkiv functionality is available."""
@@ -167,12 +167,12 @@ class ArkivModule:
         """Get the storage value stored in the given entity."""
         # EntityKey is automatically converted by arkiv_munger
         storage_value = base64.b64decode(self.client.eth.get_storage_value(entity_key))  # type: ignore[attr-defined]
-        logger.info(f"Storage value (decoded): {storage_value!r}")
+        logger.debug(f"Storage value (decoded): {storage_value!r}")
         return storage_value
 
     def _get_entity_metadata(self, entity_key: EntityKey) -> dict[str, Any]:
         """Get the metadata of the given entity."""
         # EntityKey is automatically converted by arkiv_munger
         metadata: dict[str, Any] = self.client.eth.get_entity_metadata(entity_key)  # type: ignore[attr-defined]
-        logger.info(f"Raw metadata: {metadata}")
+        logger.debug(f"Raw metadata: {metadata}")
         return metadata

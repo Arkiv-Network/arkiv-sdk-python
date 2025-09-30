@@ -38,7 +38,7 @@ def check_tx_hash(label: str, tx_hash: HexBytes) -> None:
 class TestEntityCreate:
     """Test cases for create_entity function."""
 
-    def test_create_entity_with_payload_web3(self, arkiv_client_http: Arkiv) -> None:
+    def test_create_entity_via_web3(self, arkiv_client_http: Arkiv) -> None:
         """Test create_entity with custom payload checking against Web3 client behavior."""
         payload = b"Hello world!"
         annotations: dict[str, str | int] = {"type": "Greeting", "version": 1}
@@ -150,7 +150,7 @@ class TestEntityCreate:
             "Entity expiration block should be in the future"
         )
 
-    def test_create_entity(self, arkiv_client_http: Arkiv) -> None:
+    def test_create_entity_simple(self, arkiv_client_http: Arkiv) -> None:
         """Test create_entity."""
         pl: bytes = b"Hello world!"
         ann: dict[str, str | int] = {"type": "Greeting", "version": 1}

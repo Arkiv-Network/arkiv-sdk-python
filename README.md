@@ -114,6 +114,28 @@ SDK versions are tracked in the following files:
 - `pyproject.toml`
 - `uv.lock`
 
+### Testing
+
+Pytest is used for unit and integration testing.
+```bash
+uv run pytest # Run all tests
+uv run pytest -k test_create_entity_simple --log-cli-level=INFO # Specific tests via keyword, print at info log level
+```
+
+If an `.env` file is present the unit tests are run against the specifice RPC coordinates and test accounts.
+An example wallet file is provided in `.env.testing`
+Make sure that the specified test accounts are properly funded before running the tests.
+
+Otherwise, the tests are run against a testcontainer containing an Arkiv RPC Node.
+Test accounts are created on the fly and using the CLI inside the local RPC Nonde.
+
+Account wallets for such tests can be created via the command shown below.
+The provided example creates the wallet file `wallet_alice.json` using the password provided during the execution of the command.
+
+```bash
+uv run python uv run python -m arkiv.account alice
+```
+
 ### Code Quality
 
 This project uses comprehensive unit testing, linting and type checking to maintain high code quality:

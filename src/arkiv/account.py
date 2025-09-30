@@ -1,6 +1,9 @@
 """Account management for Arkiv client."""
 
+import getpass
 import json
+import sys
+from pathlib import Path
 from typing import Any
 
 from eth_account import Account
@@ -147,3 +150,38 @@ class NamedAccount:
         if name is None or len(name.strip()) == 0:
             raise AccountNameException("Account name must be a non-empty string.")
         return name.strip()
+
+
+def main() -> None:
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Create a new named account and write a JSON wallet file."
+    )
+    parser.add_argument("name", help="Name of the account (used in wallet_<name>.json)")
+    args = parser.parse_args()
+
+    # Sanitize name for filename (alphanumeric, dash, underscore only)
+    import re
+
+    account_name = re.sub(r"[^a-zA-Z0-9_-]", "_", args.name.strip())
+    wallet_path = Path(f"wallet_{account_name}.json")
+
+    if wallet_path.exists():
+        print(f'File "{wallet_path}" already exists. Aborting.')
+        sys.exit(1)
+
+    account = NamedAccount(account_name, Account.create())
+    password = getpass.getpass("Enter wallet password: ")
+    encrypted = account.local_account.encrypt(password)
+
+    with wallet_path.open("w") as f:
+        json.dump(encrypted, f)
+
+    print(f"Named account: {account}")
+    print(f"Wallet file: {wallet_path}")
+
+
+# add main entry point
+if __name__ == "__main__":
+    main()
