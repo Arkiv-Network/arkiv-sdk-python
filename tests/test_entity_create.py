@@ -7,7 +7,7 @@ from web3.types import TxReceipt
 
 from arkiv.client import Arkiv
 from arkiv.contract import STORAGE_ADDRESS
-from arkiv.types import Annotations, CreateOp, Operations
+from arkiv.types import Annotations, CreateOp, Operations, TxHash
 from arkiv.utils import check_entity_key, to_receipt, to_tx_params
 
 logger = logging.getLogger(__name__)
@@ -15,14 +15,17 @@ logger = logging.getLogger(__name__)
 TX_SUCCESS = 1
 
 
-def check_tx_hash(label: str, tx_hash: HexBytes) -> None:
+def check_tx_hash(label: str, tx_hash: TxHash) -> None:
     """Check transaction hash validity."""
-    logger.info(f"{label}: Checking transaction hash {tx_hash.to_0x_hex()}")
+    logger.info(f"{label}: Checking transaction hash {tx_hash}")
     assert tx_hash is not None, f"{label}: Transaction hash should not be None"
-    assert isinstance(tx_hash, HexBytes), (
-        f"{label}: Transaction hash should be HexBytes"
+    assert isinstance(tx_hash, str), (
+        f"{label}: Transaction hash should be a string (TxHash)"
     )
-    assert len(tx_hash) == 32, f"{label}: Transaction hash should be 32 bytes long"
+    assert len(tx_hash) == 66, (
+        f"{label}: Transaction hash should be 66 characters long (0x + 64 hex)"
+    )
+    assert tx_hash.startswith("0x"), f"{label}: Transaction hash should start with 0x"
 
 
 class TestEntityCreate:
@@ -171,3 +174,68 @@ class TestEntityCreate:
             f"{label}: Entity expiration block should be in the future"
         )
         logger.info(f"{label}: Entity creation and retrieval successful")
+
+    def test_create_entities_bulk(self, arkiv_client_http: Arkiv) -> None:
+        """Test create_entities for bulk entity creation."""
+        # Create multiple CreateOp objects
+        create_ops = [
+            CreateOp(
+                payload=b"Entity 1",
+                annotations=Annotations({"type": "bulk", "index": 1}),
+                btl=100,
+            ),
+            CreateOp(
+                payload=b"Entity 2",
+                annotations=Annotations({"type": "bulk", "index": 2}),
+                btl=100,
+            ),
+            CreateOp(
+                payload=b"Entity 3",
+                annotations=Annotations({"type": "bulk", "index": 3}),
+                btl=100,
+            ),
+        ]
+
+        # Call create_entities
+        entity_keys, tx_hash = arkiv_client_http.arkiv.create_entities(create_ops)
+
+        label = "create_entities"
+        logger.info(f"{label}: Entity keys: {entity_keys}, tx_hash: {tx_hash}")
+
+        # Verify transaction hash
+        assert tx_hash is not None, f"{label}: Transaction hash should not be None"
+        check_tx_hash(label, tx_hash)
+
+        # Verify all entities were created
+        assert len(entity_keys) == 3, f"{label}: Should have 3 created entities"
+
+        # Verify each entity can be retrieved and has correct data
+        for i, entity_key in enumerate(entity_keys):
+            check_entity_key(entity_key, f"{label} entity {i + 1}")
+
+            entity = arkiv_client_http.arkiv.get_entity(entity_key)
+            logger.info(f"{label}: Retrieved entity {i + 1}: {entity}")
+
+            expected_payload = f"Entity {i + 1}".encode()
+            expected_annotations = Annotations({"type": "bulk", "index": i + 1})
+
+            assert entity.payload == expected_payload, (
+                f"{label}: Entity {i + 1} payload should match"
+            )
+            assert entity.annotations == expected_annotations, (
+                f"{label}: Entity {i + 1} annotations should match"
+            )
+            assert entity.owner == arkiv_client_http.eth.default_account, (
+                f"{label}: Entity {i + 1} owner should match transaction sender"
+            )
+
+        logger.info(f"{label}: Bulk entity creation successful")
+
+    def test_create_entities_empty_list_raises(self, arkiv_client_http: Arkiv) -> None:
+        """Test that create_entities raises ValueError for empty list."""
+        import pytest
+
+        with pytest.raises(
+            ValueError, match="create_ops must contain at least one CreateOp"
+        ):
+            arkiv_client_http.arkiv.create_entities([])

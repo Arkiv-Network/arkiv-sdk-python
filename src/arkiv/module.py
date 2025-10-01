@@ -4,8 +4,7 @@ import base64
 import logging
 from typing import TYPE_CHECKING, Any
 
-from eth_typing import ChecksumAddress
-from hexbytes import HexBytes
+from eth_typing import ChecksumAddress, HexStr
 from web3 import Web3
 from web3.types import TxParams, TxReceipt
 
@@ -21,6 +20,7 @@ from .types import (
     EntityKey,
     Operations,
     TransactionReceipt,
+    TxHash,
 )
 from .utils import merge_annotations, to_receipt, to_tx_params
 
@@ -54,13 +54,44 @@ class ArkivModule:
         """Check if Arkiv functionality is available."""
         return True
 
+    def execute(
+        self, operations: Operations, tx_params: TxParams | None = None
+    ) -> TransactionReceipt:
+        """
+        Execute operations on the Arkiv storage contract.
+
+        Args:
+            operations: Operations to execute (creates, updates, deletes, extensions)
+            tx_params: Optional additional transaction parameters
+
+        Returns:
+            TransactionReceipt with details of all operations executed
+        """
+        # Convert to transaction parameters and send
+        client: Arkiv = self.client
+        tx_params = to_tx_params(operations, tx_params)
+        tx_hash_bytes = client.eth.send_transaction(tx_params)
+        tx_hash = TxHash(HexStr(tx_hash_bytes.to_0x_hex()))
+
+        tx_receipt: TxReceipt = client.eth.wait_for_transaction_receipt(tx_hash)
+        tx_status: int = tx_receipt["status"]
+        if tx_status != TX_SUCCESS:
+            raise RuntimeError(f"Transaction failed with status {tx_status}")
+
+        # Parse and return receipt
+        receipt: TransactionReceipt = to_receipt(
+            client.arkiv.contract, tx_hash, tx_receipt
+        )
+        logger.info(f"Arkiv receipt: {receipt}")
+        return receipt
+
     def create_entity(
         self,
         payload: bytes | None = None,
         annotations: Annotations | None = None,
         btl: int = 0,
         tx_params: TxParams | None = None,
-    ) -> tuple[EntityKey, HexBytes]:
+    ) -> tuple[EntityKey, TxHash]:
         """
         Create a new entity on the Arkiv storage contract.
 
@@ -71,7 +102,7 @@ class ArkivModule:
             tx_params: Optional additional transaction parameters
 
         Returns:
-            Transaction hash of the create operation
+            The entity key and transaction hash of the create operation
         """
         # Check and set defaults
         if not payload:
@@ -82,30 +113,49 @@ class ArkivModule:
         # Create the operation
         create_op = CreateOp(payload=payload, annotations=annotations, btl=btl)
 
-        # Wrap in Operations container
+        # Wrap in Operations container and execute
         operations = Operations(creates=[create_op])
+        receipt = self.execute(operations, tx_params)
 
-        # Convert to transaction parameters and send
-        client: Arkiv = self.client
-        tx_params = to_tx_params(operations, tx_params)
-        tx_hash = client.eth.send_transaction(tx_params)
-
-        tx_receipt: TxReceipt = client.eth.wait_for_transaction_receipt(tx_hash)
-        tx_status: int = tx_receipt["status"]
-        if tx_status != TX_SUCCESS:
-            raise RuntimeError(f"Transaction failed with status {tx_status}")
-
-        # assert that receipt has a creates field
-        receipt: TransactionReceipt = to_receipt(
-            client.arkiv.contract, tx_hash, tx_receipt
-        )
+        # Verify we got at least one create
         creates = receipt.creates
         if len(creates) == 0:
             raise RuntimeError("Receipt should have at least one entry in 'creates'")
 
         create = creates[0]
         entity_key = create.entity_key
-        return entity_key, tx_hash
+        return entity_key, receipt.tx_hash
+
+    def create_entities(
+        self,
+        create_ops: list[CreateOp],
+        tx_params: TxParams | None = None,
+    ) -> tuple[list[EntityKey], TxHash]:
+        """
+        Create multiple entities in a single transaction (bulk create).
+
+        Args:
+            create_ops: List of CreateOp objects to create
+            tx_params: Optional additional transaction parameters
+
+        Returns:
+            An array of all created entity keys and transaction hash of the operation
+        """
+        if not create_ops or len(create_ops) == 0:
+            raise ValueError("create_ops must contain at least one CreateOp")
+
+        # Wrap in Operations container and execute
+        operations = Operations(creates=create_ops)
+        receipt = self.execute(operations, tx_params)
+
+        # Verify all creates succeeded
+        if len(receipt.creates) != len(create_ops):
+            raise RuntimeError(
+                f"Expected {len(create_ops)} creates in receipt, got {len(receipt.creates)}"
+            )
+
+        entity_keys = [create.entity_key for create in receipt.creates]
+        return entity_keys, receipt.tx_hash
 
     def get_entity(self, entity_key: EntityKey, fields: int = ALL) -> Entity:
         """

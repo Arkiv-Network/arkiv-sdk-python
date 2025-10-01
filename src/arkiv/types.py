@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from typing import NewType
 
 from eth_typing import ChecksumAddress, HexStr
-from hexbytes import HexBytes
 from web3.datastructures import AttributeDict
 
 # Field bitmask values to specify which entity fields are populated
@@ -14,6 +13,8 @@ ANNOTATIONS = 2
 METADATA = 4
 ALL = PAYLOAD | ANNOTATIONS | METADATA
 
+# Transaction hash type
+TxHash = NewType("TxHash", HexStr)
 
 # Unique key for all entities
 EntityKey = NewType("EntityKey", HexStr)
@@ -145,7 +146,7 @@ class DeleteReceipt:
 class TransactionReceipt:
     """The return type of a transaction."""
 
-    tx_hash: HexBytes
+    tx_hash: TxHash
     creates: Sequence[CreateReceipt]
     updates: Sequence[UpdateReceipt]
     extensions: Sequence[ExtendReceipt]

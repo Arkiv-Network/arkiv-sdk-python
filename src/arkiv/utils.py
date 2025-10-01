@@ -26,6 +26,7 @@ from .types import (
     StringAnnotations,
     StringAnnotationsRlp,
     TransactionReceipt,
+    TxHash,
     UpdateReceipt,
 )
 
@@ -107,11 +108,35 @@ def to_tx_params(
     return tx_params
 
 
+def to_hex_bytes(tx_hash: TxHash) -> HexBytes:
+    """
+    Convert a TxHash to HexBytes for Web3.py methods that require it.
+
+    Args:
+        tx_hash: Transaction hash as TxHash
+
+    Returns:
+        Transaction hash as HexBytes with utility methods
+
+    Example:
+        tx_hash: TxHash = client.arkiv.create_entity(...)
+        hex_bytes = to_hex_bytes(tx_hash)
+    """
+    return HexBytes(tx_hash)
+
+
 def to_receipt(
-    contract_: Contract, tx_hash: HexBytes, tx_receipt: TxReceipt
+    contract_: Contract, tx_hash_: TxHash | HexBytes, tx_receipt: TxReceipt
 ) -> TransactionReceipt:
     """Convert a tx hash and a raw transaction receipt to a typed receipt."""
     logger.debug(f"Transaction receipt: {tx_receipt}")
+
+    # normalize tx_hash to TxHash if needed
+    tx_hash: TxHash = (
+        tx_hash_
+        if isinstance(tx_hash_, str)
+        else TxHash(HexStr(HexBytes(tx_hash_).to_0x_hex()))
+    )
 
     # Initialize receipt with tx hash and empty receipt collections
     creates: list[CreateReceipt] = []
@@ -260,7 +285,7 @@ def split_annotations(
             else:
                 string_annotations.append((key, value))
 
-    logger.info(
+    logger.debug(
         f"Split annotations into {string_annotations} and {numeric_annotations}"
     )
     return string_annotations, numeric_annotations

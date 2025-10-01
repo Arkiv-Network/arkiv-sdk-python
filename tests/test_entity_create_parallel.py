@@ -88,7 +88,7 @@ def client_task(client: Arkiv, client_idx: int, num_entities: int) -> list[Entit
             entity_key, tx_hash = client.arkiv.create_entity(
                 payload=payload, annotations=annotations, btl=btl
             )
-            logger.info(f"Entity creation TX[{client_idx}][{j}]: {tx_hash.to_0x_hex()}")
+            logger.info(f"Entity creation TX[{client_idx}][{j}]: {tx_hash}")
             created.append(entity_key)
 
             # entity tx successful, increase counter
