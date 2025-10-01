@@ -119,7 +119,7 @@ SDK versions are tracked in the following files:
 Pytest is used for unit and integration testing.
 ```bash
 uv run pytest # Run all tests
-uv run pytest -k test_create_entity_simple --log-cli-level=INFO # Specific tests via keyword, print at info log level
+uv run pytest -k test_create_entity_simple --log-cli-level=info # Specific tests via keyword, print at info log level
 ```
 
 If an `.env` file is present the unit tests are run against the specifice RPC coordinates and test accounts.

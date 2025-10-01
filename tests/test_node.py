@@ -8,10 +8,6 @@ import pytest
 import requests
 from testcontainers.core.container import DockerContainer
 
-from arkiv.account import NamedAccount
-
-from .utils import fund_account
-
 logger = logging.getLogger(__name__)
 
 
@@ -88,14 +84,12 @@ def test_node_connection_ws(
 
 def test_node_arkiv_help(arkiv_node: tuple[DockerContainer, str, str]) -> None:
     """Check if the Arkiv node help command is available and responsive."""
-    arkivContainer, _, _ = arkiv_node
+    arkiv_container, _, _ = arkiv_node
+    if arkiv_container is None:
+        pytest.skip("No Arkiv node container available for testing")
+
     help_command = ["golembase", "account", "help"]
-    exit_code, output = arkivContainer.exec(help_command)
+    exit_code, output = arkiv_container.exec(help_command)
     logger.info(
         f"Account help command: {help_command}, exit_code: {exit_code}, output:\n{output.decode()}"
     )
-
-    account_1 = NamedAccount.create("account_1")
-    fund_account(arkivContainer, account_1)
-    account_2 = NamedAccount.create("account_2")
-    fund_account(arkivContainer, account_2)

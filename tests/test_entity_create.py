@@ -7,22 +7,12 @@ from web3.types import TxReceipt
 
 from arkiv.client import Arkiv
 from arkiv.contract import STORAGE_ADDRESS
-from arkiv.types import EntityKey, Operations
-from arkiv.utils import to_create_operation, to_receipt, to_tx_params
+from arkiv.types import Operations
+from arkiv.utils import check_entity_key, to_create_operation, to_receipt, to_tx_params
 
 logger = logging.getLogger(__name__)
 
 TX_SUCCESS = 1
-
-
-def check_entity_key(label: str, entity_key: EntityKey) -> None:
-    """Check entity key validity."""
-    logger.info(f"{label}: Checking entity key {entity_key}")
-    assert entity_key is not None, f"{label}: Entity key should not be None"
-    assert isinstance(entity_key, EntityKey), f"{label}: Entity key should be EntityKey"
-    assert len(entity_key.to_bytes()) == 32, (
-        f"{label}: Entity key should be 32 bytes long"
-    )
 
 
 def check_tx_hash(label: str, tx_hash: HexBytes) -> None:
@@ -161,7 +151,7 @@ class TestEntityCreate:
         )
 
         label = "create_entity (a)"
-        check_entity_key(label, entity_key)
+        check_entity_key(entity_key, label)
         check_tx_hash(label, tx_hash)
 
         entity = arkiv_client_http.arkiv.get_entity(entity_key)

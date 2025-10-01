@@ -1,10 +1,12 @@
 """Tests for utility functions in arkiv.utils module."""
 
 import pytest
+from eth_typing import HexStr
 from web3 import Web3
 from web3.types import Nonce, TxParams, Wei
 
 from arkiv.contract import STORAGE_ADDRESS
+from arkiv.exceptions import EntityKeyException
 from arkiv.types import (
     Annotation,
     CreateOp,
@@ -15,9 +17,12 @@ from arkiv.types import (
     UpdateOp,
 )
 from arkiv.utils import (
+    check_entity_key,
+    entity_key_to_bytes,
     rlp_encode_transaction,
     split_annotations,
     to_create_operation,
+    to_entity_key,
     to_tx_params,
 )
 
@@ -318,7 +323,7 @@ class TestRlpEncodeTransaction:
     def test_rlp_encode_update_operation(self) -> None:
         """Test RLP encoding with update operation."""
         entity_key = EntityKey(
-            "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+            HexStr("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef")
         )
         update_op = UpdateOp(
             entity_key=entity_key,
@@ -337,7 +342,7 @@ class TestRlpEncodeTransaction:
     def test_rlp_encode_delete_operation(self) -> None:
         """Test RLP encoding with delete operation."""
         entity_key = EntityKey(
-            "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890"
+            HexStr("0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890")
         )
         delete_op = DeleteOp(entity_key=entity_key)
         operations = Operations(deletes=[delete_op])
@@ -350,7 +355,7 @@ class TestRlpEncodeTransaction:
     def test_rlp_encode_extend_operation(self) -> None:
         """Test RLP encoding with extend operation."""
         entity_key = EntityKey(
-            "0xfedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321"
+            HexStr("0xfedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321")
         )
         extend_op = ExtendOp(entity_key=entity_key, number_of_blocks=500)
         operations = Operations(extensions=[extend_op])
@@ -370,7 +375,7 @@ class TestRlpEncodeTransaction:
         )
 
         entity_key_obj = EntityKey(
-            "0x1111111111111111111111111111111111111111111111111111111111111111"
+            HexStr("0x1111111111111111111111111111111111111111111111111111111111111111")
         )
         update_op = UpdateOp(
             entity_key=entity_key_obj,
@@ -432,3 +437,58 @@ class TestRlpEncodeTransaction:
 
         assert isinstance(encoded, bytes)
         assert len(encoded) > 0
+
+
+class TestEntityKeyUtils:
+    """Test cases for entity key utility functions."""
+
+    def test_to_entity_key_from_int(self) -> None:
+        """Test to_entity_key with integer value."""
+        int_val = 123456789
+        key = to_entity_key(int_val)
+
+        assert isinstance(key, str)
+        assert key.startswith("0x")
+        assert len(key) == 66
+        # verify that key converted to int matches original
+        int_val_from_key = int(key, 16)
+        assert int_val_from_key == int_val
+
+    def test_entity_key_to_bytes(self) -> None:
+        """Test entity_key_to_bytes with EntityKey."""
+        int_val = 123456789
+        key = to_entity_key(int_val)
+        b = entity_key_to_bytes(key)
+
+        assert isinstance(b, bytes)
+        assert len(b) == 32
+        # Should match int to bytes conversion
+        assert b == int_val.to_bytes(32, byteorder="big")
+
+    def test_check_entity_key_valid(self) -> None:
+        """Test check_entity_key with valid EntityKey."""
+        key = to_entity_key(1)
+        # Should not raise
+        check_entity_key(key)
+
+    def test_check_entity_key_invalid_length(self) -> None:
+        """Test check_entity_key with invalid length."""
+        with pytest.raises(EntityKeyException):
+            check_entity_key(EntityKey(HexStr("0x1234")))
+
+    def test_check_entity_key_invalid_hex(self) -> None:
+        """Test check_entity_key with invalid hex characters."""
+        # 64 chars but not valid hex
+        bad_key = EntityKey(HexStr("0x" + "g" * 64))
+        with pytest.raises(EntityKeyException):
+            check_entity_key(bad_key)
+
+    def test_check_entity_key_none(self) -> None:
+        """Test check_entity_key with None value."""
+        with pytest.raises(EntityKeyException):
+            check_entity_key(None)
+
+    def test_check_entity_key_not_str(self) -> None:
+        """Test check_entity_key with non-string value."""
+        with pytest.raises(EntityKeyException):
+            check_entity_key(123)

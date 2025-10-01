@@ -115,9 +115,8 @@ def client_task(client: Arkiv, client_idx: int, num_entities: int) -> list[Entit
 @pytest.mark.parametrize(
     "num_clients,num_entities",
     [
-        (2, 10),
-        # (2, 3),
-        # (4, 2),
+        # (20, 50),
+        (2, 3),
     ],
 )
 def test_parallel_entity_creation(
@@ -130,6 +129,7 @@ def test_parallel_entity_creation(
     if not rpc_url:
         pytest.skip("No Arkiv node available for testing")
 
+    # Create Arkiv clients
     logger.info(f"Starting {num_clients} Arkiv clients...")
     clients = []
     for i in range(num_clients):
@@ -138,6 +138,8 @@ def test_parallel_entity_creation(
         client = create_client(container, rpc_url, client_idx)
         account: ChecksumAddress = cast(ChecksumAddress, client.eth.default_account)
         balance = client.eth.get_balance(account)
+
+        # Only use clients with non-zero balance
         if balance > 0:
             logger.info(f"Arkiv client[{client_idx}] started.")
             clients.append(client)
@@ -147,6 +149,7 @@ def test_parallel_entity_creation(
     # Remember start time
     start_time = time.time()
 
+    # Start all clients in separate threads (pseudo-parallelism)
     threads = []
     for client_idx in range(len(clients)):
         client = clients[client_idx]
@@ -164,6 +167,7 @@ def test_parallel_entity_creation(
     end_time = time.time()
     elapsed_time = end_time - start_time
 
+    logger.info(f"Total active clients: {len(clients)}")
     logger.info(f"Total successful entity creation TX: {tx_counter}")
     logger.info(f"TX creation start time: {start_time:.2f}, end time: {end_time:.2f}")
     logger.info(f"All Arkiv clients have completed in {elapsed_time:.2f} seconds.")

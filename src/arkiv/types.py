@@ -2,89 +2,13 @@
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import NewType
 
 from eth_typing import ChecksumAddress, HexStr
 from hexbytes import HexBytes
 
-
 # Unique key for all entities
-@dataclass(frozen=True)
-class EntityKey:
-    """EntityKey dataclass that wraps HexStr for entity identification."""
-
-    value: HexStr
-
-    def __init__(self, value: str | int | HexBytes | HexStr) -> None:
-        """Create an EntityKey from various input types."""
-        if isinstance(value, str) and value.startswith("0x"):
-            # Already a hex string - validate length
-            if len(value) != 66:  # 0x + 64 hex chars
-                raise ValueError(
-                    f"EntityKey hex string must be 66 characters (0x + 64 hex), got {len(value)}"
-                )
-            object.__setattr__(self, "value", HexStr(value.lower()))
-        elif isinstance(value, int):
-            # Convert integer to hex string with 0x prefix
-            if value < 0:
-                raise ValueError("EntityKey cannot be negative")
-            hex_str = f"0x{value:064x}"  # 64 chars = 32 bytes = 256 bits
-            object.__setattr__(self, "value", HexStr(hex_str))
-        elif isinstance(value, (HexBytes, bytes)):
-            # Convert bytes to hex string
-            if len(value) != 32:  # 32 bytes = 256 bits
-                raise ValueError(
-                    f"EntityKey bytes must be exactly 32 bytes, got {len(value)}"
-                )
-            object.__setattr__(self, "value", HexStr(f"0x{value.hex()}"))
-        elif isinstance(value, str):
-            # Plain string, assume it needs 0x prefix
-            if len(value) % 2 != 0:
-                value = "0" + value  # Pad with leading zero if odd length
-            if len(value) != 64:  # Should be 64 hex characters
-                raise ValueError(
-                    f"EntityKey hex string (without 0x) must be 64 characters, got {len(value)}"
-                )
-            object.__setattr__(self, "value", HexStr(f"0x{value.lower()}"))
-        else:
-            # Try to convert via HexBytes first, then to hex string
-            try:
-                hex_bytes = HexBytes(value)
-                if len(hex_bytes) != 32:
-                    raise ValueError(
-                        f"EntityKey must represent exactly 32 bytes, got {len(hex_bytes)}"
-                    )
-                object.__setattr__(self, "value", HexStr(f"0x{hex_bytes.hex()}"))
-            except Exception as e:
-                raise ValueError(
-                    f"Cannot convert {type(value)} to EntityKey: {e}"
-                ) from e
-
-    def __str__(self) -> str:
-        """String representation."""
-        return self.value
-
-    def __repr__(self) -> str:
-        """Repr representation."""
-        return f"EntityKey('{self.value}')"
-
-    def __eq__(self, other: object) -> bool:
-        """Equality comparison."""
-        if isinstance(other, EntityKey):
-            return self.value == other.value
-        return False
-
-    def __hash__(self) -> int:
-        """Hash for use in sets/dicts."""
-        return hash(self.value)
-
-    @property
-    def hex(self) -> str:
-        """Get hex string without 0x prefix."""
-        return self.value[2:]
-
-    def to_bytes(self) -> bytes:
-        """Convert to bytes."""
-        return bytes.fromhex(self.hex)
+EntityKey = NewType("EntityKey", HexStr)
 
 
 type AnnotationValue = str | int  # Only str or non-negative int allowed

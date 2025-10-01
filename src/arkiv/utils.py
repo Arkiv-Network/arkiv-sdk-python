@@ -4,6 +4,7 @@ import logging
 from typing import Any
 
 import rlp  # type: ignore[import-untyped]
+from eth_typing import HexStr
 from hexbytes import HexBytes
 from web3 import Web3
 from web3.contract import Contract
@@ -12,6 +13,7 @@ from web3.types import EventData, LogReceipt, TxParams, TxReceipt
 
 from . import contract
 from .contract import STORAGE_ADDRESS
+from .exceptions import EntityKeyException
 from .types import (
     Annotation,
     AnnotationValue,
@@ -26,6 +28,52 @@ from .types import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def to_entity_key(entity_key_int: int) -> EntityKey:
+    hex_value = Web3.to_hex(entity_key_int)
+    # ensure lenth is 66 (0x + 64 hex)
+    if len(hex_value) < 66:
+        hex_value = HexStr("0x" + hex_value[2:].zfill(64))
+    return EntityKey(hex_value)
+
+
+def entity_key_to_bytes(entity_key: EntityKey) -> bytes:
+    return bytes.fromhex(entity_key[2:])  # Strip '0x' prefix and convert to bytes
+
+
+def check_entity_key(entity_key: Any | None, label: str | None = None) -> None:
+    """Validates entity key."""
+    prefix = ""
+    if label:
+        prefix = f"{label}: "
+
+    logger.info(f"{prefix}Checking entity key {entity_key}")
+
+    if entity_key is None:
+        raise EntityKeyException("Entity key should not be None")
+    if not isinstance(entity_key, str):
+        raise EntityKeyException(
+            f"Entity key type should be str but is: {type(entity_key)}"
+        )
+    if len(entity_key) != 66:
+        raise EntityKeyException(
+            f"Entity key should be 66 characters long (0x + 64 hex) but is: {len(entity_key)}"
+        )
+    if not is_hex_str(entity_key):
+        raise EntityKeyException("Entity key should be a valid hex string")
+
+
+def is_hex_str(value: str) -> bool:
+    if not isinstance(value, str):
+        return False
+    if value.startswith("0x"):
+        value = value[2:]
+    try:
+        int(value, 16)
+        return True
+    except ValueError:
+        return False
 
 
 def to_create_operation(
@@ -116,33 +164,36 @@ def to_receipt(
             event_args: dict[str, Any] = event_data["args"]
             event_name = event_data["event"]
 
+            entity_key: EntityKey = to_entity_key(event_args["entityKey"])
+            expiration_block: int = event_args["expirationBlock"]
+
             match event_name:
                 case contract.CREATED_EVENT:
                     creates.append(
                         CreateReceipt(
-                            entity_key=EntityKey(event_args["entityKey"]),
-                            expiration_block=int(event_args["expirationBlock"]),
+                            entity_key=entity_key,
+                            expiration_block=expiration_block,
                         )
                     )
                 case contract.UPDATED_EVENT:
                     updates.append(
                         UpdateReceipt(
-                            entity_key=EntityKey(event_args["entityKey"]),
-                            expiration_block=int(event_args["expirationBlock"]),
+                            entity_key=entity_key,
+                            expiration_block=expiration_block,
                         )
                     )
                 case contract.DELETED_EVENT:
                     deletes.append(
                         DeleteReceipt(
-                            entity_key=EntityKey(event_args["entityKey"]),
+                            entity_key=entity_key,
                         )
                     )
                 case contract.EXTENDED_EVENT:
                     extensions.append(
                         ExtendReceipt(
-                            entity_key=EntityKey(event_args["entityKey"]),
-                            old_expiration_block=int(event_args["oldExpirationBlock"]),
-                            new_expiration_block=int(event_args["newExpirationBlock"]),
+                            entity_key=entity_key,
+                            old_expiration_block=event_args["oldExpirationBlock"],
+                            new_expiration_block=event_args["newExpirationBlock"],
                         )
                     )
                 case _:
@@ -195,7 +246,7 @@ def rlp_encode_transaction(tx: Operations) -> bytes:
         # Update
         [
             [
-                element.entity_key.to_bytes(),
+                entity_key_to_bytes(element.entity_key),
                 element.btl,
                 element.data,
                 list(map(format_annotation, element.string_annotations)),
@@ -206,14 +257,14 @@ def rlp_encode_transaction(tx: Operations) -> bytes:
         # Delete
         [
             [
-                element.entity_key.to_bytes(),
+                entity_key_to_bytes(element.entity_key),
             ]
             for element in tx.deletes
         ],
         # Extend
         [
             [
-                element.entity_key.to_bytes(),
+                entity_key_to_bytes(element.entity_key),
                 element.number_of_blocks,
             ]
             for element in tx.extensions
