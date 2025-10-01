@@ -138,11 +138,8 @@ class ArkivModule:
 
             if fields & METADATA:
                 # Convert owner address to checksummed format
-                owner_metadata = metadata_all.get("owner")
-                owner = Web3.to_checksum_address(owner_metadata)
-
-                expires_at_block_metadata = metadata_all.get("expiresAtBlock")
-                expires_at_block = int(expires_at_block_metadata)
+                owner = self._get_owner(metadata_all)
+                expires_at_block = self._get_expires_at_block(metadata_all)
 
             if fields & ANNOTATIONS:
                 annotations = merge_annotations(
@@ -159,6 +156,20 @@ class ArkivModule:
             payload=payload,
             annotations=annotations,
         )
+
+    def _get_owner(self, metadata: dict[str, Any]) -> ChecksumAddress:
+        """Get the owner address of the given entity."""
+        owner_metadata = metadata.get("owner")
+        if not owner_metadata:
+            raise ValueError("Entity metadata missing required 'owner' field")
+        return Web3.to_checksum_address(owner_metadata)
+
+    def _get_expires_at_block(self, metadata: dict[str, Any]) -> int:
+        """Get the expiration block of the given entity."""
+        expires_at_block_metadata = metadata.get("expiresAtBlock")
+        if expires_at_block_metadata is None:
+            raise ValueError("Entity metadata missing required 'expiresAtBlock' field")
+        return int(expires_at_block_metadata)
 
     def _get_storage_value(self, entity_key: EntityKey) -> bytes:
         """Get the storage value stored in the given entity."""
