@@ -301,7 +301,7 @@ def merge_annotations(
     if string_annotations:
         # example: [AttributeDict({'key': 'type', 'value': 'Greeting'})]
         for element in string_annotations:
-            logger.info(f"String annotation element: {element}")
+            logger.debug(f"String annotation element: {element}")
             if isinstance(element.value, str):
                 annotations[element.key] = element.value
             else:
@@ -312,7 +312,7 @@ def merge_annotations(
     if numeric_annotations:
         # example: [AttributeDict({'key': 'version', 'value': 1})]
         for element in numeric_annotations:
-            logger.info(f"Numeric annotation element: {element}")
+            logger.debug(f"Numeric annotation element: {element}")
             if isinstance(element.value, int):
                 annotations[element.key] = element.value
             else:

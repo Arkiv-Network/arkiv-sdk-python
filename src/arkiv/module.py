@@ -82,7 +82,7 @@ class ArkivModule:
         receipt: TransactionReceipt = to_receipt(
             client.arkiv.contract, tx_hash, tx_receipt
         )
-        logger.info(f"Arkiv receipt: {receipt}")
+        logger.debug(f"Arkiv receipt: {receipt}")
         return receipt
 
     def create_entity(
@@ -179,23 +179,26 @@ class ArkivModule:
 
         # HINT: rpc methods to fetch entity content might change this is the place to adapt
         # get and decode payload if requested
-        if fields & PAYLOAD:
-            payload = self._get_storage_value(entity_key)
+        try:
+            if fields & PAYLOAD:
+                payload = self._get_storage_value(entity_key)
 
-        # get and decode annotations and/or metadata if requested
-        if fields & METADATA or fields & ANNOTATIONS:
-            metadata_all = self._get_entity_metadata(entity_key)
+            # get and decode annotations and/or metadata if requested
+            if fields & METADATA or fields & ANNOTATIONS:
+                metadata_all = self._get_entity_metadata(entity_key)
 
-            if fields & METADATA:
-                # Convert owner address to checksummed format
-                owner = self._get_owner(metadata_all)
-                expires_at_block = self._get_expires_at_block(metadata_all)
+                if fields & METADATA:
+                    # Convert owner address to checksummed format
+                    owner = self._get_owner(metadata_all)
+                    expires_at_block = self._get_expires_at_block(metadata_all)
 
-            if fields & ANNOTATIONS:
-                annotations = merge_annotations(
-                    string_annotations=metadata_all.get("stringAnnotations", []),
-                    numeric_annotations=metadata_all.get("numericAnnotations", []),
-                )
+                if fields & ANNOTATIONS:
+                    annotations = merge_annotations(
+                        string_annotations=metadata_all.get("stringAnnotations", []),
+                        numeric_annotations=metadata_all.get("numericAnnotations", []),
+                    )
+        except Exception as e:
+            logger.warning(f"Error fetching entity[{entity_key}]: {e}")
 
         # Create and return entity
         return Entity(
