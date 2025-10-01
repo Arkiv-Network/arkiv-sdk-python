@@ -24,7 +24,7 @@ from web3 import Web3
 from web3.exceptions import Web3RPCError
 
 from arkiv import Arkiv
-from arkiv.types import AnnotationValue, EntityKey
+from arkiv.types import Annotations, EntityKey
 
 from .utils import create_account
 
@@ -57,14 +57,16 @@ def random_payload(size: int = 1024) -> bytes:
     return os.urandom(size)
 
 
-def random_annotations(client: int, entity_no: int) -> dict[str, AnnotationValue]:
-    return {
-        "client": client,
-        "entity": entity_no,
-        "type": random.choice(["test", "parallel", "demo"]),
-        "version": random.randint(1, 100),
-        "tag": "".join(random.choices(string.ascii_letters, k=8)),
-    }
+def random_annotations(client: int, entity_no: int) -> Annotations:
+    return Annotations(
+        {
+            "client": client,
+            "entity": entity_no,
+            "type": random.choice(["test", "parallel", "demo"]),
+            "version": random.randint(1, 100),
+            "tag": "".join(random.choices(string.ascii_letters, k=8)),
+        }
+    )
 
 
 def random_btl(btl_min: int = 100, btl_extension: int = 1000) -> int:

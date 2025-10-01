@@ -6,60 +6,47 @@ from typing import NewType
 
 from eth_typing import ChecksumAddress, HexStr
 from hexbytes import HexBytes
+from web3.datastructures import AttributeDict
+
+# Field bitmask values to specify which entity fields are populated
+PAYLOAD = 1
+ANNOTATIONS = 2
+METADATA = 4
+ALL = PAYLOAD | ANNOTATIONS | METADATA
+
 
 # Unique key for all entities
 EntityKey = NewType("EntityKey", HexStr)
 
-
-type AnnotationValue = str | int  # Only str or non-negative int allowed
-
-
-@dataclass(frozen=True)
-class Annotation:
-    """Class to represent annotations with string or non-negative integer values."""
-
-    key: str
-    value: AnnotationValue
-
-    def __post_init__(self) -> None:
-        """Validate that integer values are non-negative."""
-        if isinstance(self.value, int) and self.value < 0:
-            raise ValueError(
-                f"Integer annotation values must be non-negative, got: {self.value}"
-            )
-
-    # @override
-    def __repr__(self) -> str:
-        """Encode annotation as a string."""
-        return f"{type(self).__name__}({self.key} -> {self.value})"
-
-
-@dataclass(frozen=True)
-class Metadata:
-    """A class representing entity metadata."""
-
-    owner: ChecksumAddress
-    expires_at_block: int
+# Entity annotations
+Annotations = NewType("Annotations", dict[str, str | int])
 
 
 @dataclass(frozen=True)
 class Entity:
     """A class representing an entity."""
 
-    entity_key: EntityKey
-    metadata: Metadata | None
+    entity_key: EntityKey  # Unique identifier for the entity
+    fields: int  # Bitmask representing which fields are populated
+
+    # Populated when fields | METADATA returns true
+    owner: ChecksumAddress | None
+    expires_at_block: int | None
+
+    # Populated when fields | PAYLOAD returns true
     payload: bytes | None
-    annotations: dict[str, AnnotationValue] | None
+
+    # Populated when fields | ANNOTATIONS returns true
+    annotations: Annotations | None
 
 
 @dataclass(frozen=True)
 class CreateOp:
     """Class to represent a create operation."""
 
-    data: bytes
+    payload: bytes
+    annotations: Annotations
     btl: int
-    string_annotations: Sequence[Annotation]
-    numeric_annotations: Sequence[Annotation]
 
 
 @dataclass(frozen=True)
@@ -67,10 +54,9 @@ class UpdateOp:
     """Class to represent an update operation."""
 
     entity_key: EntityKey
-    data: bytes
+    payload: bytes
+    annotations: Annotations
     btl: int
-    string_annotations: Sequence[Annotation]
-    numeric_annotations: Sequence[Annotation]
 
 
 @dataclass(frozen=True)
@@ -164,3 +150,12 @@ class TransactionReceipt:
     updates: Sequence[UpdateReceipt]
     extensions: Sequence[ExtendReceipt]
     deletes: Sequence[DeleteReceipt]
+
+
+# Low level annotations for RLP encoding
+StringAnnotationsRlp = NewType("StringAnnotationsRlp", list[tuple[str, str]])
+NumericAnnotationsRlp = NewType("NumericAnnotationsRlp", list[tuple[str, int]])
+
+# Low level annotations for entity decoding
+StringAnnotations = NewType("StringAnnotations", AttributeDict[str, str])
+NumericAnnotations = NewType("NumericAnnotations", AttributeDict[str, int])

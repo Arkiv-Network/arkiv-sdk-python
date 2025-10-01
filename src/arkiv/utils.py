@@ -13,16 +13,18 @@ from web3.types import EventData, LogReceipt, TxParams, TxReceipt
 
 from . import contract
 from .contract import STORAGE_ADDRESS
-from .exceptions import EntityKeyException
+from .exceptions import AnnotationException, EntityKeyException
 from .types import (
-    Annotation,
-    AnnotationValue,
-    CreateOp,
+    Annotations,
     CreateReceipt,
     DeleteReceipt,
     EntityKey,
     ExtendReceipt,
+    NumericAnnotations,
+    NumericAnnotationsRlp,
     Operations,
+    StringAnnotations,
+    StringAnnotationsRlp,
     TransactionReceipt,
     UpdateReceipt,
 )
@@ -74,38 +76,6 @@ def is_hex_str(value: str) -> bool:
         return True
     except ValueError:
         return False
-
-
-def to_create_operation(
-    payload: bytes | None = None,
-    annotations: dict[str, AnnotationValue] | None = None,
-    btl: int = 0,
-) -> CreateOp:
-    """
-    Build a CreateOp for creating a single entity.
-
-    Args:
-        payload: Optional entity data payload
-        annotations: Optional key-value annotations
-        btl: Blocks to live (default: 0)
-
-    Returns:
-        CreateOp object ready to be used in Operations
-    """
-    # Ensure we have valid data
-    if not payload:
-        payload = b""
-
-    # Separate string and numeric annotations
-    string_annotations, numeric_annotations = split_annotations(annotations)
-
-    # Build and return CreateOp
-    return CreateOp(
-        data=payload,
-        btl=btl,
-        string_annotations=string_annotations,
-        numeric_annotations=numeric_annotations,
-    )
 
 
 def to_tx_params(
@@ -228,18 +198,14 @@ def get_event_data(contract: Contract, log: LogReceipt) -> EventData:
 def rlp_encode_transaction(tx: Operations) -> bytes:
     """Encode a transaction in RLP."""
 
-    def format_annotation(annotation: Annotation) -> tuple[str, AnnotationValue]:
-        return (annotation.key, annotation.value)
-
     # Turn the transaction into a list for RLP encoding
     payload = [
         # Create
         [
             [
                 element.btl,
-                element.data,
-                list(map(format_annotation, element.string_annotations)),
-                list(map(format_annotation, element.numeric_annotations)),
+                element.payload,
+                *split_annotations(element.annotations),
             ]
             for element in tx.creates
         ],
@@ -248,9 +214,8 @@ def rlp_encode_transaction(tx: Operations) -> bytes:
             [
                 entity_key_to_bytes(element.entity_key),
                 element.btl,
-                element.data,
-                list(map(format_annotation, element.string_annotations)),
-                list(map(format_annotation, element.numeric_annotations)),
+                element.payload,
+                *split_annotations(element.annotations),
             ]
             for element in tx.updates
         ],
@@ -277,36 +242,57 @@ def rlp_encode_transaction(tx: Operations) -> bytes:
 
 
 def split_annotations(
-    annotations: dict[str, AnnotationValue] | None = None,
-) -> tuple[list[Annotation], list[Annotation]]:
+    annotations: Annotations | None = None,
+) -> tuple[StringAnnotationsRlp, NumericAnnotationsRlp]:
     """Helper to split mixed annotations into string and numeric lists."""
-    string_annotations = []
-    numeric_annotations = []
+    string_annotations: StringAnnotationsRlp = StringAnnotationsRlp([])
+    numeric_annotations: NumericAnnotationsRlp = NumericAnnotationsRlp([])
 
     if annotations:
         for key, value in annotations.items():
-            annotation = Annotation(key=key, value=value)
-            if isinstance(value, str):
-                string_annotations.append(annotation)
-            elif isinstance(value, int):
-                numeric_annotations.append(annotation)
+            if isinstance(value, int):
+                if value < 0:
+                    raise AnnotationException(
+                        f"Numeric annotations must be non-negative but found '{value}' for key '{key}'"
+                    )
 
+                numeric_annotations.append((key, value))
+            else:
+                string_annotations.append((key, value))
+
+    logger.info(
+        f"Split annotations into {string_annotations} and {numeric_annotations}"
+    )
     return string_annotations, numeric_annotations
 
 
 def merge_annotations(
-    string_annotations: list[Annotation] | None = None,
-    numeric_annotations: list[Annotation] | None = None,
-) -> dict[str, AnnotationValue]:
-    """Helper to merge string and numeric annotations into a single dictionary."""
-    annotations: dict[str, AnnotationValue] = {}
+    string_annotations: StringAnnotations | None = None,
+    numeric_annotations: NumericAnnotations | None = None,
+) -> Annotations:
+    """Helper to merge string and numeric annotations into mixed annotations."""
+    annotations: Annotations = Annotations({})
 
     if string_annotations:
-        for annotation in string_annotations:
-            annotations[annotation.key] = annotation.value
+        # example: [AttributeDict({'key': 'type', 'value': 'Greeting'})]
+        for element in string_annotations:
+            logger.info(f"String annotation element: {element}")
+            if isinstance(element.value, str):
+                annotations[element.key] = element.value
+            else:
+                logger.warning(
+                    f"Unexpected string annotation, expected (str, str) but found: {element}, skipping ..."
+                )
 
     if numeric_annotations:
-        for annotation in numeric_annotations:
-            annotations[annotation.key] = annotation.value
+        # example: [AttributeDict({'key': 'version', 'value': 1})]
+        for element in numeric_annotations:
+            logger.info(f"Numeric annotation element: {element}")
+            if isinstance(element.value, int):
+                annotations[element.key] = element.value
+            else:
+                logger.warning(
+                    f"Unexpected numeric annotation, expected (str, int) but found: {element}, skipping ..."
+                )
 
     return annotations

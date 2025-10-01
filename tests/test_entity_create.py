@@ -7,8 +7,8 @@ from web3.types import TxReceipt
 
 from arkiv.client import Arkiv
 from arkiv.contract import STORAGE_ADDRESS
-from arkiv.types import Operations
-from arkiv.utils import check_entity_key, to_create_operation, to_receipt, to_tx_params
+from arkiv.types import Annotations, CreateOp, Operations
+from arkiv.utils import check_entity_key, to_receipt, to_tx_params
 
 logger = logging.getLogger(__name__)
 
@@ -31,16 +31,14 @@ class TestEntityCreate:
     def test_create_entity_via_web3(self, arkiv_client_http: Arkiv) -> None:
         """Test create_entity with custom payload checking against Web3 client behavior."""
         payload = b"Hello world!"
-        annotations: dict[str, str | int] = {"type": "Greeting", "version": 1}
+        annotations: Annotations = Annotations({"type": "Greeting", "version": 1})
         btl = 60  # 60 blocks to live
 
         # Get the expected sender address from client's default account
         expected_from_address = arkiv_client_http.eth.default_account
 
         # Wrap in Operations container
-        create_op = to_create_operation(
-            payload=payload, annotations=annotations, btl=btl
-        )
+        create_op = CreateOp(payload=payload, annotations=annotations, btl=btl)
         operations = Operations(creates=[create_op])
 
         # Convert to transaction parameters and send
@@ -132,18 +130,21 @@ class TestEntityCreate:
         assert entity.entity_key == entity_key, "Entity key should match"
         assert entity.payload == payload, "Entity payload should match"
         assert entity.annotations == annotations, "Entity annotations should match"
-        assert entity.metadata is not None, "Entity metadata should not be None"
-        assert entity.metadata.owner == expected_from_address, (
+        assert entity.owner == expected_from_address, (
             "Entity owner should match transaction sender"
         )
-        assert entity.metadata.expires_at_block > tx_receipt["blockNumber"], (
+        assert entity.expires_at_block is not None, (
+            "Entity should have an expiration block"
+        )
+        assert entity.expires_at_block > 0, "Entity expiration block should be positive"
+        assert entity.expires_at_block > tx_receipt["blockNumber"], (
             "Entity expiration block should be in the future"
         )
 
     def test_create_entity_simple(self, arkiv_client_http: Arkiv) -> None:
         """Test create_entity."""
         pl: bytes = b"Hello world!"
-        ann: dict[str, str | int] = {"type": "Greeting", "version": 1}
+        ann: Annotations = Annotations({"type": "Greeting", "version": 1})
         btl: int = 60
 
         entity_key, tx_hash = arkiv_client_http.arkiv.create_entity(
@@ -160,13 +161,13 @@ class TestEntityCreate:
         assert entity.entity_key == entity_key, f"{label}: Entity key should match"
         assert entity.payload == pl, f"{label}: Entity payload should match"
         assert entity.annotations == ann, f"{label}: Entity annotations should match"
-        assert entity.metadata is not None, (
-            f"{label}: Entity metadata should not be None"
-        )
-        assert entity.metadata.owner == arkiv_client_http.eth.default_account, (
+        assert entity.owner == arkiv_client_http.eth.default_account, (
             f"{label}: Entity owner should match transaction sender"
         )
-        assert entity.metadata.expires_at_block > 0, (
+        assert entity.expires_at_block is not None, (
+            f"{label}: Entity should have an expiration block"
+        )
+        assert entity.expires_at_block > 0, (
             f"{label}: Entity expiration block should be in the future"
         )
         logger.info(f"{label}: Entity creation and retrieval successful")

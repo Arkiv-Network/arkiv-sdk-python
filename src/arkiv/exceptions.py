@@ -5,6 +5,10 @@ class EntityKeyException(Exception):
     pass
 
 
+class AnnotationException(Exception):
+    pass
+
+
 class AccountNameException(Exception):
     pass
 

@@ -175,6 +175,10 @@ def main() -> None:
     password = getpass.getpass("Enter wallet password: ")
     encrypted = account.local_account.encrypt(password)
 
+    # Ensure address has 0x prefix (eth_account.encrypt doesn't include it)
+    if "address" in encrypted and not encrypted["address"].startswith("0x"):
+        encrypted["address"] = "0x" + encrypted["address"]
+
     with wallet_path.open("w") as f:
         json.dump(encrypted, f)
 

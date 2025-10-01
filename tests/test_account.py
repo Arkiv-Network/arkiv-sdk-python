@@ -1,6 +1,8 @@
 """Tests for NamedAccount functionality."""
 
 import json
+from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from eth_account import Account
@@ -364,3 +366,110 @@ class TestNamedAccountConsistency:
         assert imported.key == original.key
         assert imported.name == imported_name
         assert imported.name != original.name
+
+
+class TestAccountMain:
+    """Tests for the main() CLI function."""
+
+    def test_main_creates_wallet_file(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that main creates a wallet file with correct name."""
+        # Change to temp directory
+        monkeypatch.chdir(tmp_path)
+
+        # Mock command line args
+        with patch("sys.argv", ["account.py", "charlie"]):
+            # Mock getpass to return a password
+            with patch("getpass.getpass", return_value="test_password"):
+                # Mock print to capture output
+                with patch("builtins.print") as mock_print:
+                    from arkiv.account import main
+
+                    main()
+
+        # Verify wallet file was created
+        wallet_file = tmp_path / "wallet_charlie.json"
+        assert wallet_file.exists()
+
+        # Verify it's valid JSON
+        with wallet_file.open() as f:
+            wallet_data = json.load(f)
+            assert "address" in wallet_data
+            assert "crypto" in wallet_data
+
+        # Verify output was printed
+        assert mock_print.call_count >= 2
+
+    def test_main_sanitizes_special_characters(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that special characters in name are sanitized."""
+        monkeypatch.chdir(tmp_path)
+
+        with patch("sys.argv", ["account.py", "test@account#123"]):
+            with patch("getpass.getpass", return_value="password"):
+                with patch("builtins.print"):
+                    from arkiv.account import main
+
+                    main()
+
+        # Should create wallet_test_account_123.json
+        wallet_file = tmp_path / "wallet_test_account_123.json"
+        assert wallet_file.exists()
+
+    def test_main_exits_if_file_exists(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that main exits if wallet file already exists."""
+        monkeypatch.chdir(tmp_path)
+
+        # Create existing wallet file
+        existing_file = tmp_path / "wallet_existing.json"
+        existing_file.write_text("{}")
+
+        with patch("sys.argv", ["account.py", "existing"]):
+            with patch("builtins.print") as mock_print:
+                with pytest.raises(SystemExit) as exc_info:
+                    from arkiv.account import main
+
+                    main()
+
+        # Should exit with code 1
+        assert exc_info.value.code == 1
+
+        # Should print error message
+        mock_print.assert_called_once()
+        assert "already exists" in mock_print.call_args[0][0]
+
+    def test_main_wallet_can_be_decrypted(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that created wallet can be decrypted with the password."""
+        monkeypatch.chdir(tmp_path)
+        password = "secure_password_123"
+
+        with patch("sys.argv", ["account.py", "decrypt_test"]):
+            with patch("getpass.getpass", return_value=password):
+                with patch("builtins.print"):
+                    from arkiv.account import main
+
+                    main()
+
+        # Load and decrypt the wallet
+        wallet_file = tmp_path / "wallet_decrypt_test.json"
+        with wallet_file.open() as f:
+            wallet_json = f.read()
+
+        from eth_account import Account
+
+        # Should not raise an exception
+        private_key = Account.decrypt(wallet_json, password)
+        assert isinstance(private_key, bytes)
+        assert len(private_key) == 32
+
+        # Verify address matches for private key with address in wallet
+        account = Account.from_key(private_key)
+        assert account.address.startswith("0x")
+        assert len(account.address) == 42
+        assert account.address == json.loads(wallet_json)["address"]

@@ -4,31 +4,31 @@ import base64
 import logging
 from typing import TYPE_CHECKING, Any
 
+from eth_typing import ChecksumAddress
 from hexbytes import HexBytes
 from web3 import Web3
 from web3.types import TxParams, TxReceipt
 
 from .contract import EVENTS_ABI, FUNCTIONS_ABI, STORAGE_ADDRESS
 from .types import (
-    AnnotationValue,
+    ALL,
+    ANNOTATIONS,
+    METADATA,
+    PAYLOAD,
+    Annotations,
+    CreateOp,
     Entity,
     EntityKey,
-    Metadata,
     Operations,
     TransactionReceipt,
 )
-from .utils import merge_annotations, to_create_operation, to_receipt, to_tx_params
+from .utils import merge_annotations, to_receipt, to_tx_params
 
 # Deal with potential circular imports between client.py and module.py
 if TYPE_CHECKING:
     from .client import Arkiv
 
 logger = logging.getLogger(__name__)
-
-PAYLOAD = 1
-ANNOTATIONS = 2
-METADATA = 4
-ALL = PAYLOAD | ANNOTATIONS | METADATA
 
 TX_SUCCESS = 1
 
@@ -57,7 +57,7 @@ class ArkivModule:
     def create_entity(
         self,
         payload: bytes | None = None,
-        annotations: dict[str, AnnotationValue] | None = None,
+        annotations: Annotations | None = None,
         btl: int = 0,
         tx_params: TxParams | None = None,
     ) -> tuple[EntityKey, HexBytes]:
@@ -73,10 +73,14 @@ class ArkivModule:
         Returns:
             Transaction hash of the create operation
         """
+        # Check and set defaults
+        if not payload:
+            payload = b""
+        if not annotations:
+            annotations = Annotations({})
+
         # Create the operation
-        create_op = to_create_operation(
-            payload=payload, annotations=annotations, btl=btl
-        )
+        create_op = CreateOp(payload=payload, annotations=annotations, btl=btl)
 
         # Wrap in Operations container
         operations = Operations(creates=[create_op])
@@ -118,9 +122,10 @@ class ArkivModule:
             Entity object with the requested fields
         """
         # Gather the requested data
-        payload = None
-        metadata = None
-        annotations = None
+        owner: ChecksumAddress | None = None
+        expires_at_block: int | None = None
+        payload: bytes | None = None
+        annotations: Annotations | None = None
 
         # HINT: rpc methods to fetch entity content might change this is the place to adapt
         # get and decode payload if requested
@@ -133,21 +138,11 @@ class ArkivModule:
 
             if fields & METADATA:
                 # Convert owner address to checksummed format
-                owner_address = metadata_all.get("owner")
-                if not owner_address:
-                    raise ValueError("Entity metadata missing required owner field")
-                checksummed_owner = Web3.to_checksum_address(owner_address)
+                owner_metadata = metadata_all.get("owner")
+                owner = Web3.to_checksum_address(owner_metadata)
 
-                expires_at_block = metadata_all.get("expiresAtBlock")
-                if expires_at_block is None:
-                    raise ValueError(
-                        "Entity metadata missing required expiresAtBlock field"
-                    )
-
-                metadata = Metadata(
-                    owner=checksummed_owner,
-                    expires_at_block=int(expires_at_block),
-                )
+                expires_at_block_metadata = metadata_all.get("expiresAtBlock")
+                expires_at_block = int(expires_at_block_metadata)
 
             if fields & ANNOTATIONS:
                 annotations = merge_annotations(
@@ -158,8 +153,10 @@ class ArkivModule:
         # Create and return entity
         return Entity(
             entity_key=entity_key,
+            fields=fields,
+            owner=owner,
+            expires_at_block=expires_at_block,
             payload=payload,
-            metadata=metadata,
             annotations=annotations,
         )
 
