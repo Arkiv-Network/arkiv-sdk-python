@@ -67,6 +67,15 @@ def check_entity_key(entity_key: Any | None, label: str | None = None) -> None:
         raise EntityKeyException("Entity key should be a valid hex string")
 
 
+def is_entity_key(entity_key: Any | None) -> bool:
+    """Check if the provided value is a valid EntityKey."""
+    try:
+        check_entity_key(entity_key)
+        return True
+    except EntityKeyException:
+        return False
+
+
 def is_hex_str(value: str) -> bool:
     if not isinstance(value, str):
         return False

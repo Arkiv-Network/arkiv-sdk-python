@@ -11,6 +11,7 @@ from web3.datastructures import AttributeDict
 PAYLOAD = 1
 ANNOTATIONS = 2
 METADATA = 4
+NONE = 0
 ALL = PAYLOAD | ANNOTATIONS | METADATA
 
 # Transaction hash type

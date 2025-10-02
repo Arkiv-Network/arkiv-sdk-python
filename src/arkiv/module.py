@@ -157,6 +157,23 @@ class ArkivModule:
         entity_keys = [create.entity_key for create in receipt.creates]
         return entity_keys, receipt.tx_hash
 
+    def entity_exists(self, entity_key: EntityKey) -> bool:
+        """
+        Check if an entity exists storage.
+
+        Args:
+            entity_key: The entity key to check
+
+        Returns:
+            True if the entity exists, False otherwise
+        """
+        try:
+            self.client.eth.get_entity_metadata(entity_key)  # type: ignore[attr-defined]
+            return True
+
+        except Exception:
+            return False
+
     def get_entity(self, entity_key: EntityKey, fields: int = ALL) -> Entity:
         """
         Get an entity by its entity key.

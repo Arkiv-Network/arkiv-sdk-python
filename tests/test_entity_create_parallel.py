@@ -445,7 +445,11 @@ def get_parallel_entity_creation_parameters(
     if verify_sample_size_env:
         verify_sample_size = int(verify_sample_size_env)
 
-    return (clients, txs, batch_size, verify_sample_size)
+    parameters = (clients, txs, batch_size, verify_sample_size)
+    logger.info(
+        f"Using parallel entity creation parameters (clients, txs, batch_size, verify_sample_size): {parameters}"
+    )
+    return parameters
 
 
 @pytest.mark.parametrize(
