@@ -18,6 +18,7 @@ from .types import (
     PAYLOAD,
     Annotations,
     CreateOp,
+    DeleteOp,
     Entity,
     EntityKey,
     Operations,
@@ -53,7 +54,7 @@ class ArkivModule:
             logger.debug(f"Entity event {event.topic}: {event.signature}")
 
     def is_available(self) -> bool:
-        """Check if Arkiv functionality is available."""
+        """Check if Arkiv functionality is available. Should always be true for Arkiv clients."""
         return True
 
     def execute(
@@ -159,22 +160,35 @@ class ArkivModule:
         entity_keys = [create.entity_key for create in receipt.creates]
         return entity_keys, receipt.tx_hash
 
-    def entity_exists(self, entity_key: EntityKey) -> bool:
+    def delete_entity(
+        self,
+        entity_key: EntityKey,
+        tx_params: TxParams | None = None,
+    ) -> TxHash:
         """
-        Check if an entity exists storage.
+        Delete an entity from the Arkiv storage contract.
 
         Args:
-            entity_key: The entity key to check
+            entity_key: The entity key to delete
+            tx_params: Optional additional transaction parameters
 
         Returns:
-            True if the entity exists, False otherwise
+            Transaction hash of the delete operation
         """
-        try:
-            self.client.eth.get_entity_metadata(entity_key)  # type: ignore[attr-defined]
-            return True
+        # Create the delete operation
+        delete_op = DeleteOp(entity_key=entity_key)
 
-        except Exception:
-            return False
+        # Wrap in Operations container and execute
+        operations = Operations(deletes=[delete_op])
+        receipt = self.execute(operations, tx_params)
+
+        # Verify the delete succeeded
+        if len(receipt.deletes) != 1:
+            raise RuntimeError(
+                f"Expected 1 delete in receipt, got {len(receipt.deletes)}"
+            )
+
+        return receipt.tx_hash
 
     def transfer_eth(
         self,
@@ -215,6 +229,23 @@ class ArkivModule:
             logger.info(f"TX confirmed: {tx_receipt}")
 
         return tx_hash
+
+    def entity_exists(self, entity_key: EntityKey) -> bool:
+        """
+        Check if an entity exists storage.
+
+        Args:
+            entity_key: The entity key to check
+
+        Returns:
+            True if the entity exists, False otherwise
+        """
+        try:
+            self.client.eth.get_entity_metadata(entity_key)  # type: ignore[attr-defined]
+            return True
+
+        except Exception:
+            return False
 
     def get_entity(self, entity_key: EntityKey, fields: int = ALL) -> Entity:
         """

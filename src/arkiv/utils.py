@@ -169,10 +169,10 @@ def to_receipt(
             event_name = event_data["event"]
 
             entity_key: EntityKey = to_entity_key(event_args["entityKey"])
-            expiration_block: int = event_args["expirationBlock"]
 
             match event_name:
                 case contract.CREATED_EVENT:
+                    expiration_block: int = event_args["expirationBlock"]
                     creates.append(
                         CreateReceipt(
                             entity_key=entity_key,
@@ -180,6 +180,7 @@ def to_receipt(
                         )
                     )
                 case contract.UPDATED_EVENT:
+                    expiration_block = event_args["expirationBlock"]
                     updates.append(
                         UpdateReceipt(
                             entity_key=entity_key,
@@ -254,12 +255,7 @@ def rlp_encode_transaction(tx: Operations) -> bytes:
             for element in tx.updates
         ],
         # Delete
-        [
-            [
-                entity_key_to_bytes(element.entity_key),
-            ]
-            for element in tx.deletes
-        ],
+        [entity_key_to_bytes(element.entity_key) for element in tx.deletes],
         # Extend
         [
             [

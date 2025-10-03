@@ -21,9 +21,9 @@ class TestArkivClientCreation:
 
     def test_create_arkiv_without_provider(self) -> None:
         """Test creating Arkiv client without provider."""
-        client = Arkiv()
-        _assert_arkiv_client_properties(client, None, "Without Provider")
-        logger.info("Created Arkiv client without provider")
+        with Arkiv() as client:
+            _assert_arkiv_client_properties(client, None, "Without Provider")
+            logger.info("Created Arkiv client without provider")
 
     def test_create_arkiv_with_http_provider(self, arkiv_node) -> None:
         """Test creating Arkiv client with HTTP provider."""
@@ -136,14 +136,14 @@ class TestArkivClientRepr:
 
     def test_repr_connected_with_defaults(self) -> None:
         """Test repr of connected client with defaults."""
-        client = Arkiv()
-        repr_str = repr(client)
+        with Arkiv() as client:
+            repr_str = repr(client)
 
-        assert isinstance(repr_str, str), "Should return string"
-        assert "Arkiv" in repr_str, "Should contain class name"
-        assert "connected=True" in repr_str, "Should show connection status"
+            assert isinstance(repr_str, str), "Should return string"
+            assert "Arkiv" in repr_str, "Should contain class name"
+            assert "connected=True" in repr_str, "Should show connection status"
 
-        logger.info(f"Connected client repr: {repr_str}")
+            logger.info(f"Connected client repr: {repr_str}")
 
     def test_repr_connected_with_provider(self, arkiv_node) -> None:
         """Test repr of connected client."""
