@@ -21,6 +21,7 @@ from .types import (
     DeleteOp,
     Entity,
     EntityKey,
+    ExtendOp,
     Operations,
     TransactionReceipt,
     TxHash,
@@ -159,6 +160,38 @@ class ArkivModule:
 
         entity_keys = [create.entity_key for create in receipt.creates]
         return entity_keys, receipt.tx_hash
+
+    def extend_entity(
+        self,
+        entity_key: EntityKey,
+        number_of_blocks: int,
+        tx_params: TxParams | None = None,
+    ) -> TxHash:
+        """
+        Extend the lifetime of an entity by a specified number of blocks.
+
+        Args:
+            entity_key: The entity key to extend
+            number_of_blocks: Number of blocks to extend the entity's lifetime
+            tx_params: Optional additional transaction parameters
+
+        Returns:
+            Transaction hash of the extend operation
+        """
+        # Create the extend operation
+        extend_op = ExtendOp(entity_key=entity_key, number_of_blocks=number_of_blocks)
+
+        # Wrap in Operations container and execute
+        operations = Operations(extensions=[extend_op])
+        receipt = self.execute(operations, tx_params)
+
+        # Verify the extend succeeded
+        if len(receipt.extensions) != 1:
+            raise RuntimeError(
+                f"Expected 1 extension in receipt, got {len(receipt.extensions)}"
+            )
+
+        return receipt.tx_hash
 
     def delete_entity(
         self,

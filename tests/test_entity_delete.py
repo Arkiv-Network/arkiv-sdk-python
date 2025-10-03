@@ -7,7 +7,7 @@ import pytest
 from arkiv.client import Arkiv
 from arkiv.types import Annotations, CreateOp, DeleteOp, Operations
 
-from .utils import check_tx_hash
+from .utils import bulk_create_entities, check_tx_hash
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +100,9 @@ class TestEntityDelete:
             for i in range(3)
         ]
 
-        entity_keys, _ = arkiv_client_http.arkiv.create_entities(create_ops)
+        entity_keys = bulk_create_entities(
+            arkiv_client_http, create_ops, label="bulk_delete_test"
+        )
 
         logger.info(f"Created {len(entity_keys)} entities in bulk")
 
