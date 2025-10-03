@@ -87,7 +87,6 @@ class ArkivNode:
         image: str | None = None,
         http_port: int | None = None,
         ws_port: int | None = None,
-        auto_start: bool = False,
         http_url: str | None = None,
         ws_url: str | None = None,
     ) -> None:
@@ -98,7 +97,6 @@ class ArkivNode:
             image: Docker image to use (default: golemnetwork/golembase-op-geth:latest)
             http_port: Internal HTTP port (default: 8545)
             ws_port: Internal WebSocket port (default: 8546)
-            auto_start: Automatically start the node on initialization (default: False)
             http_url: External HTTP RPC URL (for external nodes, disables container)
             ws_url: External WebSocket RPC URL (for external nodes, disables container)
 
@@ -141,9 +139,6 @@ class ArkivNode:
         self._image = image or self.DEFAULT_IMAGE
         self._http_port = http_port or self.DEFAULT_HTTP_PORT
         self._ws_port = ws_port or self.DEFAULT_WS_PORT
-
-        if auto_start:
-            self.start()
 
     @property
     def http_url(self) -> str:

@@ -51,6 +51,37 @@ _load_env_if_available()
 
 
 @pytest.fixture(scope="session")
+def arkiv_container() -> Generator[ArkivNode, None, None]:
+    """
+    Provide a containerized ArkivNode for testing.
+
+    Creates and manages a local Docker-based Arkiv node.
+    Use this fixture for tests that need container-specific features.
+    """
+    logger.info("Creating containerized test ArkivNode...")
+    with ArkivNode() as node:
+        logger.info(f"Test node ready at {node.http_url}")
+        yield node
+
+
+@pytest.fixture(scope="session")
+def arkiv_testnet() -> ArkivNode:
+    """
+    Provide Kaolin testnet ArkivNode for testing.
+
+    Always points to the Kaolin testnet.
+    Use this fixture for tests that work with the public Kaolin testnet.
+    """
+    from arkiv.provider import HTTP, KAOLIN, NETWORK_URL, WS
+
+    http_url = NETWORK_URL[KAOLIN][HTTP]
+    ws_url = NETWORK_URL[KAOLIN][WS]
+
+    logger.info(f"Using Kaolin testnet: {http_url}")
+    return ArkivNode(http_url=http_url, ws_url=ws_url)
+
+
+@pytest.fixture(scope="session")
 def arkiv_node() -> Generator[ArkivNode, None, None]:
     """
     Provide an ArkivNode for testing.
@@ -58,6 +89,7 @@ def arkiv_node() -> Generator[ArkivNode, None, None]:
     If RPC_URL and WS_URL are set in environment, creates an ArkivNode
     configured for the external node (no container management).
     Otherwise, creates and manages a local containerized node.
+    Use this fixture for tests that work with either node type.
     """
     # Check for external node configuration
     rpc_url = os.getenv(RPC_URL_ENV)
