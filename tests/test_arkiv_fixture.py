@@ -81,3 +81,49 @@ def test_arkiv_accounts_are_funded(
     assert account_2_balance > 0, "Fixture account 2 should be funded"
 
     logger.info("Arkiv fixture accounts are funded (balances > 0)")
+
+
+def test_arkiv_transfer_eth_account(
+    arkiv_client_http: Arkiv, account_1: NamedAccount, account_2: NamedAccount
+) -> None:
+    """Test that ETH (GLM) transfer works."""
+    account_1_balance_before = arkiv_client_http.eth.get_balance(account_1.address)
+    account_2_balance_before = arkiv_client_http.eth.get_balance(account_2.address)
+    amount = 42
+
+    arkiv_client_http.arkiv.transfer_eth(account_2, amount)
+
+    account_1_balance_after = arkiv_client_http.eth.get_balance(account_1.address)
+    account_2_balance_after = arkiv_client_http.eth.get_balance(account_2.address)
+
+    assert account_2_balance_after == account_2_balance_before + amount, (
+        "Account 2 balance should increase by transfer amount"
+    )
+    assert account_1_balance_after <= account_1_balance_before - amount, (
+        "Account 1 balance should decrease by transfer amount"
+    )
+
+    logger.info("Arkiv ETH transfer between accounts succeeded (to: NamedAccount)")
+
+
+def test_arkiv_transfer_eth_address(
+    arkiv_client_http: Arkiv, account_1: NamedAccount, account_2: NamedAccount
+) -> None:
+    """Test that ETH (GLM) transfer works."""
+    account_1_balance_before = arkiv_client_http.eth.get_balance(account_1.address)
+    account_2_balance_before = arkiv_client_http.eth.get_balance(account_2.address)
+    amount = 42
+
+    arkiv_client_http.arkiv.transfer_eth(account_2.address, amount)
+
+    account_1_balance_after = arkiv_client_http.eth.get_balance(account_1.address)
+    account_2_balance_after = arkiv_client_http.eth.get_balance(account_2.address)
+
+    assert account_2_balance_after == account_2_balance_before + amount, (
+        "Account 2 balance should increase by transfer amount"
+    )
+    assert account_1_balance_after <= account_1_balance_before - amount, (
+        "Account 1 balance should decrease by transfer amount"
+    )
+
+    logger.info("Arkiv ETH transfer between accounts succeeded (to: checksum address)")

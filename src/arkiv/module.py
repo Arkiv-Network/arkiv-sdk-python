@@ -8,6 +8,8 @@ from eth_typing import ChecksumAddress, HexStr
 from web3 import Web3
 from web3.types import TxParams, TxReceipt
 
+from arkiv.account import NamedAccount
+
 from .contract import EVENTS_ABI, FUNCTIONS_ABI, STORAGE_ADDRESS
 from .types import (
     ALL,
@@ -174,7 +176,12 @@ class ArkivModule:
         except Exception:
             return False
 
-    def transfer_eth(self, to: ChecksumAddress, amount_wei: int) -> TxHash:
+    def transfer_eth(
+        self,
+        to: NamedAccount | ChecksumAddress,
+        amount_wei: int,
+        wait_for_confirmation: bool = True,
+    ) -> TxHash:
         """
         Transfer ETH to the given address.
 
@@ -185,14 +192,28 @@ class ArkivModule:
         Returns:
             Transaction hash of the transfer
         """
+        to_address: ChecksumAddress = to.address if isinstance(to, NamedAccount) else to
         tx_hash_bytes = self.client.eth.send_transaction(
             {
-                "to": to,
+                "to": to_address,
                 "value": Web3.to_wei(amount_wei, "wei"),
                 "gas": 21000,  # Standard gas for ETH transfer
             }
         )
         tx_hash = TxHash(HexStr(tx_hash_bytes.to_0x_hex()))
+        logger.info(f"TX sent: Transferring {amount_wei} wei to {to}: {tx_hash}")
+
+        if wait_for_confirmation:
+            logger.info("Waiting for TX confirmation ...")
+            tx_receipt: TxReceipt = self.client.eth.wait_for_transaction_receipt(
+                tx_hash
+            )
+            tx_status: int = tx_receipt["status"]
+            if tx_status != TX_SUCCESS:
+                raise RuntimeError(f"Transaction failed with status {tx_status}")
+
+            logger.info(f"TX confirmed: {tx_receipt}")
+
         return tx_hash
 
     def get_entity(self, entity_key: EntityKey, fields: int = ALL) -> Entity:
