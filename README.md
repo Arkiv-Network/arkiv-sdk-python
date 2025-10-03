@@ -24,22 +24,17 @@ It clearly communicates that arkiv is a module extension just like eth, net, etc
 Here's a "Hello World!" example showing how to use the Python Arkiv SDK:
 
 ```python
-from web3 import HTTPProvider
 from arkiv import Arkiv
 from arkiv.account import NamedAccount
-from arkiv.provider import ProviderBuilder
 
-with open ('wallet_alice.json', 'r') as f:
-    wallet = f.read()
-
-# Initialize Arkiv client (extends Web3)
-provider = ProviderBuilder().kaolin().build()
-account = NamedAccount.from_wallet('Alice', wallet, 's3cret')
-client = Arkiv(provider, account = account)
-
-# Check connection and balance
+# Create account and client that implicitly starts a local Arkiv node
+alice = NamedAccount.create('Alice')
+client = Arkiv(account=alice)
 print(f"Connected: {client.is_connected()}")
-print(f"Account balance: {client.eth.get_balance(account.address)}")
+
+# Fund the account
+client.node.fund_account(alice)
+print(f"Balance: {client.eth.get_balance(alice.address)}")
 
 # Create entity with data and annotations
 entity_key, tx_hash = client.arkiv.create_entity(
@@ -47,7 +42,10 @@ entity_key, tx_hash = client.arkiv.create_entity(
     annotations={"type": "greeting", "version": 1},
     btl = 1000
 )
-print(f"Created entity: {entity_key}")
+
+# Check and print entity key
+exists = client.arkiv.entity_exists(entity_key)
+print(f"Created entity: {entity_key}, exists={exists}")
 
 # Get individual entity and print its details
 entity = client.arkiv.get_entity(entity_key)
@@ -57,10 +55,31 @@ print(f"Entity: {entity}")
 # Clean up - delete entities
 client.arkiv.delete_entity(entity_key)
 print("Entities deleted")
+```
 
-# Verify deletion
-exists = client.arkiv.exists(entity_key)
-print(f"Entity 1 exists? {exists}")
+### Provider Builder
+
+The snippet below demonstrates the creation of various nodes to connect to using the `ProviderBuilder`.
+
+```python
+from arkiv import Arkiv
+from arkiv.account import NamedAccount
+from arkiv.provider import ProviderBuilder
+
+# Create account from wallet json
+with open ('wallet_bob.json', 'r') as f:
+    wallet = f.read()
+
+bob = NamedAccount.from_wallet('Bob', wallet, 's3cret')
+
+# Initialize Arkiv client connected to Kaolin (Akriv testnet)
+provider = ProviderBuilder().kaolin().build()
+client = Arkiv(provider, account=bob)
+
+# Additional builder examples
+provider_container = ProviderBuilder().node().build()
+provider_kaolin_ws = ProviderBuilder().kaolin().ws().build()
+provider_custom = ProviderBuilder().custom("https://my-rpc.io").build()
 ```
 
 ### Web3 Standard Support
