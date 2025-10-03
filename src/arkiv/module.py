@@ -174,6 +174,27 @@ class ArkivModule:
         except Exception:
             return False
 
+    def transfer_eth(self, to: ChecksumAddress, amount_wei: int) -> TxHash:
+        """
+        Transfer ETH to the given address.
+
+        Args:
+            to: The recipient address or a named account
+            amount_wei: The amount of ETH to transfer in wei
+
+        Returns:
+            Transaction hash of the transfer
+        """
+        tx_hash_bytes = self.client.eth.send_transaction(
+            {
+                "to": to,
+                "value": Web3.to_wei(amount_wei, "wei"),
+                "gas": 21000,  # Standard gas for ETH transfer
+            }
+        )
+        tx_hash = TxHash(HexStr(tx_hash_bytes.to_0x_hex()))
+        return tx_hash
+
     def get_entity(self, entity_key: EntityKey, fields: int = ALL) -> Entity:
         """
         Get an entity by its entity key.

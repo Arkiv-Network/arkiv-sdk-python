@@ -4,6 +4,7 @@ import pytest
 from web3.providers import HTTPProvider, WebSocketProvider
 from web3.providers.base import BaseProvider
 
+from arkiv.node import ArkivNode
 from arkiv.provider import (
     DEFAULT_PORT,
     HTTP,
@@ -223,6 +224,59 @@ class TestProviderBuilderCustom:
         builder = ProviderBuilder().kaolin().custom("https://my-rpc.io")
 
         assert builder._network is None
+
+
+class TestProviderBuilderNode:
+    """Test ArkivNode integration."""
+
+    def test_provider_node_with_existing_node(self) -> None:
+        """Test node() with an existing ArkivNode instance."""
+        with ArkivNode() as node:
+            provider = ProviderBuilder().node(node).build()
+            assert_provider(
+                provider,
+                HTTPProvider,
+                node.http_url,
+                "test_provider_node_with_existing_node",
+            )
+
+    def test_provider_node_auto_creates_node(self) -> None:
+        """Test node() auto-creates and starts a new ArkivNode when None is passed."""
+        provider = ProviderBuilder().node().build()
+        assert isinstance(provider, HTTPProvider)
+        # URL should match the ArkivNode default format
+        assert provider.endpoint_uri.startswith("http://")
+
+    def test_provider_node_auto_starts_node(self) -> None:
+        """Test node() auto-starts a node that isn't running."""
+        node = ArkivNode()
+        assert not node.is_running()
+
+        provider = ProviderBuilder().node(node).build()
+        assert node.is_running()
+        assert isinstance(provider, HTTPProvider)
+        assert provider.endpoint_uri == node.http_url
+
+        # Cleanup
+        node.stop()
+
+    def test_provider_node_with_websocket(self) -> None:
+        """Test node() can be combined with ws() transport."""
+        with ArkivNode() as node:
+            provider = ProviderBuilder().node(node).ws().build()
+            # Should use the node's WebSocket URL
+            assert isinstance(provider, WebSocketProvider)
+            assert provider.endpoint_uri == node.ws_url
+
+    def test_provider_node_sets_correct_state(self) -> None:
+        """Test node() sets correct internal state."""
+        with ArkivNode() as node:
+            builder = ProviderBuilder().node(node)
+
+            assert builder._node is node
+            assert builder._url is None  # URL determined in build()
+            assert builder._network is None
+            assert builder._port is None
 
 
 class TestProviderBuilderTransportSwitching:

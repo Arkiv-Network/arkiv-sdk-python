@@ -89,43 +89,48 @@ name = "arkiv-sdk"
 version = "1.0.0a1"
 source = { editable = "." }
 dependencies = [
-    { name = "pytest" },
     { name = "web3" },
 ]
 
-[package.dev-dependencies]
+[package.optional-dependencies]
 dev = [
-    { name = "pytest-cov" },
-    { name = "python-dotenv" },
+    { name = "testcontainers" },
+    { name = "websockets" },
 ]
+
+[package.dev-dependencies]
 lint = [
     { name = "mypy" },
     { name = "pre-commit" },
     { name = "ruff" },
 ]
 test = [
+    { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "python-dotenv" },
     { name = "testcontainers" },
     { name = "websockets" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "pytest", specifier = ">=8.4.2" },
+    { name = "testcontainers", marker = "extra == 'dev'", specifier = ">=4.13.1" },
     { name = "web3", specifier = ">=7.13.0,<7.14.0" },
+    { name = "websockets", marker = "extra == 'dev'", specifier = ">=13.0" },
 ]
+provides-extras = ["dev"]
 
 [package.metadata.requires-dev]
-dev = [
-    { name = "pytest-cov", specifier = ">=7.0.0" },
-    { name = "python-dotenv", specifier = ">=1.0.0" },
-]
 lint = [
     { name = "mypy", specifier = ">=1.13.0" },
     { name = "pre-commit", specifier = ">=4.0.0" },
     { name = "ruff", specifier = "==0.13.2" },
 ]
 test = [
-    { name = "testcontainers", specifier = "==4.13.1" },
+    { name = "pytest", specifier = ">=8.4.2" },
+    { name = "pytest-cov", specifier = ">=7.0.0" },
+    { name = "python-dotenv", specifier = ">=1.0.0" },
+    { name = "testcontainers", specifier = ">=4.13.1" },
     { name = "websockets", specifier = ">=13.0" },
 ]
 

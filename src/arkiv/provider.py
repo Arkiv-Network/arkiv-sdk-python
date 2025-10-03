@@ -1,9 +1,15 @@
 """Provider builder for creating Web3 providers with Arkiv presets."""
 
-from typing import Literal, cast
+from __future__ import annotations
+
+import logging
+from typing import TYPE_CHECKING, Literal, cast
 
 from web3.providers import HTTPProvider, WebSocketProvider
 from web3.providers.base import BaseProvider
+
+if TYPE_CHECKING:
+    from .node import ArkivNode
 
 # Networks
 LOCALHOST = "localhost"
@@ -31,6 +37,8 @@ NETWORK_URL = {
 
 TransportType = Literal["http", "ws"]
 
+logger = logging.getLogger(__name__)
+
 
 class ProviderBuilder:
     """
@@ -41,6 +49,8 @@ class ProviderBuilder:
       - ProviderBuilder().localhost(9000).ws().build()        # ws://127.0.0.1:9000
       - ProviderBuilder().kaolin().build()                    # https://kaolin.hoodi.arkiv.network/rpc
       - ProviderBuilder().custom("https://my-rpc.io").build() # https://my-rpc.io
+      - ProviderBuilder().node().build()                      # Auto-creates and starts ArkivNode
+      - ProviderBuilder().node(my_node).ws().build()          # Use existing node with WebSocket
     """
 
     def __init__(self) -> None:
@@ -49,8 +59,9 @@ class ProviderBuilder:
         self._transport: TransportType = cast(TransportType, TRANSPORT_DEFAULT)
         self._port: int | None = DEFAULT_PORT  # Set default port for localhost
         self._url: str | None = None
+        self._node: ArkivNode | None = None
 
-    def localhost(self, port: int | None = None) -> "ProviderBuilder":
+    def localhost(self, port: int | None = None) -> ProviderBuilder:
         """
         Configure for localhost development node.
 
@@ -65,7 +76,7 @@ class ProviderBuilder:
         self._url = None
         return self
 
-    def kaolin(self) -> "ProviderBuilder":
+    def kaolin(self) -> ProviderBuilder:
         """
         Configure for Kaolin testnet.
 
@@ -77,7 +88,7 @@ class ProviderBuilder:
         self._port = None
         return self
 
-    def custom(self, url: str) -> "ProviderBuilder":
+    def custom(self, url: str) -> ProviderBuilder:
         """
         Configure with custom RPC URL.
 
@@ -92,7 +103,53 @@ class ProviderBuilder:
         self._port = None
         return self
 
-    def http(self) -> "ProviderBuilder":
+    def node(self, arkiv_node: ArkivNode | None = None) -> ProviderBuilder:
+        """
+        Configure for a local ArkivNode instance.
+
+        If no node is provided, creates a new ArkivNode and starts it.
+        The node will be auto-started if not already running.
+
+        The URL will be selected based on the current transport setting (HTTP or WebSocket).
+        You can chain .http() or .ws() to switch transports.
+
+        Args:
+            arkiv_node: ArkivNode instance to connect to, or None to create a new one
+
+        Returns:
+            Self for method chaining
+
+        Examples:
+            With existing node:
+                >>> from arkiv.node import ArkivNode
+                >>> node = ArkivNode()
+                >>> provider = ProviderBuilder().node(node).build()
+
+            Auto-create node:
+                >>> provider = ProviderBuilder().node().build()
+
+            Use WebSocket transport:
+                >>> provider = ProviderBuilder().node(node).ws().build()
+        """
+        from .node import ArkivNode
+
+        if arkiv_node is None:
+            arkiv_node = ArkivNode()
+
+        # Auto-start the node if not running
+        if not arkiv_node.is_running():
+            logger.debug("Auto-starting managed ArkivNode...")
+            arkiv_node.start()
+
+        # Store the node reference and clear network/port
+        # The URL will be determined in build() based on transport
+        self._node = arkiv_node
+        self._network = None
+        self._port = None
+        self._url = None
+        return self
+
+    def http(self) -> ProviderBuilder:
         """
         Use HTTP transport.
 
@@ -102,7 +159,7 @@ class ProviderBuilder:
         self._transport = cast(TransportType, HTTP)
         return self
 
-    def ws(self) -> "ProviderBuilder":
+    def ws(self) -> ProviderBuilder:
         """
         Use WebSocket transport.
 
@@ -124,8 +181,15 @@ class ProviderBuilder:
             ValueError: If no URL has been configured or if transport is not available
         """
         url: str
-        # Custom URL overrides network constant
-        if self._url is not None:
+        # Top priority: Check if we have an ArkivNode reference
+        if self._node is not None:
+            # Get URL from node based on transport
+            if self._transport == HTTP:
+                url = self._node.http_url
+            else:
+                url = self._node.ws_url
+        # 2nd priority: Custom URL overrides network constant
+        elif self._url is not None:
             url = self._url
         # Fallback: Get URL from network constants
         elif self._network is not None:

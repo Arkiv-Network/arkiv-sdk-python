@@ -145,13 +145,27 @@ class TestArkivClientRepr:
         client = Arkiv()
         repr_str = repr(client)
 
+        # Stop default node
+        client.node.stop()
+
         assert isinstance(repr_str, str), "Should return string"
         assert "Arkiv" in repr_str, "Should contain class name"
-        assert "connected=False" in repr_str, "Should show connection status"
+        assert "connected=False" not in repr_str, "Should not show disconnected"
 
-        logger.info(f"Disconnected client repr: {repr_str}")
+    def test_repr_connected_with_defaults(self) -> None:
+        """Test repr of connected client with defaults."""
+        client = Arkiv()
+        repr_str = repr(client)
 
-    def test_repr_connected(self, arkiv_node: tuple[object, str, str]) -> None:
+        assert isinstance(repr_str, str), "Should return string"
+        assert "Arkiv" in repr_str, "Should contain class name"
+        assert "connected=True" in repr_str, "Should show connection status"
+
+        logger.info(f"Connected client repr: {repr_str}")
+
+    def test_repr_connected_with_provider(
+        self, arkiv_node: tuple[object, str, str]
+    ) -> None:
         """Test repr of connected client."""
         _, http_url, _ = arkiv_node
         provider = HTTPProvider(http_url)
@@ -222,21 +236,6 @@ class TestArkivClientConstants:
         assert Arkiv.ACCOUNT_NAME_DEFAULT == "default", "Default should be 'default'"
 
         logger.info(f"Default account name: {Arkiv.ACCOUNT_NAME_DEFAULT}")
-
-
-class TestArkivClientErrorHandling:
-    """Test error handling in Arkiv client creation and operations."""
-
-    def test_invalid_provider_handling(self) -> None:
-        """Test handling of invalid provider."""
-        # This should not raise an exception during creation
-        client = Arkiv(None)
-        assert isinstance(client, Arkiv), "Should create instance with None provider"
-
-        # But connection should fail
-        assert not client.is_connected(), "Should not be connected with None provider"
-
-        logger.info("Properly handled None provider")
 
 
 def _assert_arkiv_client_properties(
