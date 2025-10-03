@@ -25,35 +25,26 @@ class TestArkivClientCreation:
         _assert_arkiv_client_properties(client, None, "Without Provider")
         logger.info("Created Arkiv client without provider")
 
-    def test_create_arkiv_with_http_provider(
-        self, arkiv_node: tuple[object, str, str]
-    ) -> None:
+    def test_create_arkiv_with_http_provider(self, arkiv_node) -> None:
         """Test creating Arkiv client with HTTP provider."""
-        _, http_url, _ = arkiv_node
-        provider = HTTPProvider(http_url)
+        provider = HTTPProvider(arkiv_node.http_url)
         client = Arkiv(provider)
 
         _assert_arkiv_client_properties(client, None, "With HTTP Provider")
         logger.info("Created Arkiv client with HTTP provider")
 
-    def test_create_arkiv_with_account(
-        self, arkiv_node: tuple[object, str, str]
-    ) -> None:
+    def test_create_arkiv_with_account(self, arkiv_node) -> None:
         """Test creating Arkiv client with default account."""
-        _, http_url, _ = arkiv_node
-        provider = HTTPProvider(http_url)
+        provider = HTTPProvider(arkiv_node.http_url)
         account = NamedAccount.create("test_account")
         client = Arkiv(provider, account=account)
 
         _assert_arkiv_client_properties(client, account, "With Account")
         logger.info("Created Arkiv client with default account")
 
-    def test_create_arkiv_with_kwargs(
-        self, arkiv_node: tuple[object, str, str]
-    ) -> None:
+    def test_create_arkiv_with_kwargs(self, arkiv_node) -> None:
         """Test creating Arkiv client with additional kwargs."""
-        _, http_url, _ = arkiv_node
-        provider = HTTPProvider(http_url)
+        provider = HTTPProvider(arkiv_node.http_url)
 
         # Test with middleware parameter (empty list is a valid kwarg)
         client = Arkiv(provider, middleware=[])
@@ -65,12 +56,9 @@ class TestArkivClientCreation:
 class TestArkivClientAccountManagement:
     """Test account management in Arkiv client."""
 
-    def test_switch_to_existing_account(
-        self, arkiv_node: tuple[object, str, str]
-    ) -> None:
+    def test_switch_to_existing_account(self, arkiv_node) -> None:
         """Test switching to an existing account."""
-        _, http_url, _ = arkiv_node
-        provider = HTTPProvider(http_url)
+        provider = HTTPProvider(arkiv_node.http_url)
         account1 = NamedAccount.create("account1")
         client = Arkiv(provider, account=account1)
 
@@ -97,12 +85,9 @@ class TestArkivClientAccountManagement:
 
         logger.info("Successfully switched between accounts")
 
-    def test_switch_to_nonexistent_account(
-        self, arkiv_node: tuple[object, str, str]
-    ) -> None:
+    def test_switch_to_nonexistent_account(self, arkiv_node) -> None:
         """Test switching to a non-existent account raises exception."""
-        _, http_url, _ = arkiv_node
-        provider = HTTPProvider(http_url)
+        provider = HTTPProvider(arkiv_node.http_url)
         client = Arkiv(provider)
 
         with pytest.raises(NamedAccountNotFoundException) as exc_info:
@@ -113,12 +98,9 @@ class TestArkivClientAccountManagement:
 
         logger.info("Properly handled non-existent account switch")
 
-    def test_switch_account_removes_old_middleware(
-        self, arkiv_node: tuple[object, str, str]
-    ) -> None:
+    def test_switch_account_removes_old_middleware(self, arkiv_node) -> None:
         """Test that switching accounts properly removes old middleware."""
-        _, http_url, _ = arkiv_node
-        provider = HTTPProvider(http_url)
+        provider = HTTPProvider(arkiv_node.http_url)
         account = NamedAccount.create("initial_account")
         client = Arkiv(provider, account=account)
 
@@ -163,12 +145,9 @@ class TestArkivClientRepr:
 
         logger.info(f"Connected client repr: {repr_str}")
 
-    def test_repr_connected_with_provider(
-        self, arkiv_node: tuple[object, str, str]
-    ) -> None:
+    def test_repr_connected_with_provider(self, arkiv_node) -> None:
         """Test repr of connected client."""
-        _, http_url, _ = arkiv_node
-        provider = HTTPProvider(http_url)
+        provider = HTTPProvider(arkiv_node.http_url)
         client = Arkiv(provider)
 
         repr_str = repr(client)
@@ -183,12 +162,9 @@ class TestArkivClientRepr:
 class TestArkivClientInheritance:
     """Test that Arkiv properly inherits from Web3."""
 
-    def test_inherits_web3_attributes(
-        self, arkiv_node: tuple[object, str, str]
-    ) -> None:
+    def test_inherits_web3_attributes(self, arkiv_node) -> None:
         """Test that Arkiv client has all expected Web3 attributes."""
-        _, http_url, _ = arkiv_node
-        provider = HTTPProvider(http_url)
+        provider = HTTPProvider(arkiv_node.http_url)
         client = Arkiv(provider)
 
         # Test core Web3 attributes
@@ -204,12 +180,9 @@ class TestArkivClientInheritance:
 
         logger.info("Arkiv client properly inherits Web3 attributes")
 
-    def test_arkiv_specific_attributes(
-        self, arkiv_node: tuple[object, str, str]
-    ) -> None:
+    def test_arkiv_specific_attributes(self, arkiv_node) -> None:
         """Test that Arkiv client has its specific attributes."""
-        _, http_url, _ = arkiv_node
-        provider = HTTPProvider(http_url)
+        provider = HTTPProvider(arkiv_node.http_url)
         client = Arkiv(provider)
 
         # Test Arkiv-specific attributes

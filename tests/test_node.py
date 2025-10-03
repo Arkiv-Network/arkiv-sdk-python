@@ -1,4 +1,4 @@
-"""Tests for Arkiv client connection and basic functionality."""
+"""Tests for Arkiv node connection and basic functionality."""
 
 import asyncio
 import json
@@ -6,20 +6,19 @@ import logging
 
 import pytest
 import requests
-from testcontainers.core.container import DockerContainer
+
+from arkiv.node import ArkivNode
 
 logger = logging.getLogger(__name__)
 
 
-def test_node_connection_http(arkiv_node: tuple[DockerContainer, str, str]) -> None:
+def test_node_connection_http(arkiv_node: ArkivNode) -> None:
     """Check if the Arkiv node is available and responsive via JSON-RPC."""
-    _, rpc_url, _ = arkiv_node
-
     # Use JSON-RPC call - works for both dev and production nodes
     rpc_payload = {"jsonrpc": "2.0", "method": "eth_chainId", "params": [], "id": 1}
 
     response = requests.post(
-        rpc_url,
+        arkiv_node.http_url,
         json=rpc_payload,
         headers={"Content-Type": "application/json"},
         timeout=10,
@@ -38,16 +37,12 @@ def test_node_connection_http(arkiv_node: tuple[DockerContainer, str, str]) -> N
         "Response should have jsonrpc version 2.0"
     )
 
-    logger.info(f"HTTP connection successful: {rpc_url}")
+    logger.info(f"HTTP connection successful: {arkiv_node.http_url}")
     logger.info(f"Request response: {json_response}")
 
 
-def test_node_connection_ws(
-    arkiv_node: tuple[DockerContainer, str, str],
-) -> None:
+def test_node_connection_ws(arkiv_node: ArkivNode) -> None:
     """Check if the Arkiv node WebSocket endpoint is available and responsive."""
-    _, _, ws_url = arkiv_node
-
     # Try to import websockets, skip test if not available
     try:
         import websockets
@@ -56,7 +51,7 @@ def test_node_connection_ws(
 
     async def test_ws_connection() -> dict[str, object]:
         """Test WebSocket connection and send a JSON-RPC request."""
-        async with websockets.connect(ws_url, open_timeout=5) as websocket:
+        async with websockets.connect(arkiv_node.ws_url, open_timeout=5) as websocket:
             # Send a JSON-RPC request over WebSocket
             request = {"jsonrpc": "2.0", "method": "eth_chainId", "params": [], "id": 1}
 
@@ -78,18 +73,17 @@ def test_node_connection_ws(
     )
     assert response.get("id") == 1, "WebSocket response should have matching request id"
 
-    logger.info(f"WebSocket connection successful: {ws_url}")
+    logger.info(f"WebSocket connection successful: {arkiv_node.ws_url}")
     logger.info(f"Chain ID response: {response.get('result', 'N/A')}")
 
 
-def test_node_arkiv_help(arkiv_node: tuple[DockerContainer, str, str]) -> None:
+def test_node_arkiv_help(arkiv_node: ArkivNode) -> None:
     """Check if the Arkiv node help command is available and responsive."""
-    arkiv_container, _, _ = arkiv_node
-    if arkiv_container is None:
-        pytest.skip("No Arkiv node container available for testing")
+    if arkiv_node.is_external():
+        pytest.skip("Skipping help command test for external nodes")
 
     help_command = ["golembase", "account", "help"]
-    exit_code, output = arkiv_container.exec(help_command)
+    exit_code, output = arkiv_node.container.exec(help_command)
     logger.info(
         f"Account help command: {help_command}, exit_code: {exit_code}, output:\n{output.decode()}"
     )

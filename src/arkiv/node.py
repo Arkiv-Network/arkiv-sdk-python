@@ -22,25 +22,59 @@ logger = logging.getLogger(__name__)
 
 class ArkivNode:
     """
-    Local and fully functional Arkiv development node using Docker containers.
+    Arkiv node for development and testing - supports both containerized and external nodes.
 
-    Examples:
-        Context manager (recommended):
-            >>> from arkiv.node import ArkivNode
-            >>> from arkiv import Arkiv
-            >>> with ArkivNode() as node:
-            ...     arkiv = Arkiv.from_node(node)
-            ...     assert arkiv.is_connected()
+    This class provides two modes of operation:
 
-        Quick prototyping:
-            >>> node = ArkivNode()
-            >>> arkiv = Arkiv.from_node(node)  # Starts automatically
-            >>> # ... do work ...
-            >>> node.stop()  # Don't forget cleanup
+    1. **Containerized Node (default)**: Automatically manages a local Docker container
+       running an Arkiv node for quick prototyping and testing.
+
+    2. **External Node**: Connects to an existing external Arkiv node (e.g., testnet,
+       mainnet) by providing HTTP and WebSocket URLs.
 
     Note:
-        Requires Docker to be running and testcontainers package to be installed:
-            pip install arkiv-sdk[dev]
+        Most users don't need to use ArkivNode directly. The Arkiv client automatically
+        creates and manages a node when instantiated without a provider:
+
+            >>> from arkiv import Arkiv
+            >>> from arkiv.node import ArkivNode
+            >>> with Arkiv() as client:
+            ...     assert client.is_connected()
+            ...     node: ArkivNode = client.node
+            ...     # do work
+
+    Containerized Mode Examples:
+        Explicit node management:
+            >>> from arkiv import Arkiv
+            >>> from arkiv.node import ArkivNode
+            >>> from arkiv.provider import ProviderBuilder
+            >>> with ArkivNode() as node:
+            ...     provider = ProviderBuilder().node(node).build()
+            ...     arkiv = Arkiv(provider)
+            ...     assert arkiv.is_connected()
+
+    External Node Examples:
+        Connect to external network (e.g., testnet/mainnet):
+            >>> from arkiv import Arkiv
+            >>> from arkiv.node import ArkivNode
+            >>> from arkiv.provider import ProviderBuilder
+            >>> with ArkivNode(http_url="...", ws_url="...") as node:
+            ...     provider = ProviderBuilder().node(node).build()
+            ...     arkiv = Arkiv(provider)
+            ...     # Use arkiv...
+            ... # No cleanup - external node remains running
+
+    Advanced Use Cases:
+        - Custom Docker images or ports for containerized nodes
+        - Sharing a single node across multiple test fixtures
+        - Direct access to container for CLI commands (containerized only)
+        - Using nodes in pytest fixtures (see tests/conftest.py)
+
+    Attributes:
+        - Containerized nodes require Docker and testcontainers: `pip install arkiv-sdk[dev]`
+        - External nodes cannot be started, stopped, or have accounts funded via the SDK
+        - External node accounts must be pre-funded through external means
+        - Context manager works safely with both modes (no-op for external nodes)
     """
 
     DEFAULT_IMAGE = "golemnetwork/golembase-op-geth:latest"
@@ -54,6 +88,8 @@ class ArkivNode:
         http_port: int | None = None,
         ws_port: int | None = None,
         auto_start: bool = False,
+        http_url: str | None = None,
+        ws_url: str | None = None,
     ) -> None:
         """
         Initialize the Arkiv node.
@@ -63,26 +99,48 @@ class ArkivNode:
             http_port: Internal HTTP port (default: 8545)
             ws_port: Internal WebSocket port (default: 8546)
             auto_start: Automatically start the node on initialization (default: False)
+            http_url: External HTTP RPC URL (for external nodes, disables container)
+            ws_url: External WebSocket RPC URL (for external nodes, disables container)
 
         Raises:
-            ImportError: If testcontainers is not installed
+            ImportError: If testcontainers is not installed (only for containerized nodes)
+            ValueError: If only one of http_url/ws_url is provided
         """
+        # Initialize common attributes first
+        self._container: DockerContainer | None = None
+        self._http_url: str = ""
+        self._ws_url: str = ""
+        self._is_running: bool = False
+        self._is_external: bool = False
+
+        # Check if this is an external node configuration
+        if http_url or ws_url:
+            if not (http_url and ws_url):
+                raise ValueError(
+                    "Both http_url and ws_url must be provided for external nodes"
+                )
+            # External node configuration - no container needed
+            self._image = ""
+            self._http_port = 0
+            self._ws_port = 0
+            self._http_url = http_url
+            self._ws_url = ws_url
+            self._is_running = True  # External nodes are always "running"
+            self._is_external = True
+            return
+
+        # Containerized node configuration
         try:
             import testcontainers  # noqa: F401
         except ImportError as e:
             raise ImportError(
-                "ArkivNode requires testcontainers. "
+                "ArkivNode requires testcontainers for containerized nodes. "
                 "Install with: pip install 'arkiv-sdk[dev]' or pip install testcontainers"
             ) from e
 
         self._image = image or self.DEFAULT_IMAGE
         self._http_port = http_port or self.DEFAULT_HTTP_PORT
         self._ws_port = ws_port or self.DEFAULT_WS_PORT
-
-        self._container: DockerContainer | None = None
-        self._http_url: str = ""
-        self._ws_url: str = ""
-        self._is_running: bool = False
 
         if auto_start:
             self.start()
@@ -93,7 +151,7 @@ class ArkivNode:
         Returns the HTTP RPC endpoint URL.
 
         Raises:
-            RuntimeError: If node is not running
+            RuntimeError: If node is not running (for containerized nodes only)
         """
         if not self._is_running:
             raise RuntimeError(
@@ -107,7 +165,7 @@ class ArkivNode:
         Returns the WebSocket RPC endpoint URL.
 
         Raises:
-            RuntimeError: If node is not running
+            RuntimeError: If node is not running (for containerized nodes only)
         """
         if not self._is_running:
             raise RuntimeError(
@@ -121,8 +179,10 @@ class ArkivNode:
         Returns the mapped HTTP port number.
 
         Raises:
-            RuntimeError: If node is not running
+            RuntimeError: If node is not running or is an external node
         """
+        if self._is_external:
+            raise RuntimeError("External nodes do not expose port information")
         if not self._is_running or not self._container:
             raise RuntimeError(
                 "Node is not running. Call start() first or use context manager."
@@ -135,8 +195,10 @@ class ArkivNode:
         Returns the mapped WebSocket port number.
 
         Raises:
-            RuntimeError: If node is not running
+            RuntimeError: If node is not running or is an external node
         """
+        if self._is_external:
+            raise RuntimeError("External nodes do not expose port information")
         if not self._is_running or not self._container:
             raise RuntimeError(
                 "Node is not running. Call start() first or use context manager."
@@ -152,13 +214,24 @@ class ArkivNode:
             The testcontainers DockerContainer instance
 
         Raises:
-            RuntimeError: If node is not running
+            RuntimeError: If node is an external node or not running
         """
+        if self._is_external:
+            raise RuntimeError("External nodes do not have containers")
         if not self._container:
             raise RuntimeError(
                 "Container not available. Call start() first or use context manager."
             )
         return self._container
+
+    def is_external(self) -> bool:
+        """
+        Check if this node is configured as an external node.
+
+        Returns:
+            True if the node is external, False if containerized
+        """
+        return self._is_external
 
     def is_running(self) -> bool:
         """
@@ -178,12 +251,20 @@ class ArkivNode:
 
         Raises:
             ImportError: If testcontainers is not installed
+            RuntimeError: If called on an external node
 
         Note:
             This method waits for both HTTP and WebSocket endpoints to be ready
             before returning, which may take several seconds.
             When the node is already running, this is a no-op.
+            External nodes cannot be started.
         """
+        # Check if this is an external node
+        if self._is_external:
+            raise RuntimeError(
+                "Cannot start external node - it is already configured and running"
+            )
+
         # Immediately return if already running
         if self._is_running:
             logger.debug("Node is already running, nothing to start")
@@ -195,28 +276,25 @@ class ArkivNode:
         logger.info(f"Starting Arkiv node from image: {self._image}")
 
         # Create container
-        self._container = (
+        container = (
             DockerContainer(self._image)
             .with_exposed_ports(self._http_port, self._ws_port)
             .with_command(self._get_command())
         )
 
         # Start container
-        self._container.start()
+        container.start()
+        self._container = container
 
         # Get connection details
-        host = self._container.get_container_host_ip()
-        self._http_url = (
-            f"http://{host}:{self._container.get_exposed_port(self._http_port)}"
-        )
-        self._ws_url = f"ws://{host}:{self._container.get_exposed_port(self._ws_port)}"
+        host = container.get_container_host_ip()
+        self._http_url = f"http://{host}:{container.get_exposed_port(self._http_port)}"
+        self._ws_url = f"ws://{host}:{container.get_exposed_port(self._ws_port)}"
 
         logger.info(f"Arkiv node endpoints: {self._http_url} | {self._ws_url}")
 
         # Wait for services to be ready
-        self._container.waiting_for(
-            HttpWaitStrategy(self._http_port).for_status_code(200)
-        )
+        container.waiting_for(HttpWaitStrategy(self._http_port).for_status_code(200))
         self._wait_for_websocket()
 
         self._is_running = True
@@ -228,7 +306,16 @@ class ArkivNode:
 
         Stops the Docker container and performs cleanup.
         If the node is not running, this is a no-op.
+
+        Raises:
+            RuntimeError: If called on an external node
         """
+        # External nodes cannot be stopped
+        if self._is_external:
+            raise RuntimeError(
+                "Cannot stop external node - external nodes are managed externally"
+            )
+
         if not self._is_running:
             logger.debug("Node is not running, nothing to stop")
             return
@@ -254,7 +341,7 @@ class ArkivNode:
             account: A NamedAccount to fund
 
         Raises:
-            RuntimeError: If the node is not running or funding operations fail
+            RuntimeError: If the node is not running, is an external node, or funding operations fail
 
         Examples:
             Fund a NamedAccount:
@@ -264,6 +351,11 @@ class ArkivNode:
                 ...     account = NamedAccount.create("alice")
                 ...     node.fund_account(account)
         """
+        if self._is_external:
+            raise RuntimeError(
+                f"Cannot fund account on external node - account {account.name} must be pre-funded via external means"
+            )
+
         if not self.is_running():
             msg = "Node is not running. Call start() first."
             raise RuntimeError(msg)
@@ -362,6 +454,9 @@ class ArkivNode:
         """
         Context manager entry - start the node.
 
+        For external nodes, this is a no-op (already running).
+        For containerized nodes, this starts the container.
+
         Returns:
             Self for use in with statement
 
@@ -369,19 +464,24 @@ class ArkivNode:
             >>> with ArkivNode() as node:
             ...     print(node.http_url)
         """
-        self.start()
+        if not self._is_external:
+            self.start()
         return self
 
     def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
         """
         Context manager exit - stop and cleanup the node.
 
+        For external nodes, this is a no-op (managed externally).
+        For containerized nodes, this stops the container.
+
         Args:
             exc_type: Exception type if an error occurred
             exc_val: Exception value if an error occurred
             exc_tb: Exception traceback if an error occurred
         """
-        self.stop()
+        if not self._is_external:
+            self.stop()
 
     def __repr__(self) -> str:
         """

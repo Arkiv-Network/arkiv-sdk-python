@@ -20,7 +20,6 @@ from typing import cast
 import pytest
 from eth_typing import ChecksumAddress
 from requests import HTTPError
-from testcontainers.core.container import DockerContainer
 from web3 import Web3
 from web3.exceptions import Web3RPCError
 
@@ -43,10 +42,8 @@ tx_counter_lock = threading.Lock()
 verified_counter_lock = threading.Lock()
 
 
-def create_client(
-    container: DockerContainer | None, rpc_url: str, client_idx: int
-) -> Arkiv:
-    account = create_account(client_idx, f"client_{client_idx}", container)
+def create_client(rpc_url: str, client_idx: int) -> Arkiv:
+    account = create_account(client_idx, f"client_{client_idx}")
     client = Arkiv(Web3.HTTPProvider(rpc_url), account=account)
 
     # Verify connection
@@ -230,14 +227,11 @@ def verify_entities_task(
     return local_verified
 
 
-def setup_clients(
-    container: DockerContainer | None, rpc_url: str, num_clients: int
-) -> list[Arkiv]:
+def setup_clients(rpc_url: str, num_clients: int) -> list[Arkiv]:
     """
     Create and fund Arkiv clients for testing.
 
     Args:
-        container: Optional Docker container for local testing
         rpc_url: RPC URL to connect to
         num_clients: Number of clients to create
 
@@ -249,7 +243,7 @@ def setup_clients(
     for i in range(num_clients):
         client_idx = i + 1
         logger.info(f"Starting Arkiv client[{client_idx}] ....")
-        client = create_client(container, rpc_url, client_idx)
+        client = create_client(rpc_url, client_idx)
         account: ChecksumAddress = cast(ChecksumAddress, client.eth.default_account)
         balance = client.eth.get_balance(account)
 
@@ -462,7 +456,7 @@ def get_parallel_entity_creation_parameters(
     ],
 )
 def test_parallel_entity_creation(
-    arkiv_node: tuple[DockerContainer | None, str, str],
+    arkiv_node,
     num_clients: int,
     num_tx: int,
     batch_size: int,
@@ -478,7 +472,7 @@ def test_parallel_entity_creation(
     The separation allows the distributed Arkiv node network to synchronize
     between creation and verification, avoiding stale read issues.
     """
-    container, rpc_url, _ = arkiv_node
+    rpc_url = arkiv_node.http_url
 
     if not rpc_url:
         pytest.skip("No Arkiv node available for testing")
@@ -486,7 +480,7 @@ def test_parallel_entity_creation(
     test_start_time = time.time()
 
     # Setup: Create and fund clients
-    clients = setup_clients(container, rpc_url, num_clients)
+    clients = setup_clients(rpc_url, num_clients)
 
     # Phase 1: Create entities
     creation_results, _, tx_count = run_creation_phase(clients, num_tx, batch_size)
