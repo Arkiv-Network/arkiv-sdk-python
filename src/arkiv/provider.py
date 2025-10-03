@@ -1,6 +1,6 @@
 """Provider builder for creating Web3 providers with Arkiv presets."""
 
-from typing import Literal
+from typing import Literal, cast
 
 from web3.providers import HTTPProvider, WebSocketProvider
 from web3.providers.base import BaseProvider
@@ -45,8 +45,8 @@ class ProviderBuilder:
 
     def __init__(self) -> None:
         """Initialize the provider builder."""
-        self._network: str = NETWORK_DEFAULT
-        self._transport: TransportType = TRANSPORT_DEFAULT
+        self._network: str | None = NETWORK_DEFAULT
+        self._transport: TransportType = cast(TransportType, TRANSPORT_DEFAULT)
         self._port: int | None = DEFAULT_PORT  # Set default port for localhost
         self._url: str | None = None
 
@@ -99,7 +99,7 @@ class ProviderBuilder:
         Returns:
             Self for method chaining
         """
-        self._transport = HTTP
+        self._transport = cast(TransportType, HTTP)
         return self
 
     def ws(self) -> "ProviderBuilder":
@@ -109,7 +109,7 @@ class ProviderBuilder:
         Returns:
             Self for method chaining
         """
-        self._transport = WS
+        self._transport = cast(TransportType, WS)
         return self
 
     def build(self) -> BaseProvider:
@@ -123,6 +123,7 @@ class ProviderBuilder:
         Raises:
             ValueError: If no URL has been configured or if transport is not available
         """
+        url: str
         # Custom URL overrides network constant
         if self._url is not None:
             url = self._url
@@ -132,13 +133,14 @@ class ProviderBuilder:
             if network_urls is None:
                 raise ValueError(f"Unknown network: {self._network}")
 
-            url = network_urls.get(self._transport)
-            if url is None:
+            url_from_network = network_urls.get(self._transport)
+            if url_from_network is None:
                 available = ", ".join(network_urls.keys())
                 raise ValueError(
                     f"Transport '{self._transport}' is not available for network '{self._network}'. "
                     f"Available transports: {available}"
                 )
+            url = url_from_network
 
             if self._port is not None:
                 # Append port only for localhost
@@ -154,4 +156,4 @@ class ProviderBuilder:
         if self._transport == HTTP:
             return HTTPProvider(url)
         else:
-            return WebSocketProvider(url)
+            return cast(BaseProvider, WebSocketProvider(url))

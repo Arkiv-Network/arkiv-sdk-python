@@ -12,9 +12,11 @@ from pathlib import Path
 import pytest
 from testcontainers.core.container import DockerContainer
 from web3 import Web3
+from web3.providers.base import BaseProvider
 
 from arkiv import Arkiv
 from arkiv.account import NamedAccount
+from arkiv.provider import ProviderBuilder
 from tests.node_container import create_container_node
 
 from .utils import create_account
@@ -46,6 +48,30 @@ def _load_env_if_available() -> None:
         logger.debug("python-dotenv not available, using system environment only")
 
 
+def check_and_get_web3(name: str, provider: BaseProvider) -> Web3:
+    """Create and verify a Web3 client connection."""
+    return verify_connection(name, Web3(provider))
+
+
+def check_and_get_arkiv(
+    name: str, provider: BaseProvider, account: NamedAccount | None = None
+) -> Arkiv:
+    """Create and verify an Arkiv client connection."""
+    if account:
+        return verify_connection(name, Arkiv(provider, account=account))
+    else:
+        return verify_connection(name, Arkiv(provider))
+
+
+def verify_connection(name: str, client: Web3) -> Web3:
+    """Verify Web3 client connection and return checked client."""
+    assert client.is_connected(), (
+        f"{name}: Failed to connect to {client.provider.endpoint_uri}"
+    )  # type: ignore[attr-defined]
+    logger.info(f"{name} client connected to {client.provider.endpoint_uri}")  # type: ignore[attr-defined]
+    return client
+
+
 # Load environment on import
 _load_env_if_available()
 
@@ -74,59 +100,44 @@ def arkiv_node() -> Generator[tuple[DockerContainer | None, str, str], None, Non
 
 
 @pytest.fixture(scope="session")
-def web3_client_http(arkiv_node: tuple[DockerContainer | None, str, str]) -> Web3:
-    """
-    Provide Web3 client connected to HTTP endpoint.
-
-    Returns:
-        Web3 client instance connected to the arkiv node
-    """
+def testcontainer_provider_http(
+    arkiv_node: tuple[DockerContainer | None, str, str],
+) -> BaseProvider:
+    """Returns testcontainer HTTPProvider using the ProviderBuilder."""
     _, http_url, _ = arkiv_node
-    client = Web3(Web3.HTTPProvider(http_url))
-
-    # Verify connection
-    assert client.is_connected(), f"Failed to connect to {http_url}"
-
-    logger.info(f"Web3 client connected to {http_url}")
-    return client
+    return ProviderBuilder().custom(http_url).build()
 
 
 @pytest.fixture(scope="session")
-def arkiv_ro_client_http(arkiv_node: tuple[DockerContainer | None, str, str]) -> Arkiv:
-    """
-    Provide Arkiv client connected to HTTP endpoint.
+def testcontainer_provider_ws(
+    arkiv_node: tuple[DockerContainer | None, str, str],
+) -> BaseProvider:
+    """Returns testcontainer WebSocketProvider using the ProviderBuilder."""
+    _, _, ws_url = arkiv_node
+    # Note: .ws() is to make transport explicit, it is not strictly necessary as the URL scheme is ws:// or wss://
+    return ProviderBuilder().custom(ws_url).ws().build()
 
-    Returns:
-        Web3 client instance connected to the arkiv node
-    """
-    _, http_url, _ = arkiv_node
-    client = Arkiv(Web3.HTTPProvider(http_url))
 
-    # Verify connection
-    assert client.is_connected(), f"Failed to connect Arkiv client to {http_url}"
+@pytest.fixture(scope="session")
+def web3_client_http(testcontainer_provider_http: BaseProvider) -> Web3:
+    """Return Web3 client connected to HTTP endpoint."""
+    return check_and_get_web3("Web3 HTTP", testcontainer_provider_http)
 
-    logger.info(f"Arkiv client connected to {http_url}")
-    return client
+
+@pytest.fixture(scope="session")
+def arkiv_ro_client_http(testcontainer_provider_http: BaseProvider) -> Arkiv:
+    """Return a read only Arkiv client connected to HTTP endpoint."""
+    return check_and_get_arkiv("Arkiv HTTP (read only)", testcontainer_provider_http)
 
 
 @pytest.fixture(scope="session")
 def arkiv_client_http(
-    arkiv_node: tuple[DockerContainer | None, str, str], account_1: NamedAccount
+    testcontainer_provider_http: BaseProvider, account_1: NamedAccount
 ) -> Arkiv:
-    """
-    Provide Arkiv client connected to HTTP endpoint.
-
-    Returns:
-        Web3 client instance connected to the arkiv node
-    """
-    _, http_url, _ = arkiv_node
-    client = Arkiv(Web3.HTTPProvider(http_url), account=account_1)
-
-    # Verify connection
-    assert client.is_connected(), f"Failed to connect Arkiv client to {http_url}"
-
-    logger.info(f"Arkiv client connected to {http_url}")
-    return client
+    """Return a read only Arkiv client connected to HTTP endpoint."""
+    return check_and_get_arkiv(
+        "Arkiv HTTP", testcontainer_provider_http, account=account_1
+    )
 
 
 @pytest.fixture(scope="session")

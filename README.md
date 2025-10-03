@@ -27,12 +27,13 @@ Here's a "Hello World!" example showing how to use the Python Arkiv SDK:
 from web3 import HTTPProvider
 from arkiv import Arkiv
 from arkiv.account import NamedAccount
+from arkiv.provider import ProviderBuilder
 
 with open ('wallet_alice.json', 'r') as f:
     wallet = f.read()
 
 # Initialize Arkiv client (extends Web3)
-provider = HTTPProvider('https://kaolin.hoodi.arkiv.network/rpc')
+provider = ProviderBuilder().kaolin().build()
 account = NamedAccount.from_wallet('Alice', wallet, 's3cret')
 client = Arkiv(provider, account = account)
 
