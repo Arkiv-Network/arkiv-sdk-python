@@ -25,6 +25,7 @@ from .types import (
     Operations,
     TransactionReceipt,
     TxHash,
+    UpdateOp,
 )
 from .utils import merge_annotations, to_receipt, to_tx_params
 
@@ -160,6 +161,53 @@ class ArkivModule:
 
         entity_keys = [create.entity_key for create in receipt.creates]
         return entity_keys, receipt.tx_hash
+
+    def update_entity(
+        self,
+        entity_key: EntityKey,
+        payload: bytes | None = None,
+        annotations: Annotations | None = None,
+        btl: int = 0,
+        tx_params: TxParams | None = None,
+    ) -> TxHash:
+        """
+        Update an existing entity on the Arkiv storage contract.
+
+        Args:
+            entity_key: The entity key of the entity to update
+            payload: Optional new data payload for the entity, existing payload will be replaced
+            annotations: Optional new key-value annotations, existing annotations will be replaced
+            btl: Blocks to live (default: 0)
+            tx_params: Optional additional transaction parameters
+
+        Returns:
+            Transaction hash of the update operation
+        """
+        # Check and set defaults
+        if payload is None:
+            payload = b""
+        if annotations is None:
+            annotations = Annotations({})
+
+        # Create the update operation
+        update_op = UpdateOp(
+            entity_key=entity_key,
+            payload=payload,
+            annotations=annotations,
+            btl=btl,
+        )
+
+        # Wrap in Operations container and execute
+        operations = Operations(updates=[update_op])
+        receipt = self.execute(operations, tx_params)
+
+        # Verify the update succeeded
+        if len(receipt.updates) != 1:
+            raise RuntimeError(
+                f"Expected 1 update in receipt, got {len(receipt.updates)}"
+            )
+
+        return receipt.tx_hash
 
     def extend_entity(
         self,
