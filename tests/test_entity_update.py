@@ -1,6 +1,7 @@
 """Tests for entity update functionality in ArkivModule."""
 
 import logging
+from dataclasses import replace
 
 import pytest
 from eth_typing import HexStr
@@ -8,10 +9,8 @@ from web3.exceptions import Web3RPCError
 
 from arkiv.client import Arkiv
 from arkiv.types import (
-    ALL,
     Annotations,
     CreateOp,
-    Entity,
     Operations,
     UpdateOp,
 )
@@ -54,14 +53,7 @@ class TestEntityUpdate:
         logger.info(f"{label}: Updated entity {entity_key}, tx_hash: {update_tx_hash}")
 
         # Verify the entity has the new payload
-        expected = Entity(
-            entity_key=entity_key,
-            fields=ALL,
-            owner=entity_before.owner,
-            expires_at_block=entity_before.expires_at_block,
-            payload=new_payload,
-            annotations=annotations,
-        )
+        expected = replace(entity_before, payload=new_payload)
         check_entity(label, arkiv_client_http, expected)
 
         logger.info(f"{label}: Entity payload update successful")
@@ -95,15 +87,7 @@ class TestEntityUpdate:
         check_tx_hash(label, update_tx_hash)
 
         # Verify annotations were updated
-        # Verify the entity now has empty payload
-        expected = Entity(
-            entity_key=entity_key,
-            fields=ALL,
-            owner=entity_before.owner,
-            expires_at_block=entity_before.expires_at_block,
-            payload=entity_before.payload,
-            annotations=new_annotations,
-        )
+        expected = replace(entity_before, annotations=new_annotations)
         check_entity(label, arkiv_client_http, expected)
 
         logger.info("Entity annotations update successful")
@@ -131,14 +115,7 @@ class TestEntityUpdate:
             logger.info(f"Update {i + 1}: set payload to {version_payload!r}")
 
             # Verify the update
-            expected = Entity(
-                entity_key=entity_key,
-                fields=ALL,
-                owner=entity_before.owner,
-                expires_at_block=entity_before.expires_at_block,
-                payload=version_payload,
-                annotations=entity_before.annotations,
-            )
+            expected = replace(entity_before, payload=version_payload)
             check_entity(label, arkiv_client_http, expected)
 
         logger.info("Multiple updates successful")
@@ -193,14 +170,11 @@ class TestEntityUpdate:
             )
 
         # Verify all payloads and annotations were updated
-        for i, entity_key in enumerate(entity_keys):
-            expected = Entity(
-                entity_key=entity_key,
-                fields=ALL,
-                owner=entities_before[i].owner,
-                expires_at_block=entities_before[i].expires_at_block,
+        for i in range(len(entity_keys)):
+            expected = replace(
+                entities_before[i],
                 payload=f"Updated entity {i}".encode(),
-                annotations={"updated": True, "index": i},
+                annotations=Annotations({"updated": True, "index": i}),
             )
             check_entity(f"bulk_update_{i}", arkiv_client_http, expected)
 
@@ -222,14 +196,7 @@ class TestEntityUpdate:
         check_tx_hash(label, update_tx_hash)
 
         # Verify the entity now has empty payload
-        expected = Entity(
-            entity_key=entity_key,
-            fields=ALL,
-            owner=entity_before.owner,
-            expires_at_block=entity_before.expires_at_block,
-            payload=b"",
-            annotations=entity_before.annotations,
-        )
+        expected = replace(entity_before, payload=b"")
         check_entity(label, arkiv_client_http, expected)
 
     def test_update_entity_from_empty_payload(self, arkiv_client_http: Arkiv) -> None:
@@ -246,18 +213,11 @@ class TestEntityUpdate:
         label = "update_empty_payload"
         check_tx_hash(label, update_tx_hash)
 
-        # Verify the entity now has empty payload
-        expected = Entity(
-            entity_key=entity_key,
-            fields=ALL,
-            owner=entity_before.owner,
-            expires_at_block=entity_before.expires_at_block,
-            payload=non_empty_payload,
-            annotations=entity_before.annotations,
-        )
+        # Verify the entity now has new payload
+        expected = replace(entity_before, payload=non_empty_payload)
         check_entity(label, arkiv_client_http, expected)
 
-        logger.info("Update with empty payload successful")
+        logger.info("Update from empty payload successful")
 
     def test_update_nonexistent_entity_behavior(self, arkiv_client_http: Arkiv) -> None:
         """Test that updating a non-existent entity raises an exception."""
@@ -344,19 +304,17 @@ class TestEntityUpdate:
         )
         check_tx_hash("update_btl", update_tx_hash)
 
-        # Get new expiration
-        expected = Entity(
-            entity_key=entity_key,
-            fields=ALL,
-            owner=entity_before.owner,
+        # Verify new expiration (btl extension calculation)
+        assert entity_before.expires_at_block is not None
+        expected = replace(
+            entity_before,
             expires_at_block=entity_before.expires_at_block - initial_btl + new_btl,
-            payload=entity_before.payload,
-            annotations=entity_before.annotations,
         )
         check_entity("update_btl", arkiv_client_http, expected)
 
         # Verify expiration was extended (should be roughly initial + new_btl)
         # Note: exact value depends on block advancement during the update
+        assert expected.expires_at_block is not None
         assert expected.expires_at_block > initial_expiration, (
             "Expiration should increase with higher btl"
         )
@@ -389,13 +347,8 @@ class TestEntityUpdate:
         check_tx_hash(label, update_tx_hash)
 
         # Verify both were updated
-        expected = Entity(
-            entity_key=entity_key,
-            fields=ALL,
-            owner=entity_before.owner,
-            expires_at_block=entity_before.expires_at_block,
-            payload=new_payload,
-            annotations=new_annotations,
+        expected = replace(
+            entity_before, payload=new_payload, annotations=new_annotations
         )
         check_entity(label, arkiv_client_http, expected)
 

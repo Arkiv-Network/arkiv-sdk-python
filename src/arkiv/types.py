@@ -26,7 +26,34 @@ Annotations = NewType("Annotations", dict[str, str | int])
 
 @dataclass(frozen=True)
 class Entity:
-    """A class representing an entity."""
+    """A class representing an entity.
+
+    Entities are immutable snapshots of data at a point in time.
+    To create modified copies, use dataclasses.replace().
+
+    Examples:
+        from dataclasses import replace
+
+        # Get an entity
+        entity = client.arkiv.get_entity(entity_key)
+
+        # Create a copy with modified payload
+        new_entity = replace(entity, payload=b"new data")
+
+        # Create a copy with modified annotations (creates new dict)
+        new_entity = replace(
+            entity,
+            annotations=Annotations({**entity.annotations, "version": 2})
+        )
+
+    Note:
+        The annotations field is a dict. When using replace(), always
+        create a new dict if you want to modify annotations to avoid
+        sharing the same dict instance between entities.
+
+        Use dict unpacking {**dict} to create a new dict while merging
+        existing values with new ones.
+    """
 
     entity_key: EntityKey  # Unique identifier for the entity
     fields: int  # Bitmask representing which fields are populated
