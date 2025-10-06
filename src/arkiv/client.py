@@ -38,27 +38,32 @@ class Arkiv(Web3):
     ) -> None:
         """Initialize Arkiv client with Web3 provider.
 
-        If no Web3 provider is provided, a local development node is automatically created and started.
+        If no Web3 provider is provided, a local development node is automatically created and started
+        with a funded default account for rapid prototyping.
         Remember to call arkiv.node.stop() for cleanup, or use context manager:
 
         Examples:
-            Auto-managed local node:
+            Simplest setup (auto-managed node + default account):
                 >>> with Arkiv() as arkiv:
+                ...     # Default account created, funded with test ETH
+                ...     print(arkiv.eth.default_account)
                 ...     print(arkiv.eth.chain_id)
 
-            With account (auto-funded on local node):
+            With custom account (auto-funded on local node):
                 >>> account = NamedAccount.create("alice")
                 >>> with Arkiv(account=account) as arkiv:
                 ...     balance = arkiv.eth.get_balance(account.address)
 
-            Custom provider:
+            Custom provider (no auto-node or account):
                 >>> provider = ProviderBuilder().kaolin().build()
-                >>> arkiv = Arkiv(provider)  # No auto-node
+                >>> account = NamedAccount.from_wallet("alice", wallet_json, password)
+                >>> arkiv = Arkiv(provider, account=account)
 
         Args:
             provider: Web3 provider instance (e.g., HTTPProvider).
-                If None, creates local ArkivNode (requires Docker and testcontainers).
+                If None, creates local ArkivNode with default account (requires Docker and testcontainers).
             account: Optional NamedAccount to use as the default signer.
+                If None and provider is None, creates 'default' account.
                 Auto-funded with test ETH if using local node and balance is zero.
             **kwargs: Additional arguments passed to Web3 constructor
 
@@ -76,6 +81,13 @@ class Arkiv(Web3):
             from .provider import ProviderBuilder
 
             provider = ProviderBuilder().node(self.node).build()
+
+            # Create default account if none provided (for local node prototyping)
+            if account is None:
+                logger.info(
+                    f"Creating default account '{self.ACCOUNT_NAME_DEFAULT}' for local node..."
+                )
+                account = NamedAccount.create(self.ACCOUNT_NAME_DEFAULT)
 
         super().__init__(provider, **kwargs)
 

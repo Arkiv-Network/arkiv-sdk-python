@@ -20,10 +20,22 @@ class TestArkivClientCreation:
     """Test various Arkiv client creation scenarios."""
 
     def test_create_arkiv_without_provider(self) -> None:
-        """Test creating Arkiv client without provider."""
+        """Test creating Arkiv client without provider (creates local node + default account)."""
         with Arkiv() as client:
-            _assert_arkiv_client_properties(client, None, "Without Provider")
-            logger.info("Created Arkiv client without provider")
+            # When no provider given, Arkiv creates a local node AND a default account
+            assert client.node is not None, "Should create managed node"
+            assert len(client.accounts) == 1, "Should create default account"
+            assert "default" in client.accounts, "Should have 'default' account"
+            assert client.current_signer == "default", (
+                "Should set default as current signer"
+            )
+            assert client.eth.default_account is not None, (
+                "Should have default account set"
+            )
+            assert client.is_connected(), "Should be connected to managed node"
+            logger.info(
+                "Created Arkiv client without provider - auto-created node and default account"
+            )
 
     def test_create_arkiv_with_http_provider(self, arkiv_node) -> None:
         """Test creating Arkiv client with HTTP provider."""

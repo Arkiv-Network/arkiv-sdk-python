@@ -453,11 +453,10 @@ arkiv.create_entity(metadata, annotations={"token_id": token_id})
 
 ```python
 from arkiv import Arkiv
-from arkiv.account import NamedAccount
 
-# Connect to Arkiv
-alice = NamedAccount.create('Alice')
-client = Arkiv(account=alice)
+# Create an Arkiv client for prototyping.
+# The default setup creates a funded default account and starts a containerized Arkiv node.
+client = Arkiv()
 
 # Start building
 entity_key, tx_hash = client.arkiv.create_entity(

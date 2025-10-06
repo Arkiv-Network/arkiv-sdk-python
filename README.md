@@ -1,6 +1,15 @@
 # Arkiv SDK
 
-Arkiv is a permissioned storage system for decentralized apps, supporting flexible entities with binary data, annotations, and metadata.
+Arkiv is ## Hello World
+Here's a "Hello World!" example showing how to use the Python Arkiv SDK:
+
+```python
+from arkiv import Arkiv
+
+# Create an Arkiv client for prototyping.
+# The default setup creates a funded default account and starts a containerized Arkiv node.
+client = Arkiv()
+print(f"Connected: {client.is_connected()}")ned storage system for decentralized apps, supporting flexible entities with binary data, annotations, and metadata.
 
 The Arkiv SDK is the official Python library for interacting with Arkiv networks. It offers a type-safe, developer-friendly API for managing entities, querying data, subscribing to events, and offchain verification—ideal for both rapid prototyping and production use.
 
@@ -25,12 +34,14 @@ Here's a "Hello World!" example showing how to use the Python Arkiv SDK:
 
 ```python
 from arkiv import Arkiv
-from arkiv.account import NamedAccount
 
-# Create account and client that implicitly starts a local Arkiv node
-alice = NamedAccount.create('Alice')
-client = Arkiv(account=alice)
-print(f"Connected: {client.is_connected()}")
+# Create Arkiv client with default settings:
+# - starting and connecting to a containerized Arkiv node
+# - creating a funded default account
+client = Arkiv()
+print(f"Client: {client}, connected: {client.is_connected()}")
+print(f"Account: {client.eth.default_account}")
+print(f"Balance: {client.from_wei(client.eth.get_balance(client.eth.default_account), 'ether')} ETH")
 
 # Create entity with data and annotations
 entity_key, tx_hash = client.arkiv.create_entity(
@@ -66,10 +77,14 @@ tx = client.eth.get_transaction(tx_hash)
 ### Arkiv Module Extension
 ```python
 from arkiv import Arkiv
-from arkiv.account import NamedAccount
 
+# Simple local setup
+client = Arkiv()
+
+# Or with custom provider and account
+from arkiv.account import NamedAccount
 account = NamedAccount.from_wallet('Alice', wallet, 's3cret')
-client = Arkiv(provider, account = account)
+client = Arkiv(provider, account=account)
 
 entity_key, tx_hash = client.arkiv.create_entity(
     payload=b"Hello World!",
