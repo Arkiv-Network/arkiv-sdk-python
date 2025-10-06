@@ -37,9 +37,9 @@ class TestWatchEntityCreated:
             )
 
             # Wait for callback (with timeout)
-            assert callback_triggered.wait(
-                timeout=10.0
-            ), "Callback was not triggered within timeout"
+            assert callback_triggered.wait(timeout=10.0), (
+                "Callback was not triggered within timeout"
+            )
 
             # Verify we received the event
             assert len(received_events) == 1
@@ -81,9 +81,9 @@ class TestWatchEntityCreated:
                 keys_and_hashes.append((entity_key, tx_hash))
 
             # Wait for all callbacks
-            assert callback_triggered.wait(
-                timeout=15.0
-            ), "Not all callbacks were triggered within timeout"
+            assert callback_triggered.wait(timeout=15.0), (
+                "Not all callbacks were triggered within timeout"
+            )
 
             # Verify we received all events
             assert len(received_events) == 3
@@ -200,16 +200,22 @@ class TestWatchEntityCreated:
         try:
             # Create 3 entities in a single bulk transaction
             create_ops = [
-                CreateOp(payload=b"bulk entity 1", annotations=Annotations({}), btl=100),
-                CreateOp(payload=b"bulk entity 2", annotations=Annotations({}), btl=100),
-                CreateOp(payload=b"bulk entity 3", annotations=Annotations({}), btl=100),
+                CreateOp(
+                    payload=b"bulk entity 1", annotations=Annotations({}), btl=100
+                ),
+                CreateOp(
+                    payload=b"bulk entity 2", annotations=Annotations({}), btl=100
+                ),
+                CreateOp(
+                    payload=b"bulk entity 3", annotations=Annotations({}), btl=100
+                ),
             ]
             entity_keys, tx_hash = arkiv_client_http.arkiv.create_entities(create_ops)
 
             # Wait for all callbacks
-            assert callback_triggered.wait(
-                timeout=15.0
-            ), "Not all callbacks were triggered within timeout"
+            assert callback_triggered.wait(timeout=15.0), (
+                "Not all callbacks were triggered within timeout"
+            )
 
             # Verify we received 3 events (one for each entity)
             assert len(received_events) == 3
@@ -221,7 +227,9 @@ class TestWatchEntityCreated:
 
             # Verify all events share the same transaction hash
             tx_hashes = {event_tx_hash for _, event_tx_hash in received_events}
-            assert len(tx_hashes) == 1, "All events should share the same transaction hash"
+            assert len(tx_hashes) == 1, (
+                "All events should share the same transaction hash"
+            )
             assert tx_hashes.pop() == tx_hash
 
         finally:
@@ -250,21 +258,21 @@ class TestWatchEntityCreated:
             assert received_events[0][0].entity_key == entity_key
 
             # Update the entity - should NOT trigger callback
-            update_tx_hash = arkiv_client_http.arkiv.update_entity(
+            _ = arkiv_client_http.arkiv.update_entity(
                 entity_key=entity_key, payload=b"updated data", btl=100
             )
             time.sleep(3)  # Wait to ensure no callback
             assert len(received_events) == 1  # Still only 1 event
 
             # Extend the entity - should NOT trigger callback
-            extend_tx_hash = arkiv_client_http.arkiv.extend_entity(
+            _ = arkiv_client_http.arkiv.extend_entity(
                 entity_key=entity_key, number_of_blocks=50
             )
             time.sleep(3)  # Wait to ensure no callback
             assert len(received_events) == 1  # Still only 1 event
 
             # Delete the entity - should NOT trigger callback
-            delete_tx_hash = arkiv_client_http.arkiv.delete_entity(entity_key=entity_key)
+            _ = arkiv_client_http.arkiv.delete_entity(entity_key=entity_key)
             time.sleep(3)  # Wait to ensure no callback
             assert len(received_events) == 1  # Still only 1 event
 

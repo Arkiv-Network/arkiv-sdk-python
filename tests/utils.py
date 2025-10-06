@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from arkiv.account import NamedAccount
-from arkiv.types import CreateOp, Entity, EntityKey, Operations, TxHash
+from arkiv.types import CreateOp, Entity, EntityKey, Operations, TxHash, UpdateOp
 
 if TYPE_CHECKING:
     from arkiv.client import Arkiv
@@ -119,6 +119,40 @@ def bulk_create_entities(
     logger.info(f"{label}: Created {len(entity_keys)} entities in bulk transaction")
 
     return entity_keys
+
+
+def bulk_update_entities(
+    client: "Arkiv", update_ops: list[UpdateOp], label: str = "bulk_update"
+) -> TxHash:
+    """Update multiple entities in a single bulk transaction.
+
+    Args:
+        client: Arkiv client instance
+        update_ops: List of UpdateOp operations to execute
+        label: Label for transaction hash validation logging
+
+    Returns:
+        Transaction hash of the bulk update operation
+
+    Raises:
+        RuntimeError: If the number of updates in receipt doesn't match operations
+    """
+    # Use execute() for bulk update
+    update_operations = Operations(updates=update_ops)
+    update_receipt = client.arkiv.execute(update_operations)
+
+    # Check transaction hash of bulk update
+    check_tx_hash(label, update_receipt.tx_hash)
+
+    # Verify all updates succeeded
+    if len(update_receipt.updates) != len(update_ops):
+        raise RuntimeError(
+            f"Expected {len(update_ops)} updates in receipt, got {len(update_receipt.updates)}"
+        )
+
+    logger.info(f"{label}: Updated {len(update_ops)} entities in bulk transaction")
+
+    return update_receipt.tx_hash
 
 
 def create_account(index: int, name: str) -> NamedAccount:

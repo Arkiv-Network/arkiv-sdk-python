@@ -5,9 +5,9 @@
 set -e
 
 echo "🔍 Running pre-commit checks..."
-uv run pre-commit run --all-files
+uv run --group lint pre-commit run --all-files
 
 echo "🧪 Running tests..."
-uv run pytest tests/ -v
+uv run --group test pytest tests/ -n auto -v
 
 echo "✅ All quality checks passed!"

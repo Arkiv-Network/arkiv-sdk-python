@@ -27,6 +27,7 @@ from .types import (
     Operations,
     TransactionReceipt,
     TxHash,
+    UpdateCallback,
     UpdateOp,
 )
 from .utils import merge_annotations, to_receipt, to_tx_params
@@ -386,34 +387,6 @@ class ArkivModule:
             annotations=annotations,
         )
 
-    def _get_owner(self, metadata: dict[str, Any]) -> ChecksumAddress:
-        """Get the owner address of the given entity."""
-        owner_metadata = metadata.get("owner")
-        if not owner_metadata:
-            raise ValueError("Entity metadata missing required 'owner' field")
-        return Web3.to_checksum_address(owner_metadata)
-
-    def _get_expires_at_block(self, metadata: dict[str, Any]) -> int:
-        """Get the expiration block of the given entity."""
-        expires_at_block_metadata = metadata.get("expiresAtBlock")
-        if expires_at_block_metadata is None:
-            raise ValueError("Entity metadata missing required 'expiresAtBlock' field")
-        return int(expires_at_block_metadata)
-
-    def _get_storage_value(self, entity_key: EntityKey) -> bytes:
-        """Get the storage value stored in the given entity."""
-        # EntityKey is automatically converted by arkiv_munger
-        storage_value = base64.b64decode(self.client.eth.get_storage_value(entity_key))  # type: ignore[attr-defined]
-        logger.debug(f"Storage value (decoded): {storage_value!r}")
-        return storage_value
-
-    def _get_entity_metadata(self, entity_key: EntityKey) -> dict[str, Any]:
-        """Get the metadata of the given entity."""
-        # EntityKey is automatically converted by arkiv_munger
-        metadata: dict[str, Any] = self.client.eth.get_entity_metadata(entity_key)  # type: ignore[attr-defined]
-        logger.debug(f"Raw metadata: {metadata}")
-        return metadata
-
     def watch_entity_created(
         self,
         callback: CreateCallback,
@@ -451,7 +424,89 @@ class ArkivModule:
 
         # Track the filter for cleanup
         self._active_filters.append(event_filter)
+        return event_filter
 
+    def watch_entity_updated(
+        self,
+        callback: UpdateCallback,
+        *,
+        from_block: str | int = "latest",
+        auto_start: bool = True,
+    ) -> EventFilter:
+        """
+        Watch for entity update events.
+
+        This method creates an event filter that monitors for entity updates on the
+        Arkiv storage contract. The callback is invoked each time an entity is updated,
+        receiving details about the update event and the transaction hash.
+
+        Args:
+            callback: Function to call when an update event is detected.
+                     Receives (UpdateEvent, TxHash) as arguments.
+            from_block: Starting block for the filter. Can be:
+                       - "latest": Only watch for new updates (default)
+                       - Block number (int): Watch from a specific historical block
+            auto_start: If True, starts polling immediately (default: True).
+                       If False, you must manually call filter.start()
+
+        Returns:
+            EventFilter instance for controlling the watch. Use this to:
+            - Stop polling: filter.stop()
+            - Resume polling: filter.start()
+            - Check status: filter.is_running
+            - Cleanup: filter.uninstall()
+
+        Raises:
+            ValueError: If callback is not callable
+            RuntimeError: If filter creation fails
+
+        Example:
+            Basic usage with automatic start:
+                >>> def on_update(event: UpdateEvent, tx_hash: TxHash) -> None:
+                ...     print(f"Entity updated: {event.entity_key}")
+                ...     print(f"New expiration: {event.expiration_block}")
+                ...
+                >>> filter = arkiv.watch_entity_updated(on_update)
+                >>> # Filter is now running and will call on_update for each update
+                >>> # ... later ...
+                >>> filter.stop()  # Pause watching
+                >>> filter.uninstall()  # Cleanup resources
+
+            Manual start/stop control:
+                >>> def on_update(event: UpdateEvent, tx_hash: TxHash) -> None:
+                ...     print(f"Updated: {event.entity_key}")
+                ...
+                >>> filter = arkiv.watch_entity_updated(on_update, auto_start=False)
+                >>> # Do some setup work...
+                >>> filter.start()  # Begin watching
+                >>> # ... later ...
+                >>> filter.stop()  # Stop watching
+                >>> filter.uninstall()  # Cleanup
+
+            Historical updates from specific block:
+                >>> filter = arkiv.watch_entity_updated(
+                ...     on_update,
+                ...     from_block=1000  # Start from block 1000
+                ... )
+
+        Note:
+            - Only captures UPDATE events (not creates, deletes, or extends)
+            - With from_block="latest", misses updates before filter creation
+            - Filter must be uninstalled via filter.uninstall() to free resources
+            - All active filters are automatically cleaned up when Arkiv client
+              context exits
+            - Callback exceptions are caught and logged but don't stop the filter
+        """
+        event_filter = EventFilter(
+            contract=self.contract,
+            event_type="updated",
+            callback=callback,
+            from_block=from_block,
+            auto_start=auto_start,
+        )
+
+        # Track the filter for cleanup
+        self._active_filters.append(event_filter)
         return event_filter
 
     @property
@@ -482,3 +537,31 @@ class ArkivModule:
 
         self._active_filters.clear()
         logger.info("All event filters cleaned up")
+
+    def _get_owner(self, metadata: dict[str, Any]) -> ChecksumAddress:
+        """Get the owner address of the given entity."""
+        owner_metadata = metadata.get("owner")
+        if not owner_metadata:
+            raise ValueError("Entity metadata missing required 'owner' field")
+        return Web3.to_checksum_address(owner_metadata)
+
+    def _get_expires_at_block(self, metadata: dict[str, Any]) -> int:
+        """Get the expiration block of the given entity."""
+        expires_at_block_metadata = metadata.get("expiresAtBlock")
+        if expires_at_block_metadata is None:
+            raise ValueError("Entity metadata missing required 'expiresAtBlock' field")
+        return int(expires_at_block_metadata)
+
+    def _get_storage_value(self, entity_key: EntityKey) -> bytes:
+        """Get the storage value stored in the given entity."""
+        # EntityKey is automatically converted by arkiv_munger
+        storage_value = base64.b64decode(self.client.eth.get_storage_value(entity_key))  # type: ignore[attr-defined]
+        logger.debug(f"Storage value (decoded): {storage_value!r}")
+        return storage_value
+
+    def _get_entity_metadata(self, entity_key: EntityKey) -> dict[str, Any]:
+        """Get the metadata of the given entity."""
+        # EntityKey is automatically converted by arkiv_munger
+        metadata: dict[str, Any] = self.client.eth.get_entity_metadata(entity_key)  # type: ignore[attr-defined]
+        logger.debug(f"Raw metadata: {metadata}")
+        return metadata
