@@ -11,12 +11,14 @@ from web3.types import TxParams, TxReceipt
 from arkiv.account import NamedAccount
 
 from .contract import EVENTS_ABI, FUNCTIONS_ABI, STORAGE_ADDRESS
+from .events import EventFilter
 from .types import (
     ALL,
     ANNOTATIONS,
     METADATA,
     PAYLOAD,
     Annotations,
+    CreateCallback,
     CreateOp,
     DeleteOp,
     Entity,
@@ -54,6 +56,9 @@ class ArkivModule:
         self.contract = client.eth.contract(address=STORAGE_ADDRESS, abi=EVENTS_ABI)
         for event in self.contract.all_events():
             logger.debug(f"Entity event {event.topic}: {event.signature}")
+
+        # Track active event filters for cleanup
+        self._active_filters: list[EventFilter] = []
 
     def is_available(self) -> bool:
         """Check if Arkiv functionality is available. Should always be true for Arkiv clients."""
@@ -408,3 +413,72 @@ class ArkivModule:
         metadata: dict[str, Any] = self.client.eth.get_entity_metadata(entity_key)  # type: ignore[attr-defined]
         logger.debug(f"Raw metadata: {metadata}")
         return metadata
+
+    def watch_entity_created(
+        self,
+        callback: CreateCallback,
+        *,
+        from_block: str | int = "latest",
+        auto_start: bool = True,
+    ) -> EventFilter:
+        """
+        Watch for entity creation events.
+
+        Args:
+            callback: Function to call when a creation event is detected.
+                     Receives (CreateEvent, TxHash) as arguments.
+            from_block: Starting block for the filter ('latest' or block number)
+            auto_start: If True, starts polling immediately
+
+        Returns:
+            EventFilter instance for controlling the watch
+
+        Example:
+            def on_create(event: CreateEvent, tx_hash: TxHash) -> None:
+                print(f"Entity created: {event.entity_key}")
+
+            filter = arkiv.watch_entity_created(on_create)
+            # ... later ...
+            filter.stop()
+        """
+        event_filter = EventFilter(
+            contract=self.contract,
+            event_type="created",
+            callback=callback,
+            from_block=from_block,
+            auto_start=auto_start,
+        )
+
+        # Track the filter for cleanup
+        self._active_filters.append(event_filter)
+
+        return event_filter
+
+    @property
+    def active_filters(self) -> list[EventFilter]:
+        """Get a copy of currently active event filters."""
+        return list(self._active_filters)
+
+    def cleanup_filters(self) -> None:
+        """
+        Stop and uninstall all active event filters.
+
+        This is automatically called when the Arkiv client exits its context,
+        but can be called manually if needed.
+        """
+        if not self._active_filters:
+            logger.debug("No active filters to cleanup")
+            return
+
+        logger.info(
+            f"Cleaning up {len(self._active_filters)} active event filter(s)..."
+        )
+
+        for event_filter in self._active_filters:
+            try:
+                event_filter.uninstall()
+            except Exception as e:
+                logger.warning(f"Error cleaning up filter: {e}")
+
+        self._active_filters.clear()
+        logger.info("All event filters cleaned up")

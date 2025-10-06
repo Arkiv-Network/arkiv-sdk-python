@@ -101,11 +101,11 @@ class TestContainerizedNode:
     def test_node_container_stop_start(self, arkiv_container: ArkivNode) -> None:
         """Test that containerized nodes can be stopped and started."""
         # Should be running initially
-        assert arkiv_container.is_running()
+        assert arkiv_container.is_running
 
         # Stop the node
         arkiv_container.stop()
-        assert not arkiv_container.is_running()
+        assert not arkiv_container.is_running
         with pytest.raises(
             RuntimeError,
             match=r"Node is not running\. Call start\(\) first or use context manager\.",
@@ -132,17 +132,17 @@ class TestContainerizedNode:
 
         # Stop a 2nd time should be no-op
         arkiv_container.stop()
-        assert not arkiv_container.is_running()
+        assert not arkiv_container.is_running
 
         # Start the node again
         arkiv_container.start()
-        assert arkiv_container.is_running()
+        assert arkiv_container.is_running
         assert arkiv_container.http_port > 0
         assert arkiv_container.ws_port > 0
 
         # Start a 2nd time should be no-op
         arkiv_container.start()
-        assert arkiv_container.is_running()
+        assert arkiv_container.is_running
         assert arkiv_container.http_port > 0
         assert arkiv_container.ws_port > 0
 
@@ -178,8 +178,8 @@ class TestContainerizedNode:
     def test_node_container_context_manager(self, arkiv_container: ArkivNode) -> None:
         """Test that containerized nodes work with context managers."""
         # arkiv_container fixture already uses context manager, just verify it's running
-        assert arkiv_container.is_running()
-        assert not arkiv_container.is_external()
+        assert arkiv_container.is_running
+        assert not arkiv_container.is_external
 
 
 class TestExternalNode:
@@ -240,13 +240,13 @@ class TestExternalNode:
 
         # Should work without errors (no-op)
         with arkiv_testnet as node:
-            assert node.is_running()
+            assert node.is_running
             assert node.http_url == arkiv_testnet.http_url
 
         # Node should still be running after context exit
-        assert arkiv_testnet.is_running()
+        assert arkiv_testnet.is_running
 
     def test_node_external_is_external(self, arkiv_testnet: ArkivNode) -> None:
         """Verify that external nodes are properly identified."""
 
-        assert arkiv_testnet.is_external()
+        assert arkiv_testnet.is_external

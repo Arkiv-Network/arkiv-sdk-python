@@ -128,12 +128,17 @@ class Arkiv(Web3):
         exc_val: BaseException | None,
         exc_tb: Any,
     ) -> None:
+        # Cleanup event filters first
+        logger.debug("Cleaning up event filters...")
+        self.arkiv.cleanup_filters()
+
+        # Then stop the node if managed
         if self.node:
             logger.debug("Stopping managed ArkivNode...")
             self.node.stop()
 
     def __del__(self) -> None:
-        if self.node and self.node.is_running():
+        if self.node and self.node.is_running:
             logger.warning(
                 "Arkiv client with managed node is being destroyed but node is still running. "
                 "Call arkiv.node.stop() or use context manager: 'with Arkiv() as arkiv:'"

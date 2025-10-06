@@ -114,7 +114,7 @@ def arkiv_node() -> Generator[ArkivNode, None, None]:
 def arkiv_client_http(arkiv_node: ArkivNode, account_1: NamedAccount) -> Arkiv:
     """Return Arkiv client with funded account connected via HTTP."""
     # Fund the account using the node (only for local containerized nodes)
-    if not arkiv_node.is_external():
+    if not arkiv_node.is_external:
         arkiv_node.fund_account(account_1)
 
     # Create provider and client
@@ -151,7 +151,7 @@ def account_2(arkiv_node: ArkivNode) -> NamedAccount:
     account = create_account(2, BOB)
 
     # Fund the account using the node (only for local containerized nodes)
-    if not arkiv_node.is_external():
+    if not arkiv_node.is_external:
         arkiv_node.fund_account(account)
 
     return account

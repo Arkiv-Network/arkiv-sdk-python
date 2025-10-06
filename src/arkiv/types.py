@@ -1,8 +1,8 @@
-"""Arkiv SDK Types."""
+"""Type definitions for the Arkiv SDK."""
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import NewType
+from typing import Literal, NewType
 
 from eth_typing import ChecksumAddress, HexStr
 from web3.datastructures import AttributeDict
@@ -180,6 +180,15 @@ class TransactionReceipt:
     extensions: Sequence[ExtendEvent]
     deletes: Sequence[DeleteEvent]
 
+
+# Event callback types
+CreateCallback = Callable[[CreateEvent, TxHash], None]
+UpdateCallback = Callable[[UpdateEvent, TxHash], None]
+DeleteCallback = Callable[[DeleteEvent, TxHash], None]
+ExtendCallback = Callable[[ExtendEvent, TxHash], None]
+
+# Event type literal
+EventType = Literal["created", "updated", "deleted", "extended"]
 
 # Low level annotations for RLP encoding
 StringAnnotationsRlp = NewType("StringAnnotationsRlp", list[tuple[str, str]])

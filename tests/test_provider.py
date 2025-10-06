@@ -250,10 +250,10 @@ class TestProviderBuilderNode:
     def test_provider_node_auto_starts_node(self) -> None:
         """Test node() auto-starts a node that isn't running."""
         node = ArkivNode()
-        assert not node.is_running()
+        assert not node.is_running
 
         provider = ProviderBuilder().node(node).build()
-        assert node.is_running()
+        assert node.is_running
         assert isinstance(provider, HTTPProvider)
         assert provider.endpoint_uri == node.http_url
 

@@ -2,6 +2,7 @@
 
 from .account import NamedAccount
 from .client import Arkiv
+from .events import EventFilter
 from .node import ArkivNode
 from .types import (
     CreateEvent,
@@ -17,6 +18,7 @@ __all__ = [
     "ArkivNode",
     "CreateEvent",
     "DeleteEvent",
+    "EventFilter",
     "ExtendEvent",
     "NamedAccount",
     "TransactionReceipt",

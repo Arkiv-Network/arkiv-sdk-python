@@ -137,7 +137,7 @@ class ProviderBuilder:
             arkiv_node = ArkivNode()
 
         # Auto-start the node if not running
-        if not arkiv_node.is_running():
+        if not arkiv_node.is_running:
             logger.debug("Auto-starting managed ArkivNode...")
             arkiv_node.start()
 

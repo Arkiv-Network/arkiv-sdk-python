@@ -219,6 +219,7 @@ class ArkivNode:
             )
         return self._container
 
+    @property
     def is_external(self) -> bool:
         """
         Check if this node is configured as an external node.
@@ -228,6 +229,7 @@ class ArkivNode:
         """
         return self._is_external
 
+    @property
     def is_running(self) -> bool:
         """
         Check if the node is currently running.
@@ -351,7 +353,7 @@ class ArkivNode:
                 f"Cannot fund account on external node - account {account.name} must be pre-funded via external means"
             )
 
-        if not self.is_running():
+        if not self.is_running:
             msg = "Node is not running. Call start() first."
             raise RuntimeError(msg)
 
