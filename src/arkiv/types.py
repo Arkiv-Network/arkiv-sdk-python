@@ -139,24 +139,24 @@ class Operations:
 
 
 @dataclass(frozen=True)
-class CreateReceipt:
-    """The return type of a create operation."""
+class CreateEvent:
+    """Event emitted when an entity is created."""
 
     entity_key: EntityKey
     expiration_block: int
 
 
 @dataclass(frozen=True)
-class UpdateReceipt:
-    """The return type of an update operation."""
+class UpdateEvent:
+    """Event emitted when an entity is updated."""
 
     entity_key: EntityKey
     expiration_block: int
 
 
 @dataclass(frozen=True)
-class ExtendReceipt:
-    """The return type of an extend operation."""
+class ExtendEvent:
+    """Event emitted when an entity's lifetime is extended."""
 
     entity_key: EntityKey
     old_expiration_block: int
@@ -164,21 +164,21 @@ class ExtendReceipt:
 
 
 @dataclass(frozen=True)
-class DeleteReceipt:
-    """The return type of a delete operation."""
+class DeleteEvent:
+    """Event emitted when an entity is deleted."""
 
     entity_key: EntityKey
 
 
 @dataclass(frozen=True)
 class TransactionReceipt:
-    """The return type of a transaction."""
+    """Receipt of a transaction containing all emitted events."""
 
     tx_hash: TxHash
-    creates: Sequence[CreateReceipt]
-    updates: Sequence[UpdateReceipt]
-    extensions: Sequence[ExtendReceipt]
-    deletes: Sequence[DeleteReceipt]
+    creates: Sequence[CreateEvent]
+    updates: Sequence[UpdateEvent]
+    extensions: Sequence[ExtendEvent]
+    deletes: Sequence[DeleteEvent]
 
 
 # Low level annotations for RLP encoding

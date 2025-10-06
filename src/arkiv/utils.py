@@ -16,10 +16,10 @@ from .contract import STORAGE_ADDRESS
 from .exceptions import AnnotationException, EntityKeyException
 from .types import (
     Annotations,
-    CreateReceipt,
-    DeleteReceipt,
+    CreateEvent,
+    DeleteEvent,
     EntityKey,
-    ExtendReceipt,
+    ExtendEvent,
     NumericAnnotations,
     NumericAnnotationsRlp,
     Operations,
@@ -27,7 +27,7 @@ from .types import (
     StringAnnotationsRlp,
     TransactionReceipt,
     TxHash,
-    UpdateReceipt,
+    UpdateEvent,
 )
 
 logger = logging.getLogger(__name__)
@@ -147,11 +147,11 @@ def to_receipt(
         else TxHash(HexStr(HexBytes(tx_hash_).to_0x_hex()))
     )
 
-    # Initialize receipt with tx hash and empty receipt collections
-    creates: list[CreateReceipt] = []
-    updates: list[UpdateReceipt] = []
-    extensions: list[ExtendReceipt] = []
-    deletes: list[DeleteReceipt] = []
+    # Initialize receipt with tx hash and empty event collections
+    creates: list[CreateEvent] = []
+    updates: list[UpdateEvent] = []
+    extensions: list[ExtendEvent] = []
+    deletes: list[DeleteEvent] = []
 
     receipt = TransactionReceipt(
         tx_hash=tx_hash,
@@ -174,7 +174,7 @@ def to_receipt(
                 case contract.CREATED_EVENT:
                     expiration_block: int = event_args["expirationBlock"]
                     creates.append(
-                        CreateReceipt(
+                        CreateEvent(
                             entity_key=entity_key,
                             expiration_block=expiration_block,
                         )
@@ -182,20 +182,20 @@ def to_receipt(
                 case contract.UPDATED_EVENT:
                     expiration_block = event_args["expirationBlock"]
                     updates.append(
-                        UpdateReceipt(
+                        UpdateEvent(
                             entity_key=entity_key,
                             expiration_block=expiration_block,
                         )
                     )
                 case contract.DELETED_EVENT:
                     deletes.append(
-                        DeleteReceipt(
+                        DeleteEvent(
                             entity_key=entity_key,
                         )
                     )
                 case contract.EXTENDED_EVENT:
                     extensions.append(
-                        ExtendReceipt(
+                        ExtendEvent(
                             entity_key=entity_key,
                             old_expiration_block=event_args["oldExpirationBlock"],
                             new_expiration_block=event_args["newExpirationBlock"],
