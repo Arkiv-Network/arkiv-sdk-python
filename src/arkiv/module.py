@@ -449,6 +449,26 @@ class ArkivModule:
             "extended", callback, from_block=from_block, auto_start=auto_start
         )
 
+    def watch_entity_deleted(
+        self,
+        callback: ExtendCallback,
+        *,
+        from_block: str | int = "latest",
+        auto_start: bool = True,
+    ) -> EventFilter:
+        """
+        Watch for entity deletion events.
+
+        Creates an event filter that monitors entity deletion events. The
+        callback receives (DeleteEvent, TxHash) for each deleted entity.
+
+        See `_watch_entity_event` for detailed documentation on parameters, return
+        value, error handling, and usage examples.
+        """
+        return self._watch_entity_event(
+            "deleted", callback, from_block=from_block, auto_start=auto_start
+        )
+
     def cleanup_filters(self) -> None:
         """
         Stop and uninstall all active event filters.
@@ -494,10 +514,10 @@ class ArkivModule:
         occurs, receiving details about the event and the transaction hash.
 
         Args:
-            event_type: Type of event to watch for ("created", "updated", "extended")
+            event_type: Type of event to watch for ("created", "updated", "extended", "deleted")
             callback: Function to call when an event is detected.
                      Receives (Event, TxHash) as arguments where Event is one of:
-                     CreateEvent, UpdateEvent, or ExtendEvent depending on event_type.
+                     CreateEvent, UpdateEvent, ExtendEvent, or DeleteEvent depending on event_type.
             from_block: Starting block for the filter. Can be:
                        - "latest": Only watch for new events (default)
                        - Block number (int): Watch from a specific historical block

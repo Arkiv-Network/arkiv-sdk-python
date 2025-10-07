@@ -11,10 +11,12 @@ from web3.contract import Contract
 from web3.contract.contract import ContractEvent
 from web3.types import EventData, LogReceipt
 
-from .contract import CREATED_EVENT, EXTENDED_EVENT, UPDATED_EVENT
+from .contract import EVENTS
 from .types import (
     CreateCallback,
     CreateEvent,
+    DeleteCallback,
+    DeleteEvent,
     EventType,
     ExtendCallback,
     ExtendEvent,
@@ -34,7 +36,7 @@ class EventFilter:
         self,
         contract: Contract,
         event_type: EventType,
-        callback: CreateCallback | UpdateCallback | ExtendCallback,
+        callback: CreateCallback | UpdateCallback | ExtendCallback | DeleteCallback,
         from_block: str | int = "latest",
         auto_start: bool = True,
     ) -> None:
@@ -50,7 +52,9 @@ class EventFilter:
         """
         self.contract: Contract = contract
         self.event_type: EventType = event_type
-        self.callback: CreateCallback | UpdateCallback | ExtendCallback = callback
+        self.callback: (
+            CreateCallback | UpdateCallback | ExtendCallback | DeleteCallback
+        ) = callback
         self.from_block: str | int = from_block
 
         # Internal state
@@ -74,14 +78,9 @@ class EventFilter:
 
         # Create the Web3 filter
         contract_event: ContractEvent
-        if self.event_type == "created":
-            contract_event = self.contract.events[CREATED_EVENT]
-            self._filter = contract_event.create_filter(from_block=self.from_block)
-        elif self.event_type == "updated":
-            contract_event = self.contract.events[UPDATED_EVENT]
-            self._filter = contract_event.create_filter(from_block=self.from_block)
-        elif self.event_type == "extended":
-            contract_event = self.contract.events[EXTENDED_EVENT]
+        if self.event_type in EVENTS.keys():
+            event_name = EVENTS[self.event_type]
+            contract_event = self.contract.events[event_name]
             self._filter = contract_event.create_filter(from_block=self.from_block)
         else:
             raise NotImplementedError(
@@ -204,6 +203,12 @@ class EventFilter:
                 cast(ExtendCallback, self.callback), extend_event, tx_hash
             )
 
+        elif self.event_type == "deleted":
+            delete_event = DeleteEvent(entity_key=entity_key)
+            self._trigger_callback(
+                cast(DeleteCallback, self.callback), delete_event, tx_hash
+            )
+
         else:
             logger.warning(f"Unknown event type: {self.event_type}")
 
@@ -224,8 +229,8 @@ class EventFilter:
 
     def _trigger_callback(
         self,
-        callback: CreateCallback | UpdateCallback | ExtendCallback,
-        event: CreateEvent | UpdateEvent | ExtendEvent,
+        callback: CreateCallback | UpdateCallback | ExtendCallback | DeleteCallback,
+        event: CreateEvent | UpdateEvent | ExtendEvent | DeleteEvent,
         tx_hash: TxHash,
     ) -> None:
         """

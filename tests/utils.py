@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 from arkiv.account import NamedAccount
 from arkiv.types import (
     CreateOp,
+    DeleteOp,
     Entity,
     EntityKey,
     ExtendOp,
@@ -195,6 +196,40 @@ def bulk_extend_entities(
     logger.info(f"{label}: Extended {len(extend_ops)} entities in bulk transaction")
 
     return extend_receipt.tx_hash
+
+
+def bulk_delete_entities(
+    client: "Arkiv", delete_ops: list[DeleteOp], label: str = "bulk_delete"
+) -> TxHash:
+    """Delete multiple entities in a single bulk transaction.
+
+    Args:
+        client: Arkiv client instance
+        delete_ops: List of DeleteOp operations to execute
+        label: Label for transaction hash validation logging
+
+    Returns:
+        Transaction hash of the bulk delete operation
+
+    Raises:
+        RuntimeError: If the number of deletes in receipt doesn't match operations
+    """
+    # Use execute() for bulk delete
+    delete_operations = Operations(deletes=delete_ops)
+    delete_receipt = client.arkiv.execute(delete_operations)
+
+    # Check transaction hash of bulk delete
+    check_tx_hash(label, delete_receipt.tx_hash)
+
+    # Verify all deletes succeeded
+    if len(delete_receipt.deletes) != len(delete_ops):
+        raise RuntimeError(
+            f"Expected {len(delete_ops)} deletes in receipt, got {len(delete_receipt.deletes)}"
+        )
+
+    logger.info(f"{label}: Deleted {len(delete_ops)} entities in bulk transaction")
+
+    return delete_receipt.tx_hash
 
 
 def create_account(index: int, name: str) -> NamedAccount:

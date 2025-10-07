@@ -17,44 +17,52 @@ STORAGE_ADDRESS: Final[ChecksumAddress] = Web3.to_checksum_address(
 
 CREATED_EVENT: Final[str] = "GolemBaseStorageEntityCreated"
 UPDATED_EVENT: Final[str] = "GolemBaseStorageEntityUpdated"
-DELETED_EVENT: Final[str] = "GolemBaseStorageEntityDeleted"
 EXTENDED_EVENT: Final[str] = "GolemBaseStorageEntityBTLExtended"
+DELETED_EVENT: Final[str] = "GolemBaseStorageEntityDeleted"
 
+EVENTS: dict[str, str] = {
+    "created": CREATED_EVENT,
+    "updated": UPDATED_EVENT,
+    "extended": EXTENDED_EVENT,
+    "deleted": DELETED_EVENT,
+}
 
+TYPE_EVENT = "event"
+TYPE_UINT = "uint256"
 EVENTS_ABI: Final[Sequence[dict[str, Any]]] = [
     {
         "anonymous": False,
         "inputs": [
-            {"indexed": True, "name": "entityKey", "type": "uint256"},
-            {"indexed": False, "name": "expirationBlock", "type": "uint256"},
+            {"indexed": True, "name": "entityKey", "type": TYPE_UINT},
+            {"indexed": False, "name": "expirationBlock", "type": TYPE_UINT},
         ],
         "name": CREATED_EVENT,
-        "type": "event",
+        "type": TYPE_EVENT,
     },
     {
         "anonymous": False,
         "inputs": [
-            {"indexed": True, "name": "entityKey", "type": "uint256"},
-            {"indexed": False, "name": "expirationBlock", "type": "uint256"},
+            {"indexed": True, "name": "entityKey", "type": TYPE_UINT},
+            {"indexed": False, "name": "expirationBlock", "type": TYPE_UINT},
         ],
         "name": UPDATED_EVENT,
-        "type": "event",
+        "type": TYPE_EVENT,
     },
     {
         "anonymous": False,
-        "inputs": [{"indexed": True, "name": "entityKey", "type": "uint256"}],
+        "inputs": [{"indexed": True, "name": "entityKey", "type": TYPE_UINT}],
         "name": DELETED_EVENT,
-        "type": "event",
+        "type": TYPE_EVENT,
     },
     {
         "anonymous": False,
         "inputs": [
-            {"indexed": True, "name": "entityKey", "type": "uint256"},
-            {"indexed": False, "name": "oldExpirationBlock", "type": "uint256"},
-            {"indexed": False, "name": "newExpirationBlock", "type": "uint256"},
+            {"indexed": True, "name": "entityKey", "type": TYPE_UINT},
+            {"indexed": False, "name": "oldExpirationBlock", "type": TYPE_UINT},
+            {"indexed": False, "name": "newExpirationBlock", "type": TYPE_UINT},
         ],
         "name": EXTENDED_EVENT,
-        "type": "event",
+        "type": TYPE_EVENT,
     },
 ]
 
