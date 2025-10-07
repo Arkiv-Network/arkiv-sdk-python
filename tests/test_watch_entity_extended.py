@@ -390,7 +390,8 @@ class TestWatchEntityExtended:
                 assert event.entity_key == entity_key
                 assert event.old_expiration_block == expected_old
                 assert (
-                    event.new_expiration_block == event.old_expiration_block + extensions[i]
+                    event.new_expiration_block
+                    == event.old_expiration_block + extensions[i]
                 )
                 # Update expected_old for next event
                 expected_old = event.new_expiration_block
