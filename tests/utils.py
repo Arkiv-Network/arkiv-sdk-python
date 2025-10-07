@@ -4,7 +4,15 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from arkiv.account import NamedAccount
-from arkiv.types import CreateOp, Entity, EntityKey, Operations, TxHash, UpdateOp
+from arkiv.types import (
+    CreateOp,
+    Entity,
+    EntityKey,
+    ExtendOp,
+    Operations,
+    TxHash,
+    UpdateOp,
+)
 
 if TYPE_CHECKING:
     from arkiv.client import Arkiv
@@ -153,6 +161,40 @@ def bulk_update_entities(
     logger.info(f"{label}: Updated {len(update_ops)} entities in bulk transaction")
 
     return update_receipt.tx_hash
+
+
+def bulk_extend_entities(
+    client: "Arkiv", extend_ops: list[ExtendOp], label: str = "bulk_extend"
+) -> TxHash:
+    """Extend multiple entities in a single bulk transaction.
+
+    Args:
+        client: Arkiv client instance
+        extend_ops: List of ExtendOp operations to execute
+        label: Label for transaction hash validation logging
+
+    Returns:
+        Transaction hash of the bulk extend operation
+
+    Raises:
+        RuntimeError: If the number of extensions in receipt doesn't match operations
+    """
+    # Use execute() for bulk extend
+    extend_operations = Operations(extensions=extend_ops)
+    extend_receipt = client.arkiv.execute(extend_operations)
+
+    # Check transaction hash of bulk extend
+    check_tx_hash(label, extend_receipt.tx_hash)
+
+    # Verify all extensions succeeded
+    if len(extend_receipt.extensions) != len(extend_ops):
+        raise RuntimeError(
+            f"Expected {len(extend_ops)} extensions in receipt, got {len(extend_receipt.extensions)}"
+        )
+
+    logger.info(f"{label}: Extended {len(extend_ops)} entities in bulk transaction")
+
+    return extend_receipt.tx_hash
 
 
 def create_account(index: int, name: str) -> NamedAccount:

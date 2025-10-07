@@ -23,6 +23,8 @@ from .types import (
     DeleteOp,
     Entity,
     EntityKey,
+    EventType,
+    ExtendCallback,
     ExtendOp,
     Operations,
     TransactionReceipt,
@@ -397,34 +399,15 @@ class ArkivModule:
         """
         Watch for entity creation events.
 
-        Args:
-            callback: Function to call when a creation event is detected.
-                     Receives (CreateEvent, TxHash) as arguments.
-            from_block: Starting block for the filter ('latest' or block number)
-            auto_start: If True, starts polling immediately
+        Creates an event filter that monitors entity creation events. The callback
+        receives (CreateEvent, TxHash) for each created entity.
 
-        Returns:
-            EventFilter instance for controlling the watch
-
-        Example:
-            def on_create(event: CreateEvent, tx_hash: TxHash) -> None:
-                print(f"Entity created: {event.entity_key}")
-
-            filter = arkiv.watch_entity_created(on_create)
-            # ... later ...
-            filter.stop()
+        See `_watch_entity_event` for detailed documentation on parameters, return
+        value, error handling, and usage examples.
         """
-        event_filter = EventFilter(
-            contract=self.contract,
-            event_type="created",
-            callback=callback,
-            from_block=from_block,
-            auto_start=auto_start,
+        return self._watch_entity_event(
+            "created", callback, from_block=from_block, auto_start=auto_start
         )
-
-        # Track the filter for cleanup
-        self._active_filters.append(event_filter)
-        return event_filter
 
     def watch_entity_updated(
         self,
@@ -436,83 +419,35 @@ class ArkivModule:
         """
         Watch for entity update events.
 
-        This method creates an event filter that monitors for entity updates on the
-        Arkiv storage contract. The callback is invoked each time an entity is updated,
-        receiving details about the update event and the transaction hash.
+        Creates an event filter that monitors entity update events. The callback
+        receives (UpdateEvent, TxHash) for each updated entity.
 
-        Args:
-            callback: Function to call when an update event is detected.
-                     Receives (UpdateEvent, TxHash) as arguments.
-            from_block: Starting block for the filter. Can be:
-                       - "latest": Only watch for new updates (default)
-                       - Block number (int): Watch from a specific historical block
-            auto_start: If True, starts polling immediately (default: True).
-                       If False, you must manually call filter.start()
-
-        Returns:
-            EventFilter instance for controlling the watch. Use this to:
-            - Stop polling: filter.stop()
-            - Resume polling: filter.start()
-            - Check status: filter.is_running
-            - Cleanup: filter.uninstall()
-
-        Raises:
-            ValueError: If callback is not callable
-            RuntimeError: If filter creation fails
-
-        Example:
-            Basic usage with automatic start:
-                >>> def on_update(event: UpdateEvent, tx_hash: TxHash) -> None:
-                ...     print(f"Entity updated: {event.entity_key}")
-                ...     print(f"New expiration: {event.expiration_block}")
-                ...
-                >>> filter = arkiv.watch_entity_updated(on_update)
-                >>> # Filter is now running and will call on_update for each update
-                >>> # ... later ...
-                >>> filter.stop()  # Pause watching
-                >>> filter.uninstall()  # Cleanup resources
-
-            Manual start/stop control:
-                >>> def on_update(event: UpdateEvent, tx_hash: TxHash) -> None:
-                ...     print(f"Updated: {event.entity_key}")
-                ...
-                >>> filter = arkiv.watch_entity_updated(on_update, auto_start=False)
-                >>> # Do some setup work...
-                >>> filter.start()  # Begin watching
-                >>> # ... later ...
-                >>> filter.stop()  # Stop watching
-                >>> filter.uninstall()  # Cleanup
-
-            Historical updates from specific block:
-                >>> filter = arkiv.watch_entity_updated(
-                ...     on_update,
-                ...     from_block=1000  # Start from block 1000
-                ... )
-
-        Note:
-            - Only captures UPDATE events (not creates, deletes, or extends)
-            - With from_block="latest", misses updates before filter creation
-            - Filter must be uninstalled via filter.uninstall() to free resources
-            - All active filters are automatically cleaned up when Arkiv client
-              context exits
-            - Callback exceptions are caught and logged but don't stop the filter
+        See `_watch_entity_event` for detailed documentation on parameters, return
+        value, error handling, and usage examples.
         """
-        event_filter = EventFilter(
-            contract=self.contract,
-            event_type="updated",
-            callback=callback,
-            from_block=from_block,
-            auto_start=auto_start,
+        return self._watch_entity_event(
+            "updated", callback, from_block=from_block, auto_start=auto_start
         )
 
-        # Track the filter for cleanup
-        self._active_filters.append(event_filter)
-        return event_filter
+    def watch_entity_extended(
+        self,
+        callback: ExtendCallback,
+        *,
+        from_block: str | int = "latest",
+        auto_start: bool = True,
+    ) -> EventFilter:
+        """
+        Watch for entity extension events.
 
-    @property
-    def active_filters(self) -> list[EventFilter]:
-        """Get a copy of currently active event filters."""
-        return list(self._active_filters)
+        Creates an event filter that monitors entity lifetime extension events. The
+        callback receives (ExtendEvent, TxHash) for each extended entity.
+
+        See `_watch_entity_event` for detailed documentation on parameters, return
+        value, error handling, and usage examples.
+        """
+        return self._watch_entity_event(
+            "extended", callback, from_block=from_block, auto_start=auto_start
+        )
 
     def cleanup_filters(self) -> None:
         """
@@ -537,6 +472,97 @@ class ArkivModule:
 
         self._active_filters.clear()
         logger.info("All event filters cleaned up")
+
+    @property
+    def active_filters(self) -> list[EventFilter]:
+        """Get a copy of currently active event filters."""
+        return list(self._active_filters)
+
+    def _watch_entity_event(
+        self,
+        event_type: EventType,
+        callback: CreateCallback | UpdateCallback | ExtendCallback,
+        *,
+        from_block: str | int = "latest",
+        auto_start: bool = True,
+    ) -> EventFilter:
+        """
+        Internal method to watch for entity events.
+
+        This method creates an event filter that monitors for entity events on the
+        Arkiv storage contract. The callback is invoked each time the specified event
+        occurs, receiving details about the event and the transaction hash.
+
+        Args:
+            event_type: Type of event to watch for ("created", "updated", "extended")
+            callback: Function to call when an event is detected.
+                     Receives (Event, TxHash) as arguments where Event is one of:
+                     CreateEvent, UpdateEvent, or ExtendEvent depending on event_type.
+            from_block: Starting block for the filter. Can be:
+                       - "latest": Only watch for new events (default)
+                       - Block number (int): Watch from a specific historical block
+            auto_start: If True, starts polling immediately (default: True).
+                       If False, you must manually call filter.start()
+
+        Returns:
+            EventFilter instance for controlling the watch. Use this to:
+            - Stop polling: filter.stop()
+            - Resume polling: filter.start()
+            - Check status: filter.is_running
+            - Cleanup: filter.uninstall()
+
+        Raises:
+            ValueError: If callback is not callable
+            RuntimeError: If filter creation fails
+
+        Example:
+            Basic usage with automatic start:
+                >>> def on_event(event: CreateEvent, tx_hash: TxHash) -> None:
+                ...     print(f"Event occurred: {event.entity_key}")
+                ...
+                >>> filter = arkiv._watch_entity_event("created", on_event)
+                >>> # Filter is now running and will call on_event for each event
+                >>> # ... later ...
+                >>> filter.stop()  # Pause watching
+                >>> filter.uninstall()  # Cleanup resources
+
+            Manual start/stop control:
+                >>> def on_event(event: UpdateEvent, tx_hash: TxHash) -> None:
+                ...     print(f"Event occurred: {event.entity_key}")
+                ...
+                >>> filter = arkiv._watch_entity_event("updated", on_event, auto_start=False)
+                >>> # Do some setup work...
+                >>> filter.start()  # Begin watching
+                >>> # ... later ...
+                >>> filter.stop()  # Stop watching
+                >>> filter.uninstall()  # Cleanup
+
+            Historical events from specific block:
+                >>> filter = arkiv._watch_entity_event(
+                ...     "extended",
+                ...     on_event,
+                ...     from_block=1000  # Start from block 1000
+                ... )
+
+        Note:
+            - Only captures the specified event type (not other lifecycle events)
+            - With from_block="latest", misses events before filter creation
+            - Filter must be uninstalled via filter.uninstall() to free resources
+            - All active filters are automatically cleaned up when Arkiv client
+              context exits
+            - Callback exceptions are caught and logged but don't stop the filter
+        """
+        event_filter = EventFilter(
+            contract=self.contract,
+            event_type=event_type,
+            callback=callback,
+            from_block=from_block,
+            auto_start=auto_start,
+        )
+
+        # Track the filter for cleanup
+        self._active_filters.append(event_filter)
+        return event_filter
 
     def _get_owner(self, metadata: dict[str, Any]) -> ChecksumAddress:
         """Get the owner address of the given entity."""

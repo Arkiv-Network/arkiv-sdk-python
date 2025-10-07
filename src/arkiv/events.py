@@ -11,11 +11,13 @@ from web3.contract import Contract
 from web3.contract.contract import ContractEvent
 from web3.types import EventData, LogReceipt
 
-from .contract import CREATED_EVENT, UPDATED_EVENT
+from .contract import CREATED_EVENT, EXTENDED_EVENT, UPDATED_EVENT
 from .types import (
     CreateCallback,
     CreateEvent,
     EventType,
+    ExtendCallback,
+    ExtendEvent,
     TxHash,
     UpdateCallback,
     UpdateEvent,
@@ -32,7 +34,7 @@ class EventFilter:
         self,
         contract: Contract,
         event_type: EventType,
-        callback: CreateCallback | UpdateCallback,
+        callback: CreateCallback | UpdateCallback | ExtendCallback,
         from_block: str | int = "latest",
         auto_start: bool = True,
     ) -> None:
@@ -48,7 +50,7 @@ class EventFilter:
         """
         self.contract: Contract = contract
         self.event_type: EventType = event_type
-        self.callback: CreateCallback | UpdateCallback = callback
+        self.callback: CreateCallback | UpdateCallback | ExtendCallback = callback
         self.from_block: str | int = from_block
 
         # Internal state
@@ -77,6 +79,9 @@ class EventFilter:
             self._filter = contract_event.create_filter(from_block=self.from_block)
         elif self.event_type == "updated":
             contract_event = self.contract.events[UPDATED_EVENT]
+            self._filter = contract_event.create_filter(from_block=self.from_block)
+        elif self.event_type == "extended":
+            contract_event = self.contract.events[EXTENDED_EVENT]
             self._filter = contract_event.create_filter(from_block=self.from_block)
         else:
             raise NotImplementedError(
@@ -166,50 +171,72 @@ class EventFilter:
         """
         logger.info(f"Processing event: {event_data}")
 
-        # Extract data based on event type
+        # Extract common data
+        entity_key = to_entity_key(event_data["args"]["entityKey"])
+        tx_hash = self._extract_tx_hash(event_data)
+
+        # Create event object and trigger callback based on type
         if self.event_type == "created":
-            # Parse CreateEvent
-            entity_key = to_entity_key(event_data["args"]["entityKey"])
-            expiration_block = event_data["args"]["expirationBlock"]
-
-            # Ensure transaction hash has 0x prefix
-            tx_hash_hex = event_data["transactionHash"].hex()
-            if not tx_hash_hex.startswith("0x"):
-                tx_hash_hex = f"0x{tx_hash_hex}"
-            tx_hash = TxHash(HexStr(tx_hash_hex))
-
             create_event = CreateEvent(
-                entity_key=entity_key, expiration_block=expiration_block
+                entity_key=entity_key,
+                expiration_block=event_data["args"]["expirationBlock"],
             )
-
-            # Trigger callback
-            try:
-                # Type narrowing: when event_type is "created", callback is CreateCallback
-                cast(CreateCallback, self.callback)(create_event, tx_hash)
-            except Exception as e:
-                logger.error(f"Error in callback: {e}", exc_info=True)
+            self._trigger_callback(
+                cast(CreateCallback, self.callback), create_event, tx_hash
+            )
 
         elif self.event_type == "updated":
-            # Parse UpdateEvent
-            entity_key = to_entity_key(event_data["args"]["entityKey"])
-            expiration_block = event_data["args"]["expirationBlock"]
-
-            # Ensure transaction hash has 0x prefix
-            tx_hash_hex = event_data["transactionHash"].hex()
-            if not tx_hash_hex.startswith("0x"):
-                tx_hash_hex = f"0x{tx_hash_hex}"
-            tx_hash = TxHash(HexStr(tx_hash_hex))
-
             update_event = UpdateEvent(
-                entity_key=entity_key, expiration_block=expiration_block
+                entity_key=entity_key,
+                expiration_block=event_data["args"]["expirationBlock"],
+            )
+            self._trigger_callback(
+                cast(UpdateCallback, self.callback), update_event, tx_hash
             )
 
-            # Trigger callback
-            try:
-                # Type narrowing: when event_type is "updated", callback is UpdateCallback
-                cast(UpdateCallback, self.callback)(update_event, tx_hash)
-            except Exception as e:
-                logger.error(f"Error in callback: {e}", exc_info=True)
+        elif self.event_type == "extended":
+            extend_event = ExtendEvent(
+                entity_key=entity_key,
+                old_expiration_block=event_data["args"]["oldExpirationBlock"],
+                new_expiration_block=event_data["args"]["newExpirationBlock"],
+            )
+            self._trigger_callback(
+                cast(ExtendCallback, self.callback), extend_event, tx_hash
+            )
 
         else:
             logger.warning(f"Unknown event type: {self.event_type}")
+
+    def _extract_tx_hash(self, event_data: EventData) -> TxHash:
+        """
+        Extract and normalize transaction hash from event data.
+
+        Args:
+            event_data: Event data from Web3 filter
+
+        Returns:
+            Transaction hash with 0x prefix
+        """
+        tx_hash_hex = event_data["transactionHash"].hex()
+        if not tx_hash_hex.startswith("0x"):
+            tx_hash_hex = f"0x{tx_hash_hex}"
+        return TxHash(HexStr(tx_hash_hex))
+
+    def _trigger_callback(
+        self,
+        callback: CreateCallback | UpdateCallback | ExtendCallback,
+        event: CreateEvent | UpdateEvent | ExtendEvent,
+        tx_hash: TxHash,
+    ) -> None:
+        """
+        Trigger callback with error handling.
+
+        Args:
+            callback: Callback function to invoke
+            event: Event object to pass to callback
+            tx_hash: Transaction hash to pass to callback
+        """
+        try:
+            callback(event, tx_hash)  # type: ignore[arg-type]
+        except Exception as e:
+            logger.error(f"Error in callback: {e}", exc_info=True)
