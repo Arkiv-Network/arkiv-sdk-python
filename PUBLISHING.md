@@ -102,7 +102,7 @@ export TESTPYPI_TOKEN="pypi-..."
 
 ## Publishing Workflow
 
-### Using scripts/publish.sh (Interactive)
+### Publish to TestPyPi
 
 1. Ensure you're on the correct branch with latest changes
 
@@ -127,8 +127,7 @@ Run full quality check (iterate until all green)
 ./scripts/check-all.sh
 ```
 
-
-4. Commit version changes
+5. Commit version changes
 
 ```bash
 git status # check that this matches with your expectation
@@ -137,8 +136,7 @@ git commit -m "chore: prepare for <latest-version>  release"
 git push
 ```
 
-
-5. Run the publishing wizard
+6. Run the publishing wizard
 ```bash
 ./scripts/publish.sh
 ```
@@ -155,31 +153,62 @@ The script will:
     2) Publish to PyPI (production)
     3) Exit
 
-6. First time: Choose option 1 (TestPyPI)
+7. First time: Choose option 1 (TestPyPI)
 Enter your TESTPYPI_TOKEN when prompted (if not in environment)
 
-7. Test installation from TestPyPI
-Open a terminal outside the IDE
+8. Test installation from TestPyPI
+Open a terminal outside the IDE.
+When the package arkiv-sdk is installed already remove it first.
 
 ```bash
-pip install --index-url https://test.pypi.org/simple/ \
-            --extra-index-url https://pypi.org/simple \
-            arkiv-sdk
+uv pip uninstall arkiv-sdk testcontainers
 ```
 
-8. Verify it works
+Install the dependencies for local development.
+
 ```bash
-python -c "from arkiv import Arkiv, __version__; print(f'Version: {__version__}')"
+uv pip install testcontainers
+uv pip install -i https://test.pypi.org/simple/ arkiv-sdk
+uv run python -c "from arkiv import Arkiv, __version__; print(f'Version: {__version__}')"
 ```
 
-# 9. If all good, run publish script again for production
+9. Do some optional smoke tests using the library
+
+Check the package interactively.
+
+```bash
+uv run python
+```
+
+Python session in interactive shell.
+
+```python
+from arkiv import Arkiv
+client = Arkiv()
+entity_key, _ = client.arkiv.create_entity(payload=b'Hello world!', btl=1000)
+client.arkiv.get_entity(entity_key)
+```
+
+In case of errors/issues analyize and fix them, then repeat publish to TestPyPi.
+Once all checks pass, publish to PyPi (production).
+
+### Publish to PyPi (Production)
+
+1. If all good on TestPyPi, run publish script again for production
+
+```bash
 ./scripts/publish.sh
-# Choose option 2 (PyPI)
-# Enter your PYPI_TOKEN when prompted (if not in environment)
+````
 
-# 10. Create Git tag
+Choose option 2 (PyPI)
+
+
+2. Create Git tag
+
+```bash
 git tag -a v1.0.0a2 -m "Release version 1.0.0a2"
 git push origin v1.0.0a2
+```
 
 # 11. Create GitHub release
 gh release create v1.0.0a2 \

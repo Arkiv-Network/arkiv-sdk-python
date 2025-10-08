@@ -50,6 +50,10 @@ TX_SUCCESS = 1
 class ArkivModule:
     """Basic Arkiv module for entity management operations."""
 
+    BTL_DEFAULT = (
+        1000  # Default blocks to live for created entities (~30 mins with 2s blocks)
+    )
+
     def __init__(self, client: "Arkiv") -> None:
         """Initialize Arkiv module with client reference."""
         self.client = client
@@ -106,7 +110,7 @@ class ArkivModule:
         self,
         payload: bytes | None = None,
         annotations: Annotations | None = None,
-        btl: int = 0,
+        btl: int = BTL_DEFAULT,
         tx_params: TxParams | None = None,
     ) -> tuple[EntityKey, TxHash]:
         """
@@ -115,7 +119,7 @@ class ArkivModule:
         Args:
             payload: Optional data payload for the entity
             annotations: Optional key-value annotations
-            btl: Blocks to live (default: 0)
+            btl: Blocks to live (default: 1000, ~30 minutes with 2s blocks)
             tx_params: Optional additional transaction parameters
 
         Returns:
@@ -150,7 +154,7 @@ class ArkivModule:
         entity_key: EntityKey,
         payload: bytes | None = None,
         annotations: Annotations | None = None,
-        btl: int = 0,
+        btl: int = BTL_DEFAULT,
         tx_params: TxParams | None = None,
     ) -> TxHash:
         """
@@ -160,7 +164,7 @@ class ArkivModule:
             entity_key: The entity key of the entity to update
             payload: Optional new data payload for the entity, existing payload will be replaced
             annotations: Optional new key-value annotations, existing annotations will be replaced
-            btl: Blocks to live (default: 0)
+            btl: Blocks to live (default: 1000, ~30 minutes with 2s blocks)
             tx_params: Optional additional transaction parameters
 
         Returns:
