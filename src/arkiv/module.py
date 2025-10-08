@@ -420,17 +420,18 @@ class ArkivModule:
             raise ValueError("Must provide either query or cursor")
 
         if query is not None and len(query.strip()) > 0:
-            logger.info(f"Query: '{query}', limit={limit}, at_block={at_block}, cursor={cursor}")
+            logger.info(
+                f"Query: '{query}', limit={limit}, at_block={at_block}, cursor={cursor}"
+            )
 
             # Fetch raw results from RPC
             raw_results = self.client.eth.query_entities(query)  # type: ignore[attr-defined]
-            
+
             # Transform and log each result
             entities: list[Entity] = []
             for result in raw_results:
                 entity_result = QueryEntitiesResult(
-                    entity_key=result.key,
-                    storage_value=base64.b64decode(result.value)
+                    entity_key=result.key, storage_value=base64.b64decode(result.value)
                 )
                 logger.info(f"Query result item: {entity_result}")
                 entities.append(to_entity(entity_result))

@@ -1,6 +1,5 @@
 """Tests for entity query functionality."""
 
-from unittest import result
 import uuid
 
 import pytest
@@ -30,7 +29,9 @@ class TestQueryEntitiesParameterValidation:
         """Test that query_entities accepts query without cursor."""
         # Should not raise ValueError for missing cursor
         # Query will execute (returns empty result since no matching entities exist)
-        result = arkiv_client_http.arkiv.query_entities(query='owner = "0x0000000000000000000000000000000000000000"')
+        result = arkiv_client_http.arkiv.query_entities(
+            query='owner = "0x0000000000000000000000000000000000000000"'
+        )
         assert not result  # check for falsy result
         assert len(result) == 0  # No entities match this owner
 
@@ -41,7 +42,9 @@ class TestQueryEntitiesParameterValidation:
 
         # Should not raise ValueError for missing query
         # Will raise NotImplementedError since cursor-based pagination is not yet implemented
-        with pytest.raises(NotImplementedError, match="not yet implemented for cursors"):
+        with pytest.raises(
+            NotImplementedError, match="not yet implemented for cursors"
+        ):
             arkiv_client_http.arkiv.query_entities(cursor=cursor)
 
     def test_query_entities_both_query_and_cursor_not_allowed(
@@ -52,7 +55,10 @@ class TestQueryEntitiesParameterValidation:
 
         # Should raise ValueError when both are provided
         with pytest.raises(ValueError, match="Cannot provide both query and cursor"):
-            arkiv_client_http.arkiv.query_entities(query='owner = "0x0000000000000000000000000000000000000000"', cursor=cursor)
+            arkiv_client_http.arkiv.query_entities(
+                query='owner = "0x0000000000000000000000000000000000000000"',
+                cursor=cursor,
+            )
 
     def test_query_entities_with_all_parameters(self, arkiv_client_http: Arkiv) -> None:
         """Test that query_entities accepts all parameters."""
@@ -73,7 +79,9 @@ class TestQueryEntitiesParameterValidation:
 
         # Should not raise ValueError
         # Will raise NotImplementedError since cursor-based pagination is not yet implemented
-        with pytest.raises(NotImplementedError, match="not yet implemented for cursors"):
+        with pytest.raises(
+            NotImplementedError, match="not yet implemented for cursors"
+        ):
             arkiv_client_http.arkiv.query_entities(
                 cursor=cursor,
                 limit=100,  # Ignored when cursor is provided
@@ -106,12 +114,12 @@ class TestQueryEntitiesBasic:
 
         # Verify result basics
         assert result  # Check __bool__()
+        assert result.block_number > 0
         assert result.has_more() is False
         assert result.next_cursor is None  # only 3 results, no pagination needed
 
         # Verify we got back all 3 entities
         assert len(result.entities) == 3
-        assert result.block_number > 0
 
         # Verify the entity keys match (order may differ)
         result_keys = {entity.entity_key for entity in result.entities}

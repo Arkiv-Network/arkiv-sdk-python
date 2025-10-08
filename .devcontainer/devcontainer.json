@@ -39,5 +39,5 @@
             ]
         }
     },
-    "postCreateCommand": "uv sync --all-groups && git config --global core.editor nano"
+    "postCreateCommand": "bash .devcontainer/post-create.sh"
 }
