@@ -379,20 +379,21 @@ class ArkivModule:
         Use the returned cursor to fetch subsequent pages.
 
         Args:
-            query: SQL-like query string. Required for first page, ignored when using cursor.
+            query: SQL-like query string for the first page. Mutually exclusive with cursor.
                 Example: "SELECT * WHERE owner = '0x...' ORDER BY created_at DESC"
             limit: Maximum number of entities to return per page.
-                Server may enforce a maximum limit. Ignored when using cursor.
+                Server may enforce a maximum limit. Can be modified between pagination requests.
             at_block: Block number or "latest" at which to execute query.
-                Ensures consistency across paginated results. Ignored when using cursor.
+                Ensures consistency across paginated results. Ignored when using cursor
+                (cursor already contains the block number).
             cursor: Cursor from previous QueryResult to fetch next page.
-                When provided, query, limit, and at_block are ignored (cursor contains them).
+                Mutually exclusive with query. The cursor encodes the query and block number.
 
         Returns:
             QueryResult with entities, block number, and optional next cursor.
 
         Raises:
-            ValueError: If neither query nor cursor is provided.
+            ValueError: If both query and cursor are provided, or if neither is provided.
             NotImplementedError: This method is not yet implemented.
 
         Examples:
@@ -411,8 +412,11 @@ class ArkivModule:
         Note:
             For automatic pagination across all pages, use query_all_entities() instead.
         """
+        # Validate mutual exclusivity of query and cursor
+        if cursor is not None and query is not None:
+            raise ValueError("Cannot provide both query and cursor")
         if cursor is None and query is None:
-            raise ValueError("Either query or cursor must be provided")
+            raise ValueError("Must provide either query or cursor")
 
         raise NotImplementedError("query_entities is not implemented yet")
 
