@@ -251,3 +251,12 @@ NumericAnnotationsRlp = NewType("NumericAnnotationsRlp", list[tuple[str, int]])
 # Low level annotations for entity decoding
 StringAnnotations = NewType("StringAnnotations", AttributeDict[str, str])
 NumericAnnotations = NewType("NumericAnnotations", AttributeDict[str, int])
+
+
+# Low level query result for entity query
+@dataclass(frozen=True)
+class QueryEntitiesResult:
+    """A class representing the return value of a Golem Base query."""
+
+    entity_key: EntityKey
+    storage_value: bytes

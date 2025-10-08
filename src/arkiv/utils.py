@@ -15,14 +15,17 @@ from . import contract
 from .contract import STORAGE_ADDRESS
 from .exceptions import AnnotationException, EntityKeyException
 from .types import (
+    PAYLOAD,
     Annotations,
     CreateEvent,
     DeleteEvent,
+    Entity,
     EntityKey,
     ExtendEvent,
     NumericAnnotations,
     NumericAnnotationsRlp,
     Operations,
+    QueryEntitiesResult,
     StringAnnotations,
     StringAnnotationsRlp,
     TransactionReceipt,
@@ -43,6 +46,38 @@ def to_entity_key(entity_key_int: int) -> EntityKey:
 
 def entity_key_to_bytes(entity_key: EntityKey) -> bytes:
     return bytes.fromhex(entity_key[2:])  # Strip '0x' prefix and convert to bytes
+
+
+def to_entity(query_result: QueryEntitiesResult) -> Entity:
+    """
+    Convert a QueryEntitiesResult to an Entity.
+
+    The query result only contains the entity key and payload (storage value).
+    Other fields (owner, expires_at_block, annotations) are not populated.
+
+    Args:
+        query_result: Low-level query result from the Arkiv node
+
+    Returns:
+        Entity with only the PAYLOAD field populated
+
+    Example:
+        >>> query_result = QueryEntitiesResult(
+        ...     entity_key=EntityKey("0x1234..."),
+        ...     storage_value=b"some data"
+        ... )
+        >>> entity = to_entity(query_result)
+        >>> assert entity.payload == b"some data"
+        >>> assert entity.owner is None  # Not populated by query
+    """
+    return Entity(
+        entity_key=query_result.entity_key,
+        fields=PAYLOAD,  # Only payload is populated from query results
+        owner=None,
+        expires_at_block=None,
+        payload=query_result.storage_value,
+        annotations=None,
+    )
 
 
 def check_entity_key(entity_key: Any | None, label: str | None = None) -> None:

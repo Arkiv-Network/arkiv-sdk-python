@@ -29,13 +29,14 @@ from .types import (
     ExtendCallback,
     ExtendOp,
     Operations,
+    QueryEntitiesResult,
     QueryResult,
     TransactionReceipt,
     TxHash,
     UpdateCallback,
     UpdateOp,
 )
-from .utils import merge_annotations, to_receipt, to_tx_params
+from .utils import merge_annotations, to_entity, to_receipt, to_tx_params
 
 # Deal with potential circular imports between client.py and module.py
 if TYPE_CHECKING:
@@ -418,7 +419,33 @@ class ArkivModule:
         if cursor is None and query is None:
             raise ValueError("Must provide either query or cursor")
 
-        raise NotImplementedError("query_entities is not implemented yet")
+        if query is not None and len(query.strip()) > 0:
+            logger.info(f"Query: '{query}', limit={limit}, at_block={at_block}, cursor={cursor}")
+
+            # Fetch raw results from RPC
+            raw_results = self.client.eth.query_entities(query)  # type: ignore[attr-defined]
+            
+            # Transform and log each result
+            entities: list[Entity] = []
+            for result in raw_results:
+                entity_result = QueryEntitiesResult(
+                    entity_key=result.key,
+                    storage_value=base64.b64decode(result.value)
+                )
+                logger.info(f"Query result item: {entity_result}")
+                entities.append(to_entity(entity_result))
+
+            logger.info(f"Query returned {len(entities)} result(s)")
+
+            # return dummy result for now
+            return QueryResult(
+                entities=entities,
+                block_number=self.client.eth.get_block_number(),
+                next_cursor=None,
+            )
+
+        # Cursor based pagination not implemented yet
+        raise NotImplementedError("query_entities is not yet implemented for cursors")
 
     def query_all_entities(
         self,
