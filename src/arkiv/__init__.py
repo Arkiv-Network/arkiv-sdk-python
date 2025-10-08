@@ -1,5 +1,7 @@
 """Python SDK for Arkiv networks."""
 
+from importlib.metadata import PackageNotFoundError, version
+
 from .account import NamedAccount
 from .client import Arkiv
 from .events import EventFilter
@@ -13,7 +15,12 @@ from .types import (
     UpdateEvent,
 )
 
-__version__ = "0.1.0"
+try:
+    __version__ = version("arkiv-sdk")
+except PackageNotFoundError:
+    # Package is not installed (e.g., development without editable install)
+    __version__ = "dev"
+
 __all__ = [
     "Arkiv",
     "ArkivNode",

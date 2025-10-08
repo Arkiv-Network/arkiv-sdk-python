@@ -4,9 +4,30 @@ version = "1.0.0a1"
 description = "Python SDK for Arkiv networks - Web3.py + Entities"
 readme = "README.md"
 requires-python = ">=3.12"
+license = {text = "MIT"}
+authors = [
+    {name = "Arkiv Network", email = "matthias.zimmermann@golem.network"}
+]
+keywords = ["arkiv", "web3", "blockchain", "ethereum", "storage", "entities", "l2", "layer2"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Distributed Computing",
+]
 dependencies = [
     "web3>=7.13.0,<7.14.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/Arkiv-Network/arkiv-sdk-python"
+Documentation = "https://github.com/Arkiv-Network/arkiv-sdk-python#readme"
+Repository = "https://github.com/Arkiv-Network/arkiv-sdk-python"
+Issues = "https://github.com/Arkiv-Network/arkiv-sdk-python/issues"
+Changelog = "https://github.com/Arkiv-Network/arkiv-sdk-python/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 # Optional: Local development node support (ArkivNode)
