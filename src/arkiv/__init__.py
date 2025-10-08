@@ -4,6 +4,7 @@ from .account import NamedAccount
 from .client import Arkiv
 from .events import EventFilter
 from .node import ArkivNode
+from .query import QueryIterator
 from .types import (
     CreateEvent,
     DeleteEvent,
@@ -21,6 +22,7 @@ __all__ = [
     "EventFilter",
     "ExtendEvent",
     "NamedAccount",
+    "QueryIterator",
     "TransactionReceipt",
     "UpdateEvent",
 ]

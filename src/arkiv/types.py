@@ -1,6 +1,6 @@
 """Type definitions for the Arkiv SDK."""
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass
 from typing import Literal, NewType
 
@@ -67,6 +67,60 @@ class Entity:
 
     # Populated when fields | ANNOTATIONS returns true
     annotations: Annotations | None
+
+
+# Cursor type for entity set pagination for query results
+Cursor = NewType("Cursor", str)
+
+
+@dataclass(frozen=True)
+class QueryResult:
+    """
+    Result of an entity query operation.
+
+    Attributes:
+        entities: List of entities matching the query.
+            Empty list if no entities match the query criteria.
+        block_number: Block number at which the query was executed.
+            All pages of a query result set MUST use the same block_number
+            to ensure consistency across pagination.
+        next_cursor: Cursor for fetching the next page of results.
+            None if this is the last page or all results fit in one page.
+            The cursor implicitly carries the block_number for consistency.
+
+    Example:
+        >>> result = arkiv.query_entities("SELECT * WHERE owner = '0x...' LIMIT 50")
+        >>> print(f"Found {len(result)} at block {result.block_number}")
+        >>>
+        >>> # Pagination (automatically uses same block_number)
+        >>> while result.has_more():
+        ...     result = arkiv.query_entities(cursor=result.next_cursor)
+        ...     print(f"Page entities: {result.entities}")
+    """
+
+    entities: list[Entity]
+    block_number: int
+    next_cursor: Cursor | None = None
+
+    def __len__(self) -> int:
+        """len(result) -> number of entities"""
+        return len(self.entities)
+
+    def __bool__(self) -> bool:
+        """bool(result) -> True if has entities"""
+        return len(self.entities) > 0
+
+    def __iter__(self) -> Iterator[Entity]:
+        """for entity in result: ... -> iterate entities"""
+        return iter(self.entities)
+
+    def __getitem__(self, index: int) -> Entity:
+        """result[0] -> first entity"""
+        return self.entities[index]
+
+    def has_more(self) -> bool:
+        """Check if more results available"""
+        return self.next_cursor is not None
 
 
 @dataclass(frozen=True)

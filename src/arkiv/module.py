@@ -12,6 +12,7 @@ from arkiv.account import NamedAccount
 
 from .contract import EVENTS_ABI, FUNCTIONS_ABI, STORAGE_ADDRESS
 from .events import EventFilter
+from .query import QueryIterator
 from .types import (
     ALL,
     ANNOTATIONS,
@@ -20,6 +21,7 @@ from .types import (
     Annotations,
     CreateCallback,
     CreateOp,
+    Cursor,
     DeleteOp,
     Entity,
     EntityKey,
@@ -27,6 +29,7 @@ from .types import (
     ExtendCallback,
     ExtendOp,
     Operations,
+    QueryResult,
     TransactionReceipt,
     TxHash,
     UpdateCallback,
@@ -359,6 +362,120 @@ class ArkivModule:
             expires_at_block=expires_at_block,
             payload=payload,
             annotations=annotations,
+        )
+
+    def query_entities(
+        self,
+        query: str | None = None,
+        *,
+        limit: int | None = None,
+        at_block: int | str = "latest",
+        cursor: Cursor | None = None,
+    ) -> QueryResult:
+        """
+        Query entities with manual pagination control.
+
+        Execute a query against entity storage and return a single page of results.
+        Use the returned cursor to fetch subsequent pages.
+
+        Args:
+            query: SQL-like query string. Required for first page, ignored when using cursor.
+                Example: "SELECT * WHERE owner = '0x...' ORDER BY created_at DESC"
+            limit: Maximum number of entities to return per page.
+                Server may enforce a maximum limit. Ignored when using cursor.
+            at_block: Block number or "latest" at which to execute query.
+                Ensures consistency across paginated results. Ignored when using cursor.
+            cursor: Cursor from previous QueryResult to fetch next page.
+                When provided, query, limit, and at_block are ignored (cursor contains them).
+
+        Returns:
+            QueryResult with entities, block number, and optional next cursor.
+
+        Raises:
+            ValueError: If neither query nor cursor is provided.
+            NotImplementedError: This method is not yet implemented.
+
+        Examples:
+            First page:
+                >>> result = arkiv.arkiv.query_entities(
+                ...     "SELECT * WHERE owner = '0x1234...'",
+                ...     limit=100
+                ... )
+                >>> for entity in result:
+                ...     print(entity.entity_key)
+
+            Next page:
+                >>> if result.has_more():
+                ...     next_page = arkiv.arkiv.query_entities(cursor=result.next_cursor)
+
+        Note:
+            For automatic pagination across all pages, use query_all_entities() instead.
+        """
+        if cursor is None and query is None:
+            raise ValueError("Either query or cursor must be provided")
+
+        raise NotImplementedError("query_entities is not implemented yet")
+
+    def query_all_entities(
+        self,
+        query: str,
+        *,
+        limit: int = 100,
+        at_block: int | str = "latest",
+    ) -> QueryIterator:
+        """
+        Query entities with automatic pagination.
+
+        Returns an iterator that automatically fetches all pages of results,
+        allowing you to seamlessly process all matching entities without
+        manual pagination.
+
+        Args:
+            query: SQL-like query string to filter and order entities.
+                Example: "SELECT * FROM entities WHERE owner = '0x...' ORDER BY created_at DESC"
+            limit: Number of entities to fetch per page (default: 100).
+                Server may enforce a maximum limit.
+            at_block: Block number or "latest" at which to execute query.
+                Ensures all pages are fetched from the same blockchain state.
+
+        Returns:
+            QueryIterator that yields Entity objects across all pages.
+
+        Examples:
+            Process all matching entities:
+                >>> for entity in arkiv.arkiv.query_all_entities(
+                ...     "SELECT * WHERE owner = '0x1234...'",
+                ...     limit=100
+                ... ):
+                ...     process(entity)
+
+            Collect all results:
+                >>> entities = list(arkiv.arkiv.query_all_entities(
+                ...     "SELECT * ORDER BY created_at DESC",
+                ...     limit=50
+                ... ))
+                >>> print(f"Total: {len(entities)}")
+
+            Check which block was queried:
+                >>> iterator = arkiv.arkiv.query_all_entities("SELECT *")
+                >>> first_entity = next(iterator)
+                >>> print(f"Queried at block: {iterator.block_number}")
+
+        Warning:
+            This method may make many network requests to fetch all pages.
+            Use appropriate limit values to control API usage.
+            For manual pagination control, use query_entities() instead.
+
+        Note:
+            - All pages maintain consistency by querying the same block
+            - The iterator cannot be reused once exhausted
+            - Results reflect state at a specific point in time
+        """
+        return QueryIterator(
+            client=self.client,
+            query=query,
+            limit=limit,
+            at_block=at_block,
         )
 
     def watch_entity_created(
