@@ -3,6 +3,8 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from web3.types import TxParams
+
 from arkiv.account import NamedAccount
 from arkiv.types import (
     CreateOp,
@@ -92,6 +94,39 @@ def check_entity(label: str, client: "Arkiv", expected: Entity) -> None:
         )
 
     logger.info(f"{label}: Entity comparison successful")
+
+
+def create_entities(
+    client: "Arkiv",
+    create_ops: list[CreateOp],
+    tx_params: TxParams | None = None,
+) -> tuple[list[EntityKey], TxHash]:
+    """
+    Create multiple entities in a single transaction (bulk create).
+
+    Args:
+        client: Arkiv client instance
+        create_ops: List of CreateOp objects to create
+        tx_params: Optional additional transaction parameters
+
+    Returns:
+        An array of all created entity keys and transaction hash of the operation
+    """
+    if not create_ops or len(create_ops) == 0:
+        raise ValueError("create_ops must contain at least one CreateOp")
+
+    # Wrap in Operations container and execute
+    operations = Operations(creates=create_ops)
+    receipt = client.arkiv.execute(operations, tx_params)
+
+    # Verify all creates succeeded
+    if len(receipt.creates) != len(create_ops):
+        raise RuntimeError(
+            f"Expected {len(create_ops)} creates in receipt, got {len(receipt.creates)}"
+        )
+
+    entity_keys = [create.entity_key for create in receipt.creates]
+    return entity_keys, receipt.tx_hash
 
 
 def bulk_create_entities(

@@ -6,6 +6,8 @@ from arkiv import Arkiv
 from arkiv.types import Annotations, EntityKey
 from arkiv.utils import is_entity_key
 
+from .utils import bulk_create_entities
+
 logger = logging.getLogger(__name__)
 
 
@@ -126,7 +128,9 @@ class TestEntityExists:
             )
             for i in range(5)
         ]
-        entity_keys, _ = arkiv_client_http.arkiv.create_entities(create_ops)
+        entity_keys = bulk_create_entities(
+            arkiv_client_http, create_ops, label="test_bulk_exists"
+        )
 
         # Verify all exist
         for entity_key in entity_keys:

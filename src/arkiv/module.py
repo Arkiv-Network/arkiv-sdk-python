@@ -132,43 +132,14 @@ class ArkivModule:
 
         # Verify we got at least one create
         creates = receipt.creates
-        if len(creates) == 0:
-            raise RuntimeError("Receipt should have at least one entry in 'creates'")
+        if len(creates) != 1:
+            raise RuntimeError(
+                f"Receipt should have exactly one entry in 'creates' but got {len(creates)}"
+            )
 
         create = creates[0]
         entity_key = create.entity_key
         return entity_key, receipt.tx_hash
-
-    def create_entities(
-        self,
-        create_ops: list[CreateOp],
-        tx_params: TxParams | None = None,
-    ) -> tuple[list[EntityKey], TxHash]:
-        """
-        Create multiple entities in a single transaction (bulk create).
-
-        Args:
-            create_ops: List of CreateOp objects to create
-            tx_params: Optional additional transaction parameters
-
-        Returns:
-            An array of all created entity keys and transaction hash of the operation
-        """
-        if not create_ops or len(create_ops) == 0:
-            raise ValueError("create_ops must contain at least one CreateOp")
-
-        # Wrap in Operations container and execute
-        operations = Operations(creates=create_ops)
-        receipt = self.execute(operations, tx_params)
-
-        # Verify all creates succeeded
-        if len(receipt.creates) != len(create_ops):
-            raise RuntimeError(
-                f"Expected {len(create_ops)} creates in receipt, got {len(receipt.creates)}"
-            )
-
-        entity_keys = [create.entity_key for create in receipt.creates]
-        return entity_keys, receipt.tx_hash
 
     def update_entity(
         self,
@@ -330,7 +301,8 @@ class ArkivModule:
             True if the entity exists, False otherwise
         """
         try:
-            self.client.eth.get_entity_metadata(entity_key)  # type: ignore[attr-defined]
+            # TODO self.client.eth.get_entity_metadata by itself does not guarantee existence
+            self._get_entity_metadata(entity_key)
             return True
 
         except Exception:
@@ -610,4 +582,14 @@ class ArkivModule:
         # EntityKey is automatically converted by arkiv_munger
         metadata: dict[str, Any] = self.client.eth.get_entity_metadata(entity_key)  # type: ignore[attr-defined]
         logger.debug(f"Raw metadata: {metadata}")
+
+        # Basic validation of metadata content
+        if not metadata:
+            raise ValueError(f"Entity metadata is empty for entity key {entity_key}")
+
+        if "owner" not in metadata or "expiresAtBlock" not in metadata:
+            raise ValueError(
+                f"Entity metadata missing required fields for entity key {entity_key}: {metadata}"
+            )
+
         return metadata

@@ -7,6 +7,8 @@ import pytest
 
 from arkiv.types import Annotations, CreateEvent, CreateOp, TxHash
 
+from .utils import create_entities
+
 
 @pytest.mark.usefixtures("arkiv_client_http")
 class TestWatchEntityCreated:
@@ -210,7 +212,7 @@ class TestWatchEntityCreated:
                     payload=b"bulk entity 3", annotations=Annotations({}), btl=100
                 ),
             ]
-            entity_keys, tx_hash = arkiv_client_http.arkiv.create_entities(create_ops)
+            entity_keys, tx_hash = create_entities(arkiv_client_http, create_ops)
 
             # Wait for all callbacks
             assert callback_triggered.wait(timeout=15.0), (

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from web3 import Web3
 from web3.middleware import SignAndSendRawMiddlewareBuilder
@@ -13,9 +13,6 @@ from arkiv.exceptions import NamedAccountNotFoundException
 
 from .account import NamedAccount
 from .module import ArkivModule
-
-if TYPE_CHECKING:
-    pass
 
 # Set up logger for Arkiv client
 logger = logging.getLogger(__name__)

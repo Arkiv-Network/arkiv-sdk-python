@@ -25,8 +25,9 @@ from web3.exceptions import Web3RPCError
 
 from arkiv import Arkiv
 from arkiv.types import Annotations, CreateOp, EntityKey
+from tests.conftest import arkiv_client_http
 
-from .utils import create_account
+from .utils import create_account, create_entities
 
 NUM_CLIENTS_ENV = "NUM_CLIENTS"
 NUM_TX_ENV = "NUM_TX"
@@ -124,7 +125,9 @@ def client_creation_task(
                     for p, a, b in entities_in_batch
                 ]
                 try:
-                    entity_keys, tx_hash = client.arkiv.create_entities(create_ops)
+                    entity_keys, tx_hash = create_entities(
+                        arkiv_client_http, create_ops
+                    )
                     logger.info(
                         f"Entity creation TX[{client_idx}][{tx_no}]: {tx_hash} ({len(entity_keys)} entities)"
                     )

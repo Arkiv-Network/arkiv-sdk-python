@@ -211,7 +211,9 @@ class TestEntityExtend:
         # Get initial expiration
         entity_before = arkiv_client_http.arkiv.get_entity(entity_key)
         initial_expiration = initial_expiration = entity_before.expires_at_block
-        assert initial_expiration is not None, "Entity should have expiration block"
+        assert initial_expiration is not None, (
+            f"Entity should have expiration block, actual entity: {entity_before}"
+        )
 
         # Extend by just 1 block
         extend_tx_hash = arkiv_client_http.arkiv.extend_entity(entity_key, 1)
