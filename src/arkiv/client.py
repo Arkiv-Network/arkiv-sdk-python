@@ -7,6 +7,7 @@ from typing import Any
 
 from web3 import Web3
 from web3.middleware import SignAndSendRawMiddlewareBuilder
+from web3.providers import WebSocketProvider
 from web3.providers.base import BaseProvider
 
 from arkiv.exceptions import NamedAccountNotFoundException
@@ -85,6 +86,10 @@ class Arkiv(Web3):
                     f"Creating default account '{self.ACCOUNT_NAME_DEFAULT}' for local node..."
                 )
                 account = NamedAccount.create(self.ACCOUNT_NAME_DEFAULT)
+
+        # Validate provider compatibility
+        if provider is not None:
+            self._validate_provider(provider)
 
         super().__init__(provider, **kwargs)
 
@@ -183,3 +188,26 @@ class Arkiv(Web3):
         logger.info(
             f"Successfully switched to account '{account_name}' ({account.address})"
         )
+
+    def _validate_provider(self, provider: BaseProvider) -> None:
+        """
+        Validate that the provider is compatible with the sync Arkiv client.
+
+        Args:
+            provider: Web3 provider to validate
+
+        Raises:
+            ValueError: If provider is not compatible with sync operations
+        """
+        if isinstance(provider, WebSocketProvider):
+            raise ValueError(
+                "WebSocket providers are not supported by the sync Arkiv client. "
+                "Use HTTP provider instead:\n\n"
+                "  # Instead of:\n"
+                "  provider = ProviderBuilder().localhost().ws().build()\n"
+                "  \n"
+                "  # Use:\n"
+                "  provider = ProviderBuilder().localhost().http().build()\n"
+                "  \n"
+                "For near real-time updates, consider using HTTP polling."
+            )

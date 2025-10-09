@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import threading
 import time
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 from eth_typing import HexStr
 from web3._utils.filters import LogFilter
@@ -28,11 +28,19 @@ from .types import (
 )
 from .utils import to_entity_key
 
+if TYPE_CHECKING:
+    pass
+
 logger = logging.getLogger(__name__)
 
 
 class EventFilter:
-    """Handle for watching entity events."""
+    """
+    Handle for watching entity events using HTTP polling.
+
+    Uses polling-based filter with get_new_entries() for event monitoring.
+    WebSocket providers are not supported by the sync Arkiv client.
+    """
 
     def __init__(
         self,
@@ -43,7 +51,7 @@ class EventFilter:
         auto_start: bool = True,
     ) -> None:
         """
-        Initialize event filter.
+        Initialize event filter for HTTP polling.
 
         Args:
             contract: Web3 contract instance
@@ -59,10 +67,10 @@ class EventFilter:
         ) = callback
         self.from_block: str | int = from_block
 
-        # Internal state
-        self._filter: LogFilter | None = None
+        # Internal state for HTTP polling
         self._running: bool = False
         self._thread: threading.Thread | None = None
+        self._filter: LogFilter | None = None
         self._poll_interval: float = 2.0  # seconds
 
         if auto_start:
@@ -70,7 +78,7 @@ class EventFilter:
 
     def start(self) -> None:
         """
-        Start polling for events.
+        Start HTTP polling for events.
         """
         if self._running:
             logger.warning(f"Filter for {self.event_type} is already running")
@@ -107,6 +115,7 @@ class EventFilter:
         logger.info(f"Stopping event filter for {self.event_type}")
         self._running = False
 
+        # Wait for thread to finish
         if self._thread:
             self._thread.join(timeout=5.0)
             self._thread = None
@@ -137,7 +146,7 @@ class EventFilter:
         logger.info(f"Event filter for {self.event_type} uninstalled")
 
     def _poll_loop(self) -> None:
-        """Background polling loop for events."""
+        """Background polling loop for HTTP provider events."""
         logger.debug(f"Poll loop started for {self.event_type}")
 
         while self._running:
