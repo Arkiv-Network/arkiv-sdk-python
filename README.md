@@ -1,15 +1,6 @@
 # Arkiv SDK
 
-Arkiv is ## Hello World
-Here's a "Hello World!" example showing how to use the Python Arkiv SDK:
-
-```python
-from arkiv import Arkiv
-
-# Create an Arkiv client for prototyping.
-# The default setup creates a funded default account and starts a containerized Arkiv node.
-client = Arkiv()
-print(f"Connected: {client.is_connected()}")ned storage system for decentralized apps, supporting flexible entities with binary data, annotations, and metadata.
+Arkiv is a permissioned storage system for decentralized apps, supporting flexible entities with binary data, annotations, and metadata.
 
 The Arkiv SDK is the official Python library for interacting with Arkiv networks. It offers a type-safe, developer-friendly API for managing entities, querying data, subscribing to events, and offchain verification—ideal for both rapid prototyping and production use.
 
@@ -24,7 +15,7 @@ As underlying library we use [Web3.py](https://github.com/ethereum/web3.py) (no 
 
 ### Arkiv Client
 
-The Arkiv SDK should feel like "web3.py + entities", maintaining the familiar developer experience that Python web3 developers.
+The Arkiv SDK should feel like "web3.py + entities", maintaining the familiar developer experience that Python web3 developers expect.
 
 A `client.arkiv.*` approach is in line with web3.py's module pattern.
 It clearly communicates that arkiv is a module extension just like eth, net, etc.
@@ -125,7 +116,7 @@ provider_custom = ProviderBuilder().custom("https://my-rpc.io").build()
 
 ## Arkiv Topics/Features
 
-### Deprecate BTL
+### BTL
 
 BTL (Blocks-To-Live) should be replaced with explicit `expires_at_block` values for predictability and composability.
 
@@ -133,14 +124,16 @@ Relative `BTL` depends on execution timing and creates unnecessary complexity:
 - An entity created with `btl=100` will have different expiration blocks depending on when the transaction is mined
 - Extending entity lifetimes requires fetching the entity, calculating remaining blocks, and adding more—a race-prone pattern
 - Creates asymmetry between write operations (which use `btl`) and read operations (which return `expires_at_block`)
+- Mempool management can accept any value
 
 Absolute `expires_at_block` is predictable, composable, and matches what you get when reading entities:
 - Deterministic regardless of execution timing
 - Maps directly to `Entity.expires_at_block` field returned by queries
 - Enables clean compositional patterns like `replace(entity, expires_at_block=entity.expires_at_block + 100)`
 - Aligns write API with read API, making the SDK more intuitive
+- Mempool needs to manage/delete tx with expires at values in the past
 
-With `expires_at_block`, updating entities becomes cleaner:
+It's complicated. Deterministic mempool management vs predictable tx management in mempool.
 
 ```python
 from dataclasses import replace
@@ -172,7 +165,7 @@ To make querying entities as simple and natural as possible, rely on a suitable 
 **Example:**
 ```python
 # Query entities using SQL-like syntax
-results = client.arkiv.query(
+results = client.arkiv.query_entities(
     "SELECT entity_key, payload WHERE annotations.type = 'user' AND annotations.age > 18 ORDER BY annotations.name"
 )
 ```

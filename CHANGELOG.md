@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0a2] - 2025-10-09
+
+### Documentation
+- README fixed
+
+### Developer Experience
+- Default blocks to live values at 1000, parameter may be omitted for simple prototyping
+
 ## [1.0.0a1] - 2025-10-08
 
 ### Added
