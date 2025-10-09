@@ -1,7 +1,8 @@
 """Tests for provider builder functionality."""
 
 import pytest
-from web3.providers import HTTPProvider, WebSocketProvider
+from web3.providers import AsyncHTTPProvider, HTTPProvider, WebSocketProvider
+from web3.providers.async_base import AsyncBaseProvider
 from web3.providers.base import BaseProvider
 
 from arkiv.node import ArkivNode
@@ -376,3 +377,120 @@ class TestProviderBuilderStateMangement:
         builder = ProviderBuilder().http().ws()
 
         assert builder._transport == WS
+
+
+class TestProviderBuilderAsyncMode:
+    """Test async mode functionality."""
+
+    def test_async_mode_sets_correct_state_for_default(self) -> None:
+        """Test async_mode() sets internal flag."""
+        builder = ProviderBuilder().async_mode()
+
+        assert builder._is_async is True
+
+    def test_async_mode_sets_correct_state_for_false(self) -> None:
+        """Test async_mode() sets internal flag."""
+        builder = ProviderBuilder().async_mode(False)
+
+        assert builder._is_async is False
+
+    def test_default_is_sync_mode(self) -> None:
+        """Test default mode is sync (not async)."""
+        builder = ProviderBuilder()
+
+        assert builder._is_async is False
+
+    def test_async_mode_with_http_creates_async_http_provider(self) -> None:
+        """Test async_mode() with HTTP creates AsyncHTTPProvider."""
+        provider = ProviderBuilder().localhost().async_mode().build()
+
+        assert isinstance(provider, AsyncHTTPProvider)
+        assert isinstance(provider, AsyncBaseProvider)
+        assert provider.endpoint_uri == get_expected_default_url(HTTP)
+
+    def test_async_mode_with_ws_creates_websocket_provider(self) -> None:
+        """Test async_mode() with WebSocket creates WebSocketProvider (always async)."""
+        provider = ProviderBuilder().localhost().ws().async_mode().build()
+
+        assert isinstance(provider, WebSocketProvider)
+        assert isinstance(provider, AsyncBaseProvider)
+        assert provider.endpoint_uri == get_expected_default_url(WS)
+
+    def test_sync_mode_with_http_creates_http_provider(self) -> None:
+        """Test default (sync) mode with HTTP creates HTTPProvider."""
+        provider = ProviderBuilder().localhost().build()
+
+        assert isinstance(provider, HTTPProvider)
+        assert isinstance(provider, BaseProvider)
+        assert not isinstance(provider, AsyncBaseProvider)
+        assert provider.endpoint_uri == get_expected_default_url(HTTP)
+
+    def test_sync_mode_with_ws_creates_websocket_provider(self) -> None:
+        """Test sync mode with WebSocket still creates WebSocketProvider (always async)."""
+        provider = ProviderBuilder().localhost().ws().build()
+
+        # WebSocketProvider is always async, even without async_mode()
+        assert isinstance(provider, WebSocketProvider)
+        assert isinstance(provider, AsyncBaseProvider)
+        assert provider.endpoint_uri == get_expected_default_url(WS)
+
+    def test_async_mode_with_kaolin_http(self) -> None:
+        """Test async_mode() with Kaolin HTTP."""
+        provider = ProviderBuilder().kaolin().async_mode().build()
+
+        assert isinstance(provider, AsyncHTTPProvider)
+        assert provider.endpoint_uri == get_expected_kaolin_url(HTTP)
+
+    def test_async_mode_with_kaolin_ws(self) -> None:
+        """Test async_mode() with Kaolin WebSocket."""
+        provider = ProviderBuilder().kaolin().ws().async_mode().build()
+
+        assert isinstance(provider, WebSocketProvider)
+        assert provider.endpoint_uri == get_expected_kaolin_url(WS)
+
+    def test_async_mode_with_custom_url(self) -> None:
+        """Test async_mode() with custom URL."""
+        custom_url = "https://my-async-rpc.io"
+        provider = ProviderBuilder().custom(custom_url).async_mode().build()
+
+        assert isinstance(provider, AsyncHTTPProvider)
+        assert provider.endpoint_uri == custom_url
+
+    def test_async_mode_chaining(self) -> None:
+        """Test async_mode() can be chained in different positions."""
+        # async_mode() before transport
+        provider1 = ProviderBuilder().localhost().async_mode().http().build()
+        assert isinstance(provider1, AsyncHTTPProvider)
+
+        # async_mode() after transport
+        provider2 = ProviderBuilder().localhost().http().async_mode().build()
+        assert isinstance(provider2, AsyncHTTPProvider)
+
+        # async_mode() in middle of chain
+        provider3 = ProviderBuilder().async_mode().localhost().http().build()
+        assert isinstance(provider3, AsyncHTTPProvider)
+
+    def test_async_mode_with_node(self) -> None:
+        """Test async_mode() works with node() configuration."""
+        with ArkivNode() as node:
+            # Async HTTP
+            provider_http = ProviderBuilder().node(node).async_mode().build()
+            assert isinstance(provider_http, AsyncHTTPProvider)
+            assert provider_http.endpoint_uri == node.http_url
+
+            # Async WebSocket
+            provider_ws = ProviderBuilder().node(node).ws().async_mode().build()
+            assert isinstance(provider_ws, WebSocketProvider)
+            assert provider_ws.endpoint_uri == node.ws_url
+
+    def test_async_mode_return_type_annotation(self) -> None:
+        """Test that async providers are correctly typed."""
+        # This test mainly validates type annotations work correctly
+        sync_provider: BaseProvider = ProviderBuilder().localhost().build()
+        async_provider: AsyncBaseProvider = (
+            ProviderBuilder().localhost().async_mode().build()
+        )
+
+        # Runtime validation
+        assert isinstance(sync_provider, BaseProvider)
+        assert isinstance(async_provider, AsyncBaseProvider)

@@ -5,7 +5,8 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Literal, cast
 
-from web3.providers import HTTPProvider, WebSocketProvider
+from web3.providers import AsyncHTTPProvider, HTTPProvider, WebSocketProvider
+from web3.providers.async_base import AsyncBaseProvider
 from web3.providers.base import BaseProvider
 
 if TYPE_CHECKING:
@@ -45,12 +46,25 @@ class ProviderBuilder:
     Fluent builder for Web3 providers with Arkiv presets.
 
     Examples:
-      - ProviderBuilder().localhost().build()                 # http://127.0.0.1:8545
-      - ProviderBuilder().localhost(9000).ws().build()        # ws://127.0.0.1:9000
+      - ProviderBuilder().localhost().build()                 # http://127.0.0.1:8545 (HTTPProvider)
+      - ProviderBuilder().localhost(9000).ws().build()        # ws://127.0.0.1:9000 (WebSocketProvider, async)
+      - ProviderBuilder().localhost().async_mode().build()    # http://127.0.0.1:8545 (AsyncHTTPProvider)
       - ProviderBuilder().kaolin().build()                    # https://kaolin.hoodi.arkiv.network/rpc
       - ProviderBuilder().custom("https://my-rpc.io").build() # https://my-rpc.io
       - ProviderBuilder().node().build()                      # Auto-creates and starts ArkivNode
-      - ProviderBuilder().node(my_node).ws().build()          # Use existing node with WebSocket
+      - ProviderBuilder().node(my_node).ws().build()          # Use existing node with WebSocket (async)
+
+    Note:
+      For best practice, call async_mode() at the end of your builder chain, just before build():
+        >>> ProviderBuilder().localhost().http().async_mode().build()
+
+    Defaults:
+      - Transport: HTTP (sync HTTPProvider)
+      - Network: localhost:8545
+      - Async mode: False (sync providers)
+
+      WebSocket transport (ws()) always returns async providers (AsyncBaseProvider),
+      regardless of async_mode() setting, as WebSocketProvider is inherently async.
     """
 
     def __init__(self) -> None:
@@ -60,6 +74,7 @@ class ProviderBuilder:
         self._port: int | None = DEFAULT_PORT  # Set default port for localhost
         self._url: str | None = None
         self._node: ArkivNode | None = None
+        self._is_async: bool = False  # Default to sync providers
 
     def localhost(self, port: int | None = None) -> ProviderBuilder:
         """
@@ -163,19 +178,59 @@ class ProviderBuilder:
         """
         Use WebSocket transport.
 
+        Note: WebSocket providers are always async (AsyncBaseProvider).
+
         Returns:
             Self for method chaining
         """
         self._transport = cast(TransportType, WS)
         return self
 
-    def build(self) -> BaseProvider:
+    def async_mode(self, async_provider=True) -> ProviderBuilder:
+        """
+        Sets the async provider mode.
+
+        When enabled, build() will return async-compatible providers:
+        - HTTP transport → AsyncHTTPProvider
+        - WebSocket transport → WebSocketProvider (inherently async)
+
+        By default (async mode disabled), build() returns sync providers:
+        - HTTP transport → HTTPProvider
+        - WebSocket transport → WebSocketProvider (inherently async)
+
+        Returns:
+            Self for method chaining
+
+        Examples:
+            Async HTTP provider:
+                >>> provider = ProviderBuilder().localhost().async_mode().build()
+                >>> # Returns AsyncHTTPProvider
+
+            Async WebSocket provider:
+                >>> provider = ProviderBuilder().localhost().ws().async_mode().build()
+                >>> # Returns WebSocketProvider (always async)
+
+            Sync HTTP provider (default):
+                >>> provider = ProviderBuilder().localhost().build() # or .async_mode(False)
+                >>> # Returns HTTPProvider
+        """
+        self._is_async = async_provider
+        return self
+
+    def build(self) -> BaseProvider | AsyncBaseProvider:
         """
         Build and return the Web3 provider.
 
         Returns:
             Configured Web3 provider instance.
-            Uses HTTPProvider or WebSocketProvider based on specified transport (HTTP being default).
+
+            By default (sync mode):
+            - HTTP transport → HTTPProvider
+            - WebSocket transport → WebSocketProvider (inherently async)
+
+            With async_mode() enabled:
+            - HTTP transport → AsyncHTTPProvider
+            - WebSocket transport → WebSocketProvider (inherently async)
 
         Raises:
             ValueError: If no URL has been configured or if transport is not available
@@ -217,7 +272,13 @@ class ProviderBuilder:
                 "No URL or network configured. Use localhost(), kaolin(), or custom()."
             )
 
+        # Build provider based on transport
         if self._transport == HTTP:
-            return HTTPProvider(url)
+            # Consider async mode
+            if self._is_async:
+                return AsyncHTTPProvider(url)
+            else:
+                return HTTPProvider(url)
+        # Web socket transport (always async)
         else:
-            return cast(BaseProvider, WebSocketProvider(url))
+            return cast(AsyncBaseProvider, WebSocketProvider(url))
