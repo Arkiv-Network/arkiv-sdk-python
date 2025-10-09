@@ -1,4 +1,6 @@
-"""Event filtering for Arkiv entity events."""
+"""Event filtering and monitoring for Arkiv entities."""
+
+from __future__ import annotations
 
 import logging
 import threading

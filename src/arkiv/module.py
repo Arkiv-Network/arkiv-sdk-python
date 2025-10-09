@@ -1,5 +1,7 @@
 """Basic entity management module for Arkiv client."""
 
+from __future__ import annotations
+
 import base64
 import logging
 from typing import TYPE_CHECKING, Any
@@ -54,7 +56,7 @@ class ArkivModule:
         1000  # Default blocks to live for created entities (~30 mins with 2s blocks)
     )
 
-    def __init__(self, client: "Arkiv") -> None:
+    def __init__(self, client: Arkiv) -> None:
         """Initialize Arkiv module with client reference."""
         self.client = client
 

@@ -1,5 +1,7 @@
 """Type definitions for the Arkiv SDK."""
 
+from __future__ import annotations
+
 from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass
 from typing import Literal, NewType

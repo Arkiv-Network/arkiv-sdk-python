@@ -1,5 +1,7 @@
 """Account management for Arkiv client."""
 
+from __future__ import annotations
+
 import getpass
 import json
 import sys
@@ -64,7 +66,7 @@ class NamedAccount:
         return getattr(self._account, name)
 
     @classmethod
-    def create(cls, name: str) -> "NamedAccount":
+    def create(cls, name: str) -> NamedAccount:
         """
         Create a new random account with a name.
 
@@ -78,7 +80,7 @@ class NamedAccount:
         return cls(name, account)
 
     @classmethod
-    def from_private_key(cls, name: str, private_key: str | bytes) -> "NamedAccount":
+    def from_private_key(cls, name: str, private_key: str | bytes) -> NamedAccount:
         """
         Create a NamedAccount from a private key.
 
@@ -99,7 +101,7 @@ class NamedAccount:
         mnemonic: str,
         passphrase: str = "",
         account_path: str = ETHEREUM_DEFAULT_PATH,
-    ) -> "NamedAccount":
+    ) -> NamedAccount:
         """
         Create a NamedAccount from an existing mnemonic phrase.
 
@@ -118,7 +120,7 @@ class NamedAccount:
         return cls(name, account)
 
     @classmethod
-    def from_wallet(cls, name: str, wallet_json: str, password: str) -> "NamedAccount":
+    def from_wallet(cls, name: str, wallet_json: str, password: str) -> NamedAccount:
         """
         Create a NamedAccount from a JSON wallet.
 

@@ -3,7 +3,7 @@ name = "arkiv-sdk"
 version = "1.0.0a2"
 description = "Python SDK for Arkiv networks - Web3.py + Entities"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
     {name = "Arkiv Network", email = "matthias.zimmermann@golem.network"}
@@ -14,6 +14,8 @@ classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: System :: Distributed Computing",

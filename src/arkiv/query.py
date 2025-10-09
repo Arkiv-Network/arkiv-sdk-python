@@ -1,5 +1,7 @@
 """Query utilities for Arkiv entity queries."""
 
+from __future__ import annotations
+
 from collections.abc import Iterator
 from typing import TYPE_CHECKING
 
@@ -40,7 +42,7 @@ class QueryIterator:
 
     def __init__(
         self,
-        client: "Arkiv",
+        client: Arkiv,
         query: str,
         *,
         limit: int = 100,
