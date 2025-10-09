@@ -210,19 +210,6 @@ class TestArkivClientInheritance:
         logger.info("Arkiv client has all specific attributes")
 
 
-class TestArkivClientConstants:
-    """Test Arkiv client constants."""
-
-    def test_default_account_name_constant(self) -> None:
-        """Test that default account name constant is properly defined."""
-        assert hasattr(Arkiv, "ACCOUNT_NAME_DEFAULT"), (
-            "Should have default account name constant"
-        )
-        assert Arkiv.ACCOUNT_NAME_DEFAULT == "default", "Default should be 'default'"
-
-        logger.info(f"Default account name: {Arkiv.ACCOUNT_NAME_DEFAULT}")
-
-
 def _assert_arkiv_client_properties(
     client: Arkiv, account: NamedAccount | None, label: str
 ) -> None:

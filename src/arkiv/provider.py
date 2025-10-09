@@ -186,7 +186,7 @@ class ProviderBuilder:
         self._transport = cast(TransportType, WS)
         return self
 
-    def async_mode(self, async_provider=True) -> ProviderBuilder:
+    def async_mode(self, async_provider: bool = True) -> ProviderBuilder:
         """
         Sets the async provider mode.
 

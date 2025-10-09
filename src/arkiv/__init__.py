@@ -3,7 +3,7 @@
 from importlib.metadata import PackageNotFoundError, version
 
 from .account import NamedAccount
-from .client import Arkiv
+from .client import Arkiv, AsyncArkiv
 from .events import EventFilter
 from .node import ArkivNode
 from .query import QueryIterator
@@ -24,6 +24,7 @@ except PackageNotFoundError:
 __all__ = [
     "Arkiv",
     "ArkivNode",
+    "AsyncArkiv",
     "CreateEvent",
     "DeleteEvent",
     "EventFilter",

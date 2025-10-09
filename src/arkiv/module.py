@@ -431,7 +431,7 @@ class ArkivModule:
             )
 
             # Fetch raw results from RPC
-            raw_results = self.client.eth.query_entities(query)  # type: ignore[attr-defined]
+            raw_results = self.client.eth.query_entities(query)
 
             # Transform and log each result
             entities: list[Entity] = []
@@ -728,14 +728,14 @@ class ArkivModule:
     def _get_storage_value(self, entity_key: EntityKey) -> bytes:
         """Get the storage value stored in the given entity."""
         # EntityKey is automatically converted by arkiv_munger
-        storage_value = base64.b64decode(self.client.eth.get_storage_value(entity_key))  # type: ignore[attr-defined]
+        storage_value = base64.b64decode(self.client.eth.get_storage_value(entity_key))
         logger.debug(f"Storage value (decoded): {storage_value!r}")
         return storage_value
 
     def _get_entity_metadata(self, entity_key: EntityKey) -> dict[str, Any]:
         """Get the metadata of the given entity."""
         # EntityKey is automatically converted by arkiv_munger
-        metadata: dict[str, Any] = self.client.eth.get_entity_metadata(entity_key)  # type: ignore[attr-defined]
+        metadata: dict[str, Any] = self.client.eth.get_entity_metadata(entity_key)
         logger.debug(f"Raw metadata: {metadata}")
 
         # Basic validation of metadata content

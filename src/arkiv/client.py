@@ -5,9 +5,10 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from web3 import Web3
+from web3 import AsyncWeb3, Web3
 from web3.middleware import SignAndSendRawMiddlewareBuilder
 from web3.providers import WebSocketProvider
+from web3.providers.async_base import AsyncBaseProvider
 from web3.providers.base import BaseProvider
 
 from arkiv.exceptions import NamedAccountNotFoundException
@@ -78,7 +79,10 @@ class Arkiv(Web3):
 
             from .provider import ProviderBuilder
 
-            provider = ProviderBuilder().node(self.node).build()
+            # Build HTTP provider for sync client
+            built_provider = ProviderBuilder().node(self.node).build()
+            assert isinstance(built_provider, BaseProvider)  # Type narrowing
+            provider = built_provider
 
             # Create default account if none provided (for local node prototyping)
             if account is None:
@@ -210,4 +214,249 @@ class Arkiv(Web3):
                 "  provider = ProviderBuilder().localhost().http().build()\n"
                 "  \n"
                 "For near real-time updates, consider using HTTP polling."
+            )
+
+
+class AsyncArkiv(AsyncWeb3):
+    """
+    Async Arkiv client that extends AsyncWeb3 with entity management capabilities.
+
+    Provides async client Web3.py interface plus client.arkiv.* methods for entity operations.
+    """
+
+    ACCOUNT_NAME_DEFAULT = "default"
+
+    def __init__(
+        self,
+        provider: AsyncBaseProvider | None = None,
+        account: NamedAccount | None = None,
+        **kwargs: Any,
+    ) -> None:
+        """Initialize AsyncArkiv client with async Web3 provider.
+
+        If no Web3 provider is provided, a local development node is automatically created and started
+        with a funded default account for rapid prototyping.
+        Remember to call arkiv.node.stop() for cleanup, or use context manager:
+
+        Examples:
+            Simplest setup (auto-managed node + default account):
+                >>> async with AsyncArkiv() as arkiv:
+                ...     # Default account created, funded with test ETH
+                ...     print(arkiv.eth.default_account)
+                ...     print(await arkiv.eth.chain_id)
+
+            With custom account (auto-funded on local node):
+                >>> account = NamedAccount.create("alice")
+                >>> async with AsyncArkiv(account=account) as arkiv:
+                ...     balance = await arkiv.eth.get_balance(account.address)
+
+            Custom provider (no auto-node or account):
+                >>> provider = ProviderBuilder().kaolin().ws().build()
+                >>> account = NamedAccount.from_wallet("alice", wallet_json, password)
+                >>> arkiv = AsyncArkiv(provider, account=account)
+
+        Args:
+            provider: Async Web3 provider instance (e.g., AsyncHTTPProvider).
+                If None, creates local ArkivNode with default account (requires Docker and testcontainers).
+            account: Optional NamedAccount to use as the default signer.
+                If None and provider is None, creates 'default' account.
+                Auto-funded with test ETH if using local node and balance is zero.
+            **kwargs: Additional arguments passed to AsyncWeb3 constructor
+
+        Note:
+            Auto-node creation requires testcontainers: pip install arkiv-sdk[dev]
+        """
+        # Self managed node instance (only created/used if no provider is provided)
+        self.node: ArkivNode | None = None
+        if provider is None:
+            from .node import ArkivNode
+
+            logger.info("No provider given, creating managed ArkivNode...")
+            self.node = ArkivNode()
+
+            from .provider import ProviderBuilder
+
+            # Build WebSocket provider for async client
+            built_provider = ProviderBuilder().node(self.node).ws().build()
+            assert isinstance(built_provider, AsyncBaseProvider)  # Type narrowing
+            provider = built_provider
+
+            # Create default account if none provided (for local node prototyping)
+            if account is None:
+                logger.info(
+                    f"Creating default account '{self.ACCOUNT_NAME_DEFAULT}' for local node..."
+                )
+                account = NamedAccount.create(self.ACCOUNT_NAME_DEFAULT)
+
+        # Validate provider compatibility
+        if provider is not None:
+            self._validate_provider(provider)
+
+        super().__init__(provider, **kwargs)
+
+        # Note: Async version of ArkivModule not yet implemented
+        # Will be added in future work
+
+        # Initialize account management
+        self.accounts: dict[str, NamedAccount] = {}
+        self.current_signer: str | None = None
+
+        # Cache for connection status (used by __repr__)
+        self._cached_connected: bool | None = None
+
+        # Store account for deferred initialization (must happen in __aenter__)
+        self._pending_account: NamedAccount | None = account if account else None
+
+        if not account:
+            logger.debug("Initializing AsyncArkiv client without default account")
+
+    async def is_connected(self, show_traceback: bool = False) -> bool:
+        """Check if connected to provider and update connection cache.
+
+        Args:
+            show_traceback: Whether to show traceback on connection errors
+
+        Returns:
+            True if connected, False otherwise
+        """
+        result = await super().is_connected(show_traceback)
+        self._cached_connected = result
+        return result
+
+    async def __aenter__(self) -> AsyncArkiv:
+        """Enter async context manager."""
+        # Initialize pending account if provided
+        if self._pending_account:
+            await self._initialize_account_async(self._pending_account)
+            self._pending_account = None
+
+        # Populate connection cache
+        await self.is_connected()
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: Any,
+    ) -> None:
+        """Exit async context manager."""
+        # Note: Event filter cleanup not yet implemented (needs async ArkivModule)
+
+        # Disconnect provider if it has disconnect method
+        if hasattr(self.provider, "disconnect"):
+            await self.provider.disconnect()
+
+        # Then stop the node if managed and update cache
+        self._cleanup_node()
+
+    def __del__(self) -> None:
+        if self.node and self.node.is_running:
+            logger.warning(
+                "AsyncArkiv client with managed node is being destroyed but node is still running. "
+                "Call arkiv.node.stop() or use context manager: 'async with AsyncArkiv() as arkiv:'"
+            )
+
+    def __repr__(self) -> str:
+        """String representation of AsyncArkiv client."""
+        # Use cached connection status to avoid async issues in sync method
+        connected = (
+            self._cached_connected if self._cached_connected is not None else False
+        )
+        return f"<AsyncArkiv connected={connected}>"
+
+    async def _initialize_account_async(self, account: NamedAccount) -> None:
+        """Initialize account asynchronously.
+
+        Args:
+            account: The named account to initialize
+        """
+        logger.debug(f"Initializing AsyncArkiv client with account: {account.name}")
+        self.accounts[account.name] = account
+        self.switch_to(account.name)
+
+        # If client has node and account has zero balance, fund the account with test ETH
+        if self.node is not None:
+            balance = await self.eth.get_balance(account.address)
+            if balance == 0:
+                logger.info(
+                    f"Funding account {account.name} ({account.address}) with test ETH..."
+                )
+                self.node.fund_account(account)
+
+        balance = await self.eth.get_balance(account.address)
+        balance_eth = self.from_wei(balance, "ether")
+        logger.info(
+            f"Account balance for {account.name} ({account.address}): {balance_eth} ETH"
+        )
+
+    def _cleanup_node(self) -> None:
+        """Cleanup node and update connection cache."""
+        if self.node:
+            logger.debug("Stopping managed ArkivNode...")
+            self.node.stop()
+        self._cached_connected = False
+
+    def switch_to(self, account_name: str) -> None:
+        """Switch signer account to specified named account."""
+        logger.info(f"Switching to account: {account_name}")
+
+        if account_name not in self.accounts:
+            logger.error(
+                f"Account '{account_name}' not found. Available accounts: {list(self.accounts.keys())}"
+            )
+            raise NamedAccountNotFoundException(
+                f"Unknown account name: '{account_name}'"
+            )
+
+        # Remove existing signing middleware if present
+        if self.current_signer is not None:
+            logger.debug(f"Removing existing signing middleware: {self.current_signer}")
+            try:
+                self.middleware_onion.remove(self.current_signer)
+            except ValueError:
+                logger.warning(
+                    "Middleware might have been removed elsewhere, continuing"
+                )
+                pass
+
+        # Inject signer account
+        account = self.accounts[account_name]
+        logger.debug(f"Injecting signing middleware for account: {account.address}")
+        self.middleware_onion.inject(
+            SignAndSendRawMiddlewareBuilder.build(account.local_account),
+            name=account_name,
+            layer=0,
+        )
+
+        # Configure default account
+        self.eth.default_account = account.address
+        self.current_signer = account_name
+        logger.info(
+            f"Successfully switched to account '{account_name}' ({account.address})"
+        )
+
+    def _validate_provider(self, provider: AsyncBaseProvider) -> None:
+        """
+        Validate that the provider is compatible with the async Arkiv client.
+
+        Args:
+            provider: Async Web3 provider to validate
+
+        Raises:
+            ValueError: If provider is not compatible with async operations
+        """
+        if not isinstance(provider, AsyncBaseProvider):
+            raise ValueError(
+                "AsyncArkiv requires an async provider. "
+                "Use AsyncHTTPProvider or other async-compatible providers:\n\n"
+                "  # For async operations:\n"
+                "  provider = ProviderBuilder().localhost().ws().build()\n"
+                "  async with AsyncArkiv(provider) as arkiv:\n"
+                "      balance = await arkiv.eth.get_balance(address)\n"
+                "  \n"
+                "  # For sync operations, use Arkiv instead:\n"
+                "  provider = ProviderBuilder().localhost().http().build()\n"
+                "  with Arkiv(provider) as arkiv:\n"
+                "      balance = arkiv.eth.get_balance(address)"
             )
