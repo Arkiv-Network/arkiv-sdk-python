@@ -108,7 +108,8 @@ case $choice in
         echo "✅ Published to TestPyPI!"
         echo ""
         echo "📥 Test installation:"
-        echo "   pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple arkiv-sdk"
+        echo "   uv pip install testcontainers
+        echo "   uv pip install -i https://test.pypi.org/simple/ arkiv-sdk"
         ;;
     2)
         echo ""
