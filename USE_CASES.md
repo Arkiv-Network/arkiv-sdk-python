@@ -8,63 +8,126 @@ Arkiv provides 100-1000x cheaper storage than traditional L2 chains, making prev
 
 ## Top Use Cases
 
-### 1. NFT Metadata & Dynamic NFTs
+### 1. NFT Metadata & Small Images
 
-**The Problem**: Storing NFT metadata on-chain is prohibitively expensive. Most projects use centralized servers or IPFS with mutable, centralized pinning.
+**The Problem**: Storing NFT metadata and images on-chain is prohibitively expensive. Most projects use centralized servers or IPFS with mutable, centralized pinning.
 
 **Arkiv Solution**:
 ```python
-# Mint NFT on mainnet/L2, store metadata on Arkiv DB chain
-nft_metadata = {
-    "name": "CryptoPunk #1234",
-    "image": "ipfs://...",
-    "attributes": {...},
-    "level": 5,
-    "experience": 1250
-}
+from pathlib import Path
 
-# Store on Arkiv - pennies instead of dollars
-entity_key, _ = arkiv.create_entity(
-    payload=json.dumps(nft_metadata).encode(),
-    annotations={"collection": "cryptopunks", "token_id": "1234", "level": 5},
-    expires_at_block=NEVER_EXPIRES
+# Read a small PNG image (e.g., icon, thumbnail, pixel art)
+image_path = Path("punk_icon.png")
+image_data = image_path.read_bytes()
+
+# Store image directly on Arkiv with metadata as annotations
+entity_key, tx_hash = client.arkiv.create_entity(
+    payload=image_data,  # Raw PNG bytes
+    annotations={
+        "name": "CryptoPunk#1234",
+        "collection": "cryptopunks",
+        "token_id": 1234,
+        "trait_type": "beanie",
+        "trait_eyes": "blue"
+    },
+    btl=100_000_000  # a few years with 2s blocks
 )
 
 # NFT contract points to entity_key
 nft.tokenURI(1234) -> f"arkiv://{entity_key}"
 
-# Update NFT as character levels up
-arkiv.update_entity(
-    entity_key,
-    payload=updated_metadata,
-    annotations={"level": 6, "experience": 2000}
+# Retrieve and display the image
+entity = client.arkiv.get_entity(entity_key)
+Path("retrieved_punk.png").write_bytes(entity.payload)
+
+# Query by attributes
+punks_with_beanie = client.arkiv.query_all_entities(
+    "SELECT * WHERE collection='cryptopunks' AND trait_type='beanie'"
 )
 ```
 
 **Why It Wins**:
 - 100-1000x cheaper than L2 storage
 - Truly on-chain (not IPFS trust assumptions)
-- Updatable (gaming NFTs, evolving art)
-- Queryable (filter by level, rarity, attributes)
-- Ownership enforced (only NFT owner can update)
+- Images under ~100KB fit directly in payload
+- Queryable by traits and attributes
+- Almost instant retrieval without IPFS gateway delays
 
 **Use Cases**:
-- Gaming NFTs with evolving stats
-- Dynamic art that changes based on conditions
-- Achievement/badge systems
-- Collectibles with upgradeable traits
-- Reputation-based NFTs
+- Pixel art NFTs (like CryptoPunks at 24x24)
+- Icons and thumbnails (small PNGs/SVGs)
+- Gaming item sprites
+- Badge and achievement images
+- Profile avatars
+- Small generative art
+
+**Note**: For larger images (>100KB), see "File Vault" use case below or combine with IPFS and put the IPFS hash in annotations.
 
 ---
 
-### 2. Gaming State & Inventory
+### 2. File Vault with Chunking
+
+**The Problem**: Store files larger than the entity size limit on-chain without relying on IPFS or centralized storage.
+
+**Arkiv Solution**:
+```python
+CHUNK_SIZE = 100_000  # Entity size limit
+
+# Split file into chunks
+file_data = Path("video.mp4").read_bytes()
+file_hash = hashlib.sha256(file_data).hexdigest()
+
+chunk_keys = []
+for i in range(0, len(file_data), CHUNK_SIZE):
+    chunk_key, _ = client.arkiv.create_entity(
+        payload=file_data[i:i + CHUNK_SIZE],
+        annotations={"file_hash": file_hash, "chunk_index": i // CHUNK_SIZE},
+        btl=100_000_000
+    )
+    chunk_keys.append(chunk_key)
+
+# Create manifest
+manifest_key, _ = client.arkiv.create_entity(
+    payload=file_hash.encode(),
+    annotations={
+        "type": "file_manifest",
+        "file_name": "video.mp4",
+        "chunk_keys": ",".join(chunk_keys),
+    },
+    btl=100_000_000
+)
+
+# Reconstruct file
+manifest = client.arkiv.get_entity(manifest_key)
+reconstructed = b"".join(
+    client.arkiv.get_entity(k).payload
+    for k in manifest.annotations["chunk_keys"].split(",")
+)
+```
+
+**Why It Wins**:
+- Store unlimited file sizes on-chain
+- Queryable metadata
+- Compose with other use cases
+- Avoids IPFS trust assumptions or centralized storage
+
+**Use Cases**:
+- High-res NFT artwork
+- Videos
+- Documents
+- Static web pages
+- Software packages
+
+---
+
+### 3. Gaming State & Inventory
 
 **The Problem**: Game state on traditional L1/L2s is too expensive. Most games use centralized servers, breaking web3 promises.
 
 **Arkiv Solution**:
 ```python
 # Player inventory - create once, update frequently
-player_state = arkiv.create_entity(
+player_state = client.arkiv.create_entity(
     payload=msgpack.packb({
         "health": 100,
         "inventory": ["sword", "shield", "potion"],
@@ -82,15 +145,16 @@ player_state = arkiv.create_entity(
 )
 
 # Update 1000x cheaper than L2
-arkiv.update_entity(entity_key, new_state, annotations={"level": 16})
+entity = arkiv.get_entity(entity_key)
+client.arkiv.update_entity(payload=entity.payload, annotations=entity.annotations | {"level": 16})
 
 # Query all online guild members
-players = arkiv.query(
+players = client.arkiv.query_entities(
     "SELECT * WHERE annotations.guild = 'dragons' AND annotations.online = 1"
 )
 
 # Find players for PVP matchmaking
-opponents = arkiv.query(
+opponents = client.arkiv.query_entities(
     "SELECT * WHERE annotations.pvp_rating BETWEEN 1800 AND 1900"
 )
 ```
@@ -112,14 +176,14 @@ opponents = arkiv.query(
 
 ---
 
-### 3. Social Media & Content Platforms
+### 4. Social Media & Content Platforms
 
 **The Problem**: Decentralized social media needs cheap, permissioned storage for posts, profiles, and interactions.
 
 **Arkiv Solution**:
 ```python
 # User posts
-post = arkiv.create_entity(
+post = client.arkiv.create_entity(
     payload=post_content.encode(),
     annotations={
         "author": user_address,
@@ -134,17 +198,11 @@ post = arkiv.create_entity(
 
 # Extend popular posts
 if likes > 1000:
-    arkiv.extend_entity(post_key, 20_000_000)  # Keep for 8 more months
+    client.arkiv.extend_entity(post_key, number_of_blocks=20_000_000)  # Keep for 8 more months
 
 # Query feed
-feed = arkiv.query(
+feed = client.arkiv.query_entities(
     "SELECT * WHERE annotations.author IN (following_list) ORDER BY timestamp DESC LIMIT 50"
-)
-
-# Trending hashtags
-trending = arkiv.query(
-    "SELECT hashtag, COUNT(*) as count WHERE timestamp > ? GROUP BY hashtag ORDER BY count DESC",
-    params=[recent_block]
 )
 ```
 
@@ -166,40 +224,43 @@ trending = arkiv.query(
 
 ---
 
-### 4. DAO Proposals & Governance
+### 5. DAO Proposals & Governance
 
 **The Problem**: Storing full proposal text, discussions, and vote updates on-chain is prohibitively expensive.
 
 **Arkiv Solution**:
 ```python
 # Create proposal
-proposal = arkiv.create_entity(
+proposal = client.arkiv.create_entity(
     payload=full_proposal_markdown.encode(),
     annotations={
         "dao": "uniswap",
         "type": "proposal",
+        "proposal_id": some_unique_id,
+        "proposal_closes": timestamp,
         "status": "active",
         "votes_for": 0,
         "votes_against": 0,
         "quorum": 40000000
     },
-    expires_at_block=voting_end_block + 100_000  # Keep for historical record
+    btl=100_000_000  # Keep for historical record
 )
 
 # Update vote counts (cheap!)
 arkiv.update_entity(
     proposal_key,
     payload=proposal.payload,  # Same text
-    annotations={"votes_for": 1234, "votes_against": 567, "status": "passed"}
+    annotations={"votes_for": 1234, "votes_against": 567, "status": "passed"},
+    btl=100_000_000  # Keep for historical record
 )
 
 # Query all active proposals
-proposals = arkiv.query(
+proposals = client.arkiv.query_entities(
     "SELECT * WHERE annotations.dao = 'uniswap' AND annotations.status = 'active'"
 )
 
 # Historical analysis
-history = arkiv.query(
+history = client.arkiv.query_entities(
     "SELECT * WHERE annotations.dao = 'uniswap' AND annotations.status = 'passed' ORDER BY timestamp DESC"
 )
 ```
@@ -221,38 +282,30 @@ history = arkiv.query(
 
 ---
 
-### 5. DeFi Analytics & Oracle Data
+### 6. DeFi Analytics & Oracle Data
 
 **The Problem**: Storing historical price feeds, market data, and analytics on L2 is too expensive for high-frequency updates.
 
 **Arkiv Solution**:
 ```python
 # Price oracle writes every block
-price_data = arkiv.create_entity(
-    payload=msgpack.packb({
-        "eth_usd": 3450.23,
-        "btc_usd": 65432.11,
-        "volume_24h": 1_234_567_890,
-        "timestamp": block.timestamp
-    }),
+btc_price_data = client.arkiv.create_entity(
+    payload=b'',
     annotations={
+        "price": 3450230000, # price as int
         "block": block_number,
-        "source": "chainlink",
+        "timestamp": timestamp,
+        "pair": "eth_usd",
+        "source": chainlink_feed_address,
+        "network_id": network_id,
         "market": "crypto"
     },
-    expires_at_block=block_number + 100_000  # Keep 1 week of data
+    btl=100_000  # Keep 1 month
 )
 
 # Applications read latest or query history
-historical = arkiv.query(
-    "SELECT * WHERE annotations.block > ? AND annotations.market = 'crypto' ORDER BY block DESC LIMIT 1000",
-    params=[block_number - 1000]
-)
-
-# Analytics
-avg_price = arkiv.query(
-    "SELECT AVG(eth_usd) WHERE annotations.block BETWEEN ? AND ?",
-    params=[start_block, end_block]
+historical = client.arkiv.query_entities(
+    "SELECT * WHERE timestamp > your_date_time AND market = 'crypto' ORDER BY timestamp DESC LIMIT 1000"
 )
 ```
 
@@ -273,41 +326,73 @@ avg_price = arkiv.query(
 
 ---
 
-### 6. Supply Chain & Document Tracking
+### 7. Supply Chain & Document Tracking
 
 **The Problem**: Enterprise needs immutable audit trails but can't afford L1/L2 costs for every event.
 
 **Arkiv Solution**:
 ```python
 # Product shipment tracking
-shipment = arkiv.create_entity(
+shipment_key = client.arkiv.create_entity(
     payload=shipment_document_pdf,
     annotations={
+        "type": "shipment",
         "tracking_id": "SHIP-12345",
+        "company": "acme_corp",
+        "product_sku": "PROD-789",
+        "status": "in_transit",
+    },
+    btl=10_000_000  # Keep 6 months
+)
+
+status_key = client.arkiv.create_entity(
+    payload=b''
+    annotations={
+        "type": "shipment_status",
+        "shipment_key": shipment_key,
         "status": "in_transit",
         "location": "warehouse_b",
-        "temperature": 22,
-        "company": "acme_corp",
-        "product_sku": "PROD-789"
-    },
-    expires_at_block=delivery_block + 2_000_000  # Keep 6 months post-delivery
+        "temperature": 5.0,
+    }
+    btl=10_000_000  # Keep 6 months
+)
+
+delivery_key = client.arkiv.create_entity(
+    payload=b''
+    annotations={
+        "type": "shipment_status",
+        "shipment_key": shipment_key,
+        "status": "delivered",
+        "location": "customer",
+        "temperature": 11.0,
+        "delivery_timestamp": delivery_timestamp,
+        "signature": customer_signature_hash,
+    }
+    btl=10_000_000  # Keep 6 months
 )
 
 # Update status at each checkpoint
-arkiv.update_entity(
+client.arkiv.update_entity(
     shipment_key,
-    payload=updated_document,
-    annotations={"status": "delivered", "location": "customer", "signature": "0x..."}
+    payload=updated_document_pdf,
+    annotations=annotations | {
+        "status": "delivered",
+        "delivery": delivery_key,
+    }
 )
 
-# Audit query
-audit = arkiv.query(
-    "SELECT * WHERE annotations.company = 'acme_corp' AND annotations.status = 'delivered'"
+# Audit query for delivered items
+audit = client.arkiv.query_entities(
+    "SELECT * WHERE type = 'shipment'"
+    "AND company = 'acme_corp'"
+    "AND status = 'delivered'"
 )
 
 # Compliance reporting
-report = arkiv.query(
-    "SELECT * WHERE annotations.temperature > 25 AND annotations.product_sku = 'PROD-789'"
+report = client.arkiv.query_entities(
+    "SELECT * WHERE type = 'shipment_status'"
+    "AND product_sku = 'PROD-789'"
+    "AND temperature > 10.0"
 )
 ```
 
@@ -329,48 +414,49 @@ report = arkiv.query(
 
 ---
 
-### 7. AI Model Versioning & Training Data
+### 8. AI Model Versioning & Training Data
 
 **The Problem**: Tracking ML model versions, training datasets, and experiment results on-chain for reproducibility is too expensive.
 
 **Arkiv Solution**:
 ```python
 # Store model weights hash + metadata
-model = arkiv.create_entity(
+model_entity_key = client.arkiv.create_entity(
     payload=model_metadata_json.encode(),
     annotations={
         "model_hash": ipfs_cid,
         "version": "v2.1.3",
-        "accuracy": 95,
-        "f1_score": 93,
         "training_data_hash": dataset_hash,
         "author": researcher_address,
         "framework": "pytorch"
     },
-    expires_at_block=NEVER_EXPIRES
+    btl=10_000_000
 )
 
 # Track experiments
-experiment = arkiv.create_entity(
+experiment = client.arkiv.create_entity(
     payload=hyperparameters_json.encode(),
     annotations={
         "experiment_id": "exp-456",
-        "parent_model": model_hash,
+        "model_key": model_entity_key,
+        "validation_data_hash": ipfs_cid,
+        "test_data_hash": ipfs_cid,
         "learning_rate": 0.001,
         "epochs": 100,
-        "best_accuracy": 96
-    },
-    expires_at_block=current_block + 5_000_000
+        "accuracy": 95,
+        "f1_score": 93,
+        },
+    btl=5_000_000
 )
 
 # Provable model lineage
-lineage = arkiv.query(
+lineage = client.arkiv.query_entities(
     "SELECT * WHERE annotations.training_data_hash = ? ORDER BY version",
     params=[dataset_hash]
 )
 
 # Find best models
-best = arkiv.query(
+best = client.arkiv.query_entities(
     "SELECT * WHERE annotations.accuracy > 95 ORDER BY accuracy DESC LIMIT 10"
 )
 ```
@@ -396,32 +482,18 @@ best = arkiv.query(
 ## The Value Proposition
 
 ### The Problem All These Use Cases Share:
-- **Current L1/L2 storage**: $10-$1000 per write
+- **Current L1/L2 storage**: Too costly to store real world data
 - **Centralized DBs**: Break web3 promises (censorship, single point of failure)
-- **IPFS**: Mutable, requires pinning services, trust assumptions
+- **IPFS**: Requires pinning services, trust assumptions
 
 ### Arkiv's Unique Position:
 
-1. **100-1000x cheaper** than L2 → Makes new use cases economically viable
+1. **100-1000x cheaper** than L2 → Makes many use cases economically viable
 2. **Truly on-chain** → No IPFS trust, no centralized servers
 3. **Permissioned ownership** → Only you can update your data
 4. **Auto-expiration** → Natural data lifecycle, no bloat
 5. **Queryable** → Not just key-value, actual SQL queries
 6. **Web3 native** → Drop into any Web3.py project today
-7. **L2 integrated** → Bridge to mainnet when needed
-
-### Migration Path:
-
-```python
-# Week 1: Keep using your L2 for core logic
-l2_contract.mint_nft(token_id, owner)
-
-# Week 2: Move expensive storage to Arkiv
-arkiv.create_entity(metadata, annotations={"token_id": token_id})
-
-# Week 3: Save 90%+ on gas costs
-# Week 4: Launch features you couldn't afford before
-```
 
 ---
 
@@ -462,23 +534,17 @@ client = Arkiv()
 entity_key, tx_hash = client.arkiv.create_entity(
     payload=b"Your data here",
     annotations={"type": "example", "version": 1},
-    expires_at_block=future_block
 )
 
 # Query your data
 entity = client.arkiv.get_entity(entity_key)
 ```
 
-**The clincher**: *"Start building like storage is free. Because on Arkiv, it basically is."*
-
 ---
 
 ## Additional Resources
 
-- [SDK Documentation](README.md)
-- [API Reference](docs/api.md)
-- [Architecture Overview](README.md#architecture)
-- [Development Guide](README.md#development-guide)
+TODO
 
 ---
 
