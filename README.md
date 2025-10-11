@@ -4,6 +4,14 @@ Arkiv is a permissioned storage system for decentralized apps, supporting flexib
 
 The Arkiv SDK is the official Python library for interacting with Arkiv networks. It offers a type-safe, developer-friendly API for managing entities, querying data, subscribing to events, and offchain verification—ideal for both rapid prototyping and production use.
 
+## TODO AsyncArkiv
+
+- check for duplicate code with Arkiv
+- refactor
+- re-check testing
+- commit
+- move to ArkivModule for async usage
+
 ## Architecture
 
 Principles:

@@ -48,6 +48,18 @@ class ArkivBase:
         self.accounts: dict[str, NamedAccount] = {}
         self.current_signer: str | None = None
 
+    def __del__(self) -> None:
+        """Warn user if node is still running when object is garbage collected."""
+        # Determine client type from class name
+        client_type = self.__class__.__name__
+        self._warn_if_node_running(client_type)
+
+    def __repr__(self) -> str:
+        """String representation of Arkiv client."""
+        client_type = self.__class__.__name__
+        connected = self._is_connected()
+        return f"<{client_type} connected={connected}>"
+
     @staticmethod
     def _create_managed_node_and_provider(
         transport: Literal["http", "ws"] = "http",
@@ -134,7 +146,7 @@ class ArkivBase:
         """
         logger.debug(f"Initializing Arkiv client with account: {account.name}")
         self.accounts[account.name] = account
-        self._switch_to_account(account.name)
+        self.switch_to(account.name)
 
         # If client has node and account has zero balance, fund the account with test ETH
         if self.node is not None:
@@ -151,7 +163,7 @@ class ArkivBase:
             f"Account balance for {account.name} ({account.address}): {balance_eth} ETH"
         )
 
-    def _switch_to_account(self, account_name: str) -> None:
+    def switch_to(self, account_name: str) -> None:
         """
         Switch signer account to specified named account.
 
@@ -216,22 +228,6 @@ class ArkivBase:
                 f"{client_type} client with managed node is being destroyed but node is still running. "
                 f"Call arkiv.node.stop() or use context manager: '{context_mgr}'"
             )
-
-    def __del__(self) -> None:
-        """Warn user if node is still running when object is garbage collected."""
-        # Determine client type from class name
-        client_type = self.__class__.__name__
-        self._warn_if_node_running(client_type)
-
-    def __repr__(self) -> str:
-        """String representation of Arkiv client."""
-        client_type = self.__class__.__name__
-        connected = self._is_connected()
-        return f"<{client_type} connected={connected}>"
-
-    def switch_to(self, account_name: str) -> None:
-        """Switch signer account to specified named account."""
-        self._switch_to_account(account_name)
 
     # Abstract methods to be implemented by subclasses
     def _is_connected(self) -> bool:

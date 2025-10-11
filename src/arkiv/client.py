@@ -3,31 +3,29 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 from web3 import AsyncWeb3, Web3
 from web3.middleware import SignAndSendRawMiddlewareBuilder
 from web3.providers import WebSocketProvider
 from web3.providers.async_base import AsyncBaseProvider
 from web3.providers.base import BaseProvider
-
-from arkiv.exceptions import NamedAccountNotFoundException
+from web3.types import Wei
 
 from .account import NamedAccount
+from .client_base import ArkivBase
 from .module import ArkivModule
 
 # Set up logger for Arkiv client
 logger = logging.getLogger(__name__)
 
 
-class Arkiv(Web3):
+class Arkiv(ArkivBase, Web3):
     """
     Arkiv client that extends Web3 with entity management capabilities.
 
     Provides the familiar client Web3.py interface plus client.arkiv.* methods for entity operations.
     """
-
-    ACCOUNT_NAME_DEFAULT = "default"
 
     def __init__(
         self,
@@ -69,59 +67,27 @@ class Arkiv(Web3):
         Note:
             Auto-node creation requires testcontainers: pip install arkiv-sdk[dev]
         """
-        # Self managed node instance (only created/used if no provider is provided)
-        self.node: ArkivNode | None = None
-        if provider is None:
-            from .node import ArkivNode
+        # Initialize base class first
+        ArkivBase.__init__(self)
 
-            logger.info("No provider given, creating managed ArkivNode...")
-            self.node = ArkivNode()
-
-            from .provider import ProviderBuilder
-
-            # Build HTTP provider for sync client
-            built_provider = ProviderBuilder().node(self.node).build()
-            assert isinstance(built_provider, BaseProvider)  # Type narrowing
-            provider = built_provider
-
-            # Create default account if none provided (for local node prototyping)
-            if account is None:
-                logger.info(
-                    f"Creating default account '{self.ACCOUNT_NAME_DEFAULT}' for local node..."
-                )
-                account = NamedAccount.create(self.ACCOUNT_NAME_DEFAULT)
+        # Setup node and account using base class helper
+        self.node, provider, account = self._setup_node_and_account(
+            provider, account, "http"
+        )
 
         # Validate provider compatibility
         if provider is not None:
             self._validate_provider(provider)
 
-        super().__init__(provider, **kwargs)
+        # Initialize Web3 parent
+        Web3.__init__(self, provider, **kwargs)
 
         # Initialize entity management module
         self.arkiv = ArkivModule(self)
 
-        # Initialize account management
-        self.accounts: dict[str, NamedAccount] = {}
-        self.current_signer: str | None = None
-
         # Set account if provided
         if account:
-            logger.debug(f"Initializing Arkiv client with account: {account.name}")
-            self.accounts[account.name] = account
-            self.switch_to(account.name)
-
-            # If client has node and account a zero balance, also fund the account with test ETH
-            if self.node is not None and self.eth.get_balance(account.address) == 0:
-                logger.info(
-                    f"Funding account {account.name} ({account.address}) with test ETH..."
-                )
-                self.node.fund_account(account)
-
-            balance = self.eth.get_balance(account.address)
-            balance_eth = self.from_wei(balance, "ether")
-            logger.info(
-                f"Account balance for {account.name} ({account.address}): {balance_eth} ETH"
-            )
+            self._initialize_account(account)
         else:
             logger.debug("Initializing Arkiv client without default account")
 
@@ -139,59 +105,32 @@ class Arkiv(Web3):
         self.arkiv.cleanup_filters()
 
         # Then stop the node if managed
-        if self.node:
-            logger.debug("Stopping managed ArkivNode...")
-            self.node.stop()
+        self._cleanup_node()
 
-    def __del__(self) -> None:
-        if self.node and self.node.is_running:
-            logger.warning(
-                "Arkiv client with managed node is being destroyed but node is still running. "
-                "Call arkiv.node.stop() or use context manager: 'with Arkiv() as arkiv:'"
-            )
+    # Implement abstract methods from ArkivBase
+    def _is_connected(self) -> bool:
+        """Check if client is connected to provider."""
+        return self.is_connected()
 
-    def __repr__(self) -> str:
-        """String representation of Arkiv client."""
-        return f"<Arkiv connected={self.is_connected()}>"
+    def _get_balance(self, address: str) -> Wei:
+        """Get account balance."""
+        return cast(Wei, self.eth.get_balance(address))
 
-    def switch_to(self, account_name: str) -> None:
-        """Switch signer account to specified named account."""
-        logger.info(f"Switching to account: {account_name}")
+    def _middleware_remove(self, name: str) -> None:
+        """Remove middleware by name."""
+        self.middleware_onion.remove(name)
 
-        if account_name not in self.accounts:
-            logger.error(
-                f"Account '{account_name}' not found. Available accounts: {list(self.accounts.keys())}"
-            )
-            raise NamedAccountNotFoundException(
-                f"Unknown account name: '{account_name}'"
-            )
-
-        # Remove existing signing middleware if present
-        if self.current_signer is not None:
-            logger.debug(f"Removing existing signing middleware: {self.current_signer}")
-            try:
-                self.middleware_onion.remove(self.current_signer)
-            except ValueError:
-                logger.warning(
-                    "Middleware might have been removed elsewhere, continuing"
-                )
-                pass
-
-        # Inject signer account
-        account = self.accounts[account_name]
-        logger.debug(f"Injecting signing middleware for account: {account.address}")
+    def _middleware_inject(self, account: NamedAccount, name: str) -> None:
+        """Inject signing middleware for account."""
         self.middleware_onion.inject(
             SignAndSendRawMiddlewareBuilder.build(account.local_account),
-            name=account_name,
+            name=name,
             layer=0,
         )
 
-        # Configure default account
-        self.eth.default_account = account.address
-        self.current_signer = account_name
-        logger.info(
-            f"Successfully switched to account '{account_name}' ({account.address})"
-        )
+    def _set_default_account(self, address: str) -> None:
+        """Set the default account address."""
+        self.eth.default_account = address
 
     def _validate_provider(self, provider: BaseProvider) -> None:
         """
@@ -217,14 +156,12 @@ class Arkiv(Web3):
             )
 
 
-class AsyncArkiv(AsyncWeb3):
+class AsyncArkiv(ArkivBase, AsyncWeb3):
     """
     Async Arkiv client that extends AsyncWeb3 with entity management capabilities.
 
     Provides async client Web3.py interface plus client.arkiv.* methods for entity operations.
     """
-
-    ACCOUNT_NAME_DEFAULT = "default"
 
     def __init__(
         self,
@@ -266,40 +203,23 @@ class AsyncArkiv(AsyncWeb3):
         Note:
             Auto-node creation requires testcontainers: pip install arkiv-sdk[dev]
         """
-        # Self managed node instance (only created/used if no provider is provided)
-        self.node: ArkivNode | None = None
-        if provider is None:
-            from .node import ArkivNode
+        # Initialize base class first
+        ArkivBase.__init__(self)
 
-            logger.info("No provider given, creating managed ArkivNode...")
-            self.node = ArkivNode()
-
-            from .provider import ProviderBuilder
-
-            # Build WebSocket provider for async client
-            built_provider = ProviderBuilder().node(self.node).ws().build()
-            assert isinstance(built_provider, AsyncBaseProvider)  # Type narrowing
-            provider = built_provider
-
-            # Create default account if none provided (for local node prototyping)
-            if account is None:
-                logger.info(
-                    f"Creating default account '{self.ACCOUNT_NAME_DEFAULT}' for local node..."
-                )
-                account = NamedAccount.create(self.ACCOUNT_NAME_DEFAULT)
+        # Setup node and account using base class helper
+        self.node, provider, account = self._setup_node_and_account(
+            provider, account, "ws"
+        )
 
         # Validate provider compatibility
         if provider is not None:
             self._validate_provider(provider)
 
-        super().__init__(provider, **kwargs)
+        # Initialize AsyncWeb3 parent
+        AsyncWeb3.__init__(self, provider, **kwargs)
 
         # Note: Async version of ArkivModule not yet implemented
         # Will be added in future work
-
-        # Initialize account management
-        self.accounts: dict[str, NamedAccount] = {}
-        self.current_signer: str | None = None
 
         # Cache for connection status (used by __repr__)
         self._cached_connected: bool | None = None
@@ -350,21 +270,6 @@ class AsyncArkiv(AsyncWeb3):
         # Then stop the node if managed and update cache
         self._cleanup_node()
 
-    def __del__(self) -> None:
-        if self.node and self.node.is_running:
-            logger.warning(
-                "AsyncArkiv client with managed node is being destroyed but node is still running. "
-                "Call arkiv.node.stop() or use context manager: 'async with AsyncArkiv() as arkiv:'"
-            )
-
-    def __repr__(self) -> str:
-        """String representation of AsyncArkiv client."""
-        # Use cached connection status to avoid async issues in sync method
-        connected = (
-            self._cached_connected if self._cached_connected is not None else False
-        )
-        return f"<AsyncArkiv connected={connected}>"
-
     async def _initialize_account_async(self, account: NamedAccount) -> None:
         """Initialize account asynchronously.
 
@@ -392,49 +297,36 @@ class AsyncArkiv(AsyncWeb3):
 
     def _cleanup_node(self) -> None:
         """Cleanup node and update connection cache."""
-        if self.node:
-            logger.debug("Stopping managed ArkivNode...")
-            self.node.stop()
+        super()._cleanup_node()
         self._cached_connected = False
 
-    def switch_to(self, account_name: str) -> None:
-        """Switch signer account to specified named account."""
-        logger.info(f"Switching to account: {account_name}")
+    # Implement abstract methods from ArkivBase
+    def _is_connected(self) -> bool:
+        """Check if client is connected (uses cache to avoid async issues)."""
+        return self._cached_connected if self._cached_connected is not None else False
 
-        if account_name not in self.accounts:
-            logger.error(
-                f"Account '{account_name}' not found. Available accounts: {list(self.accounts.keys())}"
-            )
-            raise NamedAccountNotFoundException(
-                f"Unknown account name: '{account_name}'"
-            )
+    def _get_balance(self, address: str) -> Wei:
+        """Get account balance - not used in async client (raises error)."""
+        raise RuntimeError(
+            "_get_balance should not be called directly on AsyncArkiv. "
+            "Use 'await client.eth.get_balance(address)' instead."
+        )
 
-        # Remove existing signing middleware if present
-        if self.current_signer is not None:
-            logger.debug(f"Removing existing signing middleware: {self.current_signer}")
-            try:
-                self.middleware_onion.remove(self.current_signer)
-            except ValueError:
-                logger.warning(
-                    "Middleware might have been removed elsewhere, continuing"
-                )
-                pass
+    def _middleware_remove(self, name: str) -> None:
+        """Remove middleware by name."""
+        self.middleware_onion.remove(name)
 
-        # Inject signer account
-        account = self.accounts[account_name]
-        logger.debug(f"Injecting signing middleware for account: {account.address}")
+    def _middleware_inject(self, account: NamedAccount, name: str) -> None:
+        """Inject signing middleware for account."""
         self.middleware_onion.inject(
             SignAndSendRawMiddlewareBuilder.build(account.local_account),
-            name=account_name,
+            name=name,
             layer=0,
         )
 
-        # Configure default account
-        self.eth.default_account = account.address
-        self.current_signer = account_name
-        logger.info(
-            f"Successfully switched to account '{account_name}' ({account.address})"
-        )
+    def _set_default_account(self, address: str) -> None:
+        """Set the default account address."""
+        self.eth.default_account = address
 
     def _validate_provider(self, provider: AsyncBaseProvider) -> None:
         """
