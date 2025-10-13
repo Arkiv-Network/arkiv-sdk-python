@@ -1,8 +1,15 @@
 FROM python:3.12-slim-bookworm
 
 # Install system dependencies
+# Note: build-essential is required for ARM64 architectures to compile
+# Python packages that don't have pre-built wheels (like ruff, maturin, etc.)
+# docker.io provides the Docker CLI for testcontainers
+# openssh-client provides ssh for git operations over SSH
 RUN apt-get update && apt-get install -y \
     --no-install-recommends \
+    build-essential \
+    docker.io \
+    openssh-client \
     nano \
     curl \
     iputils-ping \

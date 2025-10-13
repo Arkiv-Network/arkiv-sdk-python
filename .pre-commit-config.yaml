@@ -10,20 +10,6 @@ repos:
       # Run the formatter
       - id: ruff-format
 
-  # MyPy for type checking
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.18.2
-    hooks:
-      - id: mypy
-        additional_dependencies:
-          - types-requests
-          - pytest
-          - testcontainers
-          - web3==7.13.0
-        args: [--strict]
-        # Only check source files, not tests (to avoid import issues)
-        files: ^src/
-
   # Basic hooks for file quality
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0

@@ -7,6 +7,9 @@ set -e
 echo "🔍 Running pre-commit checks..."
 uv run --group lint pre-commit run --all-files
 
+echo "🔬 Running type checks with mypy..."
+uv run --group lint mypy --strict src/
+
 echo "🧪 Running tests..."
 uv run --group test pytest tests/ -n auto -v
 
