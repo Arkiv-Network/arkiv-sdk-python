@@ -15,6 +15,7 @@ from web3.types import Wei
 from .account import NamedAccount
 from .client_base import ArkivBase
 from .module import ArkivModule
+from .module_async import AsyncArkivModule
 
 # Set up logger for Arkiv client
 logger = logging.getLogger(__name__)
@@ -218,8 +219,8 @@ class AsyncArkiv(ArkivBase, AsyncWeb3):
         # Initialize AsyncWeb3 parent
         AsyncWeb3.__init__(self, provider, **kwargs)
 
-        # Note: Async version of ArkivModule not yet implemented
-        # Will be added in future work
+        # Initialize async entity management module
+        self.arkiv = AsyncArkivModule(self)
 
         # Cache for connection status (used by __repr__)
         self._cached_connected: bool | None = None

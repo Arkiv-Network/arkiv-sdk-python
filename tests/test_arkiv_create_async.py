@@ -272,3 +272,38 @@ async def _assert_asyncarkiv_client_properties(
             f"{label}: Should set default account to empty (not {client.eth.default_account})"
         )
         assert client.current_signer is None, f"{label}: Should have no current signer"
+
+
+class TestAsyncArkivModuleBasics:
+    """Test basic AsyncArkivModule functionality."""
+
+    @pytest.mark.asyncio
+    async def test_module_exists(self, arkiv_node) -> None:
+        """Test that arkiv module is attached to AsyncArkiv client."""
+        provider = ProviderBuilder().node(arkiv_node).async_mode().build()
+
+        async with AsyncArkiv(provider) as client:
+            assert hasattr(client, "arkiv"), "Should have arkiv module"
+            assert client.arkiv is not None, "Arkiv module should be initialized"
+            logger.info("AsyncArkiv module is attached to client")
+
+    @pytest.mark.asyncio
+    async def test_module_is_available(self, arkiv_node) -> None:
+        """Test that arkiv module reports as available."""
+        provider = ProviderBuilder().node(arkiv_node).async_mode().build()
+
+        async with AsyncArkiv(provider) as client:
+            available = client.arkiv.is_available()
+            assert available is True, "Arkiv module should be available"
+            logger.info("AsyncArkiv module is available")
+
+    @pytest.mark.asyncio
+    async def test_module_has_contract(self, arkiv_node) -> None:
+        """Test that arkiv module has contract instance."""
+        provider = ProviderBuilder().node(arkiv_node).async_mode().build()
+
+        async with AsyncArkiv(provider) as client:
+            assert hasattr(client.arkiv, "contract"), "Should have contract attribute"
+            assert client.arkiv.contract is not None, "Contract should be initialized"
+            logger.info("AsyncArkiv module has contract instance")
+
