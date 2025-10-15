@@ -12,8 +12,8 @@ from web3.types import TxParams, TxReceipt
 
 from arkiv.account import NamedAccount
 
-from .contract import EVENTS_ABI, FUNCTIONS_ABI, STORAGE_ADDRESS
 from .events import EventFilter
+from .module_base import ArkivModuleBase
 from .query import QueryIterator
 from .types import (
     ALL,
@@ -38,44 +38,19 @@ from .types import (
     UpdateCallback,
     UpdateOp,
 )
-from .utils import merge_annotations, to_entity, to_receipt, to_tx_params
+from .utils import merge_annotations, to_entity, to_tx_params
 
 # Deal with potential circular imports between client.py and module.py
 if TYPE_CHECKING:
-    from .client import Arkiv
+    from .client import Arkiv  # noqa: F401 - used in Generic type parameter
 
 logger = logging.getLogger(__name__)
 
 TX_SUCCESS = 1
 
 
-class ArkivModule:
+class ArkivModule(ArkivModuleBase["Arkiv"]):
     """Basic Arkiv module for entity management operations."""
-
-    BTL_DEFAULT = (
-        1000  # Default blocks to live for created entities (~30 mins with 2s blocks)
-    )
-
-    def __init__(self, client: Arkiv) -> None:
-        """Initialize Arkiv module with client reference."""
-        self.client = client
-
-        # Attach custom Arkiv RPC methods to the eth object
-        self.client.eth.attach_methods(FUNCTIONS_ABI)
-        for method_name in FUNCTIONS_ABI.keys():
-            logger.debug(f"Custom RPC method: eth.{method_name}")
-
-        # Create contract instance for events (using EVENTS_ABI)
-        self.contract = client.eth.contract(address=STORAGE_ADDRESS, abi=EVENTS_ABI)
-        for event in self.contract.all_events():
-            logger.debug(f"Entity event {event.topic}: {event.signature}")
-
-        # Track active event filters for cleanup
-        self._active_filters: list[EventFilter] = []
-
-    def is_available(self) -> bool:
-        """Check if Arkiv functionality is available. Should always be true for Arkiv clients."""
-        return True
 
     def execute(
         self, operations: Operations, tx_params: TxParams | None = None
@@ -91,28 +66,21 @@ class ArkivModule:
             TransactionReceipt with details of all operations executed
         """
         # Convert to transaction parameters and send
-        client: Arkiv = self.client
         tx_params = to_tx_params(operations, tx_params)
-        tx_hash_bytes = client.eth.send_transaction(tx_params)
+
+        # Send transaction and get tx hash
+        tx_hash_bytes = self.client.eth.send_transaction(tx_params)
         tx_hash = TxHash(HexStr(tx_hash_bytes.to_0x_hex()))
 
-        tx_receipt: TxReceipt = client.eth.wait_for_transaction_receipt(tx_hash)
-        tx_status: int = tx_receipt["status"]
-        if tx_status != TX_SUCCESS:
-            raise RuntimeError(f"Transaction failed with status {tx_status}")
-
-        # Parse and return receipt
-        receipt: TransactionReceipt = to_receipt(
-            client.arkiv.contract, tx_hash, tx_receipt
-        )
-        logger.debug(f"Arkiv receipt: {receipt}")
-        return receipt
+        # Wait for transaction to complete and return receipt
+        tx_receipt: TxReceipt = self.client.eth.wait_for_transaction_receipt(tx_hash)
+        return self._check_tx_and_get_receipt(tx_hash, tx_receipt)
 
     def create_entity(
         self,
         payload: bytes | None = None,
         annotations: Annotations | None = None,
-        btl: int = BTL_DEFAULT,
+        btl: int | None = None,
         tx_params: TxParams | None = None,
     ) -> tuple[EntityKey, TxHash]:
         """
@@ -121,19 +89,16 @@ class ArkivModule:
         Args:
             payload: Optional data payload for the entity
             annotations: Optional key-value annotations
-            btl: Blocks to live (default: 1000, ~30 minutes with 2s blocks)
+            btl: Blocks to live (default: self.btl_default, ~30 minutes with 2s blocks)
             tx_params: Optional additional transaction parameters
 
         Returns:
             The entity key and transaction hash of the create operation
         """
-        # Check and set defaults
-        if not payload:
-            payload = b""
-        if not annotations:
-            annotations = Annotations({})
-
         # Create the operation
+        payload, annotations, btl = self._check_and_set_argument_defaults(
+            payload, annotations, btl
+        )
         create_op = CreateOp(payload=payload, annotations=annotations, btl=btl)
 
         # Wrap in Operations container and execute
@@ -156,7 +121,7 @@ class ArkivModule:
         entity_key: EntityKey,
         payload: bytes | None = None,
         annotations: Annotations | None = None,
-        btl: int = BTL_DEFAULT,
+        btl: int | None = None,
         tx_params: TxParams | None = None,
     ) -> TxHash:
         """
@@ -166,19 +131,16 @@ class ArkivModule:
             entity_key: The entity key of the entity to update
             payload: Optional new data payload for the entity, existing payload will be replaced
             annotations: Optional new key-value annotations, existing annotations will be replaced
-            btl: Blocks to live (default: 1000, ~30 minutes with 2s blocks)
+            btl: Blocks to live (default: self.btl_default, ~30 minutes with 2s blocks)
             tx_params: Optional additional transaction parameters
 
         Returns:
             Transaction hash of the update operation
         """
-        # Check and set defaults
-        if payload is None:
-            payload = b""
-        if annotations is None:
-            annotations = Annotations({})
-
         # Create the update operation
+        payload, annotations, btl = self._check_and_set_argument_defaults(
+            payload, annotations, btl
+        )
         update_op = UpdateOp(
             entity_key=entity_key,
             payload=payload,

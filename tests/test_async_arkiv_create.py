@@ -306,4 +306,3 @@ class TestAsyncArkivModuleBasics:
             assert hasattr(client.arkiv, "contract"), "Should have contract attribute"
             assert client.arkiv.contract is not None, "Contract should be initialized"
             logger.info("AsyncArkiv module has contract instance")
-

@@ -6,13 +6,13 @@ Provides either external node connections (via env vars) or containerized test n
 
 import logging
 import os
-from collections.abc import Generator
+from collections.abc import AsyncGenerator, Generator
 from pathlib import Path
 
 import pytest
 from web3 import Web3
 
-from arkiv import Arkiv
+from arkiv import Arkiv, AsyncArkiv
 from arkiv.account import NamedAccount
 from arkiv.node import ArkivNode
 from arkiv.provider import ProviderBuilder
@@ -115,7 +115,12 @@ def arkiv_client_http(arkiv_node: ArkivNode, account_1: NamedAccount) -> Arkiv:
     """Return Arkiv client with funded account connected via HTTP."""
     # Fund the account using the node (only for local containerized nodes)
     if not arkiv_node.is_external:
-        arkiv_node.fund_account(account_1)
+        try:
+            arkiv_node.fund_account(account_1)
+        except RuntimeError as e:
+            # Account may already be funded from previous tests
+            if "account already exists" not in str(e):
+                raise
 
     # Create provider and client
     provider = ProviderBuilder().node(arkiv_node).build()
@@ -155,3 +160,38 @@ def account_2(arkiv_node: ArkivNode) -> NamedAccount:
         arkiv_node.fund_account(account)
 
     return account
+
+
+@pytest.fixture
+async def async_arkiv_client_http(
+    arkiv_node: ArkivNode, account_1: NamedAccount
+) -> AsyncGenerator[AsyncArkiv, None]:
+    """Return AsyncArkiv client with funded account connected via HTTP.
+
+    Note: This is function-scoped (unlike the sync arkiv_client_http which is session-scoped)
+    because pytest-asyncio's event loop is function-scoped by default. Session-scoped async
+    fixtures would require a session-scoped event loop, which can cause issues with cleanup
+    and state management across tests.
+    """
+    # Fund the account using the node (only for local containerized nodes)
+    if not arkiv_node.is_external:
+        try:
+            arkiv_node.fund_account(account_1)
+        except RuntimeError as e:
+            # Account may already be funded from previous tests
+            if "account already exists" not in str(e):
+                raise
+
+    # Create async provider and client
+    provider = ProviderBuilder().node(arkiv_node).async_mode().build()
+
+    async with AsyncArkiv(provider, account=account_1) as client:
+        assert await client.is_connected(), (
+            f"Failed to connect to {provider.endpoint_uri}"  # type: ignore[attr-defined]
+        )
+        logger.info(f"AsyncArkiv client connected to {provider.endpoint_uri}")  # type: ignore[attr-defined]
+
+        yield client
+
+    # Cleanup happens automatically when exiting the async context manager
+    logger.info("AsyncArkiv client closed")
