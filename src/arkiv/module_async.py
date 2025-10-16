@@ -2,22 +2,28 @@
 
 from __future__ import annotations
 
+import base64
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-from eth_typing import HexStr
+from eth_typing import ChecksumAddress, HexStr
 from web3.types import TxParams, TxReceipt
 
 from .module_base import ArkivModuleBase
 from .types import (
+    ALL,
+    ANNOTATIONS,
+    METADATA,
+    PAYLOAD,
     Annotations,
     CreateOp,
+    Entity,
     EntityKey,
     Operations,
     TransactionReceipt,
     TxHash,
 )
-from .utils import to_tx_params
+from .utils import merge_annotations, to_tx_params
 
 # Deal with potential circular imports between client.py and module_async.py
 if TYPE_CHECKING:
@@ -94,3 +100,71 @@ class AsyncArkivModule(ArkivModuleBase["AsyncArkiv"]):
         create = creates[0]
         entity_key = create.entity_key
         return entity_key, receipt.tx_hash
+
+    async def get_entity(self, entity_key: EntityKey, fields: int = ALL) -> Entity:
+        """
+        Get an entity by its entity key (async).
+
+        Args:
+            entity_key: The entity key to retrieve
+            fields: Bitfield indicating which fields to retrieve
+                   PAYLOAD (1) = retrieve payload
+                   METADATA (2) = retrieve metadata
+                   ANNOTATIONS (4) = retrieve annotations
+
+        Returns:
+            Entity object with the requested fields
+        """
+        # Gather the requested data
+        owner: ChecksumAddress | None = None
+        expires_at_block: int | None = None
+        payload: bytes | None = None
+        annotations: Annotations | None = None
+
+        # HINT: rpc methods to fetch entity content might change this is the place to adapt
+        # get and decode payload if requested
+        try:
+            if fields & PAYLOAD:
+                payload = await self._get_storage_value(entity_key)
+
+            # get and decode annotations and/or metadata if requested
+            if fields & METADATA or fields & ANNOTATIONS:
+                metadata_all = await self._get_entity_metadata(entity_key)
+
+                if fields & METADATA:
+                    # Convert owner address to checksummed format
+                    owner = self._get_owner(metadata_all)
+                    expires_at_block = self._get_expires_at_block(metadata_all)
+
+                if fields & ANNOTATIONS:
+                    annotations = merge_annotations(
+                        string_annotations=metadata_all.get("stringAnnotations", []),
+                        numeric_annotations=metadata_all.get("numericAnnotations", []),
+                    )
+        except Exception as e:
+            logger.warning(f"Error fetching entity[{entity_key}]: {e}")
+
+        # Create and return entity
+        return Entity(
+            entity_key=entity_key,
+            fields=fields,
+            owner=owner,
+            expires_at_block=expires_at_block,
+            payload=payload,
+            annotations=annotations,
+        )
+
+    async def _get_storage_value(self, entity_key: EntityKey) -> bytes:
+        """Get the storage value stored in the given entity (async)."""
+        # EntityKey is automatically converted by arkiv_munger
+        storage_value = base64.b64decode(
+            await self.client.eth.get_storage_value(entity_key)
+        )
+        logger.debug(f"Storage value (decoded): {storage_value!r}")
+        return storage_value
+
+    async def _get_entity_metadata(self, entity_key: EntityKey) -> dict[str, Any]:
+        """Get the metadata of the given entity (async)."""
+        # EntityKey is automatically converted by arkiv_munger
+        metadata: dict[str, Any] = await self.client.eth.get_entity_metadata(entity_key)
+        return self._check_entity_metadata(entity_key, metadata)
