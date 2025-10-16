@@ -673,20 +673,6 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
         self._active_filters.append(event_filter)
         return event_filter
 
-    def _get_owner(self, metadata: dict[str, Any]) -> ChecksumAddress:
-        """Get the owner address of the given entity."""
-        owner_metadata = metadata.get("owner")
-        if not owner_metadata:
-            raise ValueError("Entity metadata missing required 'owner' field")
-        return Web3.to_checksum_address(owner_metadata)
-
-    def _get_expires_at_block(self, metadata: dict[str, Any]) -> int:
-        """Get the expiration block of the given entity."""
-        expires_at_block_metadata = metadata.get("expiresAtBlock")
-        if expires_at_block_metadata is None:
-            raise ValueError("Entity metadata missing required 'expiresAtBlock' field")
-        return int(expires_at_block_metadata)
-
     def _get_storage_value(self, entity_key: EntityKey) -> bytes:
         """Get the storage value stored in the given entity."""
         # EntityKey is automatically converted by arkiv_munger
@@ -698,15 +684,4 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
         """Get the metadata of the given entity."""
         # EntityKey is automatically converted by arkiv_munger
         metadata: dict[str, Any] = self.client.eth.get_entity_metadata(entity_key)
-        logger.debug(f"Raw metadata: {metadata}")
-
-        # Basic validation of metadata content
-        if not metadata:
-            raise ValueError(f"Entity metadata is empty for entity key {entity_key}")
-
-        if "owner" not in metadata or "expiresAtBlock" not in metadata:
-            raise ValueError(
-                f"Entity metadata missing required fields for entity key {entity_key}: {metadata}"
-            )
-
-        return metadata
+        return self._check_entity_metadata(entity_key, metadata)

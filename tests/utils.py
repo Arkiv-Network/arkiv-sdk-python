@@ -39,6 +39,17 @@ def check_tx_hash(label: str, tx_hash: TxHash) -> None:
     assert tx_hash.startswith("0x"), f"{label}: Transaction hash should start with 0x"
 
 
+def check_entity_key(label: str, entity_key: EntityKey) -> None:
+    """Check entity key validity."""
+    logger.info(f"{label}: Checking entity key {entity_key}")
+    assert entity_key is not None, f"{label}: Entity key should not be None"
+    assert isinstance(entity_key, str), f"{label}: Entity key should be a string"
+    assert len(entity_key) == 66, (
+        f"{label}: Entity key should be 66 characters long (0x + 64 hex)"
+    )
+    assert entity_key.startswith("0x"), f"{label}: Entity key should start with 0x"
+
+
 def check_entity(label: str, client: "Arkiv", expected: Entity) -> None:
     """Fetch an entity and compare it with expected values.
 

@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
+from eth_typing import ChecksumAddress
+from web3 import Web3
 from web3.types import TxReceipt
 
 from arkiv.types import Annotations, TransactionReceipt, TxHash
@@ -90,3 +92,34 @@ class ArkivModuleBase(Generic[ClientT]):  # noqa: UP046 - Generic syntax for Pyt
 
         logger.debug(f"Arkiv receipt: {receipt}")
         return receipt
+
+    def _check_entity_metadata(
+        self, entity_key: str, metadata: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Check and validate entity metadata structure."""
+        logger.debug(f"Raw metadata: {metadata}")
+
+        # Basic validation of metadata content
+        if not metadata:
+            raise ValueError(f"Entity metadata is empty for entity key {entity_key}")
+
+        if "owner" not in metadata or "expiresAtBlock" not in metadata:
+            raise ValueError(
+                f"Entity metadata missing required fields for entity key {entity_key}: {metadata}"
+            )
+
+        return metadata
+
+    def _get_owner(self, metadata: dict[str, Any]) -> ChecksumAddress:
+        """Get the owner address of the given entity."""
+        owner_metadata = metadata.get("owner")
+        if not owner_metadata:
+            raise ValueError("Entity metadata missing required 'owner' field")
+        return Web3.to_checksum_address(owner_metadata)
+
+    def _get_expires_at_block(self, metadata: dict[str, Any]) -> int:
+        """Get the expiration block of the given entity."""
+        expires_at_block_metadata = metadata.get("expiresAtBlock")
+        if expires_at_block_metadata is None:
+            raise ValueError("Entity metadata missing required 'expiresAtBlock' field")
+        return int(expires_at_block_metadata)
