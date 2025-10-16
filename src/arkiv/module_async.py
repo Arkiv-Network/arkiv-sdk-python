@@ -101,6 +101,24 @@ class AsyncArkivModule(ArkivModuleBase["AsyncArkiv"]):
         entity_key = create.entity_key
         return entity_key, receipt.tx_hash
 
+    async def entity_exists(self, entity_key: EntityKey) -> bool:
+        """
+        Check if an entity exists storage (async).
+
+        Args:
+            entity_key: The entity key to check
+
+        Returns:
+            True if the entity exists, False otherwise
+        """
+        try:
+            # TODO self.client.eth.get_entity_metadata by itself does not guarantee existence
+            await self._get_entity_metadata(entity_key)
+            return True
+
+        except Exception:
+            return False
+
     async def get_entity(self, entity_key: EntityKey, fields: int = ALL) -> Entity:
         """
         Get an entity by its entity key (async).
