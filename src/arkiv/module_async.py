@@ -22,6 +22,7 @@ from .types import (
     Operations,
     TransactionReceipt,
     TxHash,
+    UpdateOp,
 )
 from .utils import merge_annotations, to_tx_params
 
@@ -100,6 +101,50 @@ class AsyncArkivModule(ArkivModuleBase["AsyncArkiv"]):
         create = creates[0]
         entity_key = create.entity_key
         return entity_key, receipt.tx_hash
+
+    async def update_entity(
+        self,
+        entity_key: EntityKey,
+        payload: bytes | None = None,
+        annotations: Annotations | None = None,
+        btl: int | None = None,
+        tx_params: TxParams | None = None,
+    ) -> TxHash:
+        """
+        Update an existing entity on the Arkiv storage contract (async).
+
+        Args:
+            entity_key: The entity key of the entity to update
+            payload: Optional new data payload for the entity, existing payload will be replaced
+            annotations: Optional new key-value annotations, existing annotations will be replaced
+            btl: Blocks to live (default: self.btl_default, ~30 minutes with 2s blocks)
+            tx_params: Optional additional transaction parameters
+
+        Returns:
+            Transaction hash of the update operation
+        """
+        # Create the update operation
+        payload, annotations, btl = self._check_and_set_argument_defaults(
+            payload, annotations, btl
+        )
+        update_op = UpdateOp(
+            entity_key=entity_key,
+            payload=payload,
+            annotations=annotations,
+            btl=btl,
+        )
+
+        # Wrap in Operations container and execute
+        operations = Operations(updates=[update_op])
+        receipt = await self.execute(operations, tx_params)
+
+        # Verify the update succeeded
+        if len(receipt.updates) != 1:
+            raise RuntimeError(
+                f"Expected 1 update in receipt, got {len(receipt.updates)}"
+            )
+
+        return receipt.tx_hash
 
     async def entity_exists(self, entity_key: EntityKey) -> bool:
         """

@@ -7,25 +7,14 @@ from web3.types import TxReceipt
 
 from arkiv.client import Arkiv
 from arkiv.contract import STORAGE_ADDRESS
-from arkiv.types import Annotations, CreateOp, Operations, TxHash
+from arkiv.types import Annotations, CreateOp, Operations
 from arkiv.utils import check_entity_key, to_receipt, to_tx_params
+
+from .utils import check_tx_hash
 
 logger = logging.getLogger(__name__)
 
 TX_SUCCESS = 1
-
-
-def check_tx_hash(label: str, tx_hash: TxHash) -> None:
-    """Check transaction hash validity."""
-    logger.info(f"{label}: Checking transaction hash {tx_hash}")
-    assert tx_hash is not None, f"{label}: Transaction hash should not be None"
-    assert isinstance(tx_hash, str), (
-        f"{label}: Transaction hash should be a string (TxHash)"
-    )
-    assert len(tx_hash) == 66, (
-        f"{label}: Transaction hash should be 66 characters long (0x + 64 hex)"
-    )
-    assert tx_hash.startswith("0x"), f"{label}: Transaction hash should start with 0x"
 
 
 class TestEntityCreate:
