@@ -71,7 +71,9 @@ class TestAsyncEntityUpdate:
             )
             # Verify individual entity_key and tx_hash formats
             check_entity_key(entity_key, f"test_async_update_entities_sequentially_{i}")
-            check_tx_hash(f"test_async_update_entities_sequentially_{i}", update_tx_hash)
+            check_tx_hash(
+                f"test_async_update_entities_sequentially_{i}", update_tx_hash
+            )
             logger.info(f"Updated entity {i + 1}/3: {entity_key}")
 
         # Verify all updates
