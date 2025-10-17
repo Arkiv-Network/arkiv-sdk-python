@@ -22,7 +22,7 @@ from web3.contract import AsyncContract
 from web3.exceptions import ProviderConnectionError, Web3RPCError, Web3ValueError
 from web3.method import Method, default_root_munger
 from web3.middleware import SignAndSendRawMiddlewareBuilder
-from web3.types import LogReceipt, RPCEndpoint, TxParams, TxReceipt, Wei
+from web3.types import BlockData, LogReceipt, RPCEndpoint, TxParams, TxReceipt, Wei
 from web3.utils.subscriptions import (
     LogsSubscription,
     LogsSubscriptionContext,
@@ -294,6 +294,16 @@ class ArkivROClient:
     def ws_client(self) -> AsyncWeb3:
         """Get the underlying web3 websocket client."""
         return self._ws_client
+
+    @property
+    async def chain_cadence(self) -> int:
+        latestBlock: BlockData = await self.http_client().eth.get_block(
+            block_identifier="latest", full_transactions=False
+        )
+        prevBlock: BlockData = await self.http_client().eth.get_block(
+            block_identifier=latestBlock["parentHash"], full_transactions=False
+        )
+        return int(latestBlock["timestamp"] - prevBlock["timestamp"])
 
     async def is_connected(self) -> bool:
         """Check whether the client's underlying http client is connected."""
@@ -713,7 +723,7 @@ class ArkivClient(ArkivROClient):
             # pylint: disable=no-member
             "to": STORAGE_ADDRESS.as_address(),
             "value": AsyncWeb3.to_wei(0, "ether"),
-            "data": rlp_encode_transaction(tx),
+            "data": rlp_encode_transaction(tx, await self.chain_cadence),
         }
 
         if tx.gas:

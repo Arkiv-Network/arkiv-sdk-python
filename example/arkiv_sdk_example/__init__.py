@@ -123,7 +123,14 @@ Got extend event: %s
         """)
 
         create_receipt = await client.create_entities(
-            [ArkivCreate(b"hello", 60, [Annotation("app", "demo")], [])]
+            [
+                ArkivCreate(
+                    data=b"hello",
+                    string_annotations=[Annotation("app", "demo")],
+                    numeric_annotations=[],
+                    btl=60,
+                )
+            ]
         )
         entity_key = create_receipt[0].entity_key
         logger.info("receipt: %s", create_receipt)
@@ -146,7 +153,9 @@ Got extend event: %s
             await client.get_entities_to_expire_at_block(metadata.expires_at_block),
         )
 
-        [extend_receipt] = await client.extend_entities([ArkivExtend(entity_key, 60)])
+        [extend_receipt] = await client.extend_entities(
+            [ArkivExtend(entity_key, number_of_blocks=60)]
+        )
         logger.info("receipt: %s", extend_receipt)
 
         logger.info(
@@ -161,7 +170,40 @@ Got extend event: %s
                 extend_receipt.new_expiration_block
             ),
         )
-        logger.info("entity metadata: %s", await client.get_entity_metadata(entity_key))
+        metadata = await client.get_entity_metadata(entity_key)
+        logger.info("entity metadata: %s", metadata)
+
+        logger.info("""\n
+        *************************************************
+        * Extend the BTL of the entity using seconds... *
+        *************************************************
+        """)
+
+        logger.info(
+            "entities to expire at block %s: %s",
+            metadata.expires_at_block,
+            await client.get_entities_to_expire_at_block(metadata.expires_at_block),
+        )
+
+        [extend_receipt] = await client.extend_entities(
+            [ArkivExtend(entity_key, number_of_seconds=500)]
+        )
+        logger.info("receipt: %s", extend_receipt)
+
+        logger.info(
+            "entities to expire at block %s: %s",
+            metadata.expires_at_block,
+            await client.get_entities_to_expire_at_block(metadata.expires_at_block),
+        )
+        logger.info(
+            "entities to expire at block %s: %s",
+            extend_receipt.new_expiration_block,
+            await client.get_entities_to_expire_at_block(
+                extend_receipt.new_expiration_block
+            ),
+        )
+        metadata = await client.get_entity_metadata(entity_key)
+        logger.info("entity metadata: %s", metadata)
 
         logger.info("""\n
         ************************
@@ -173,12 +215,21 @@ Got extend event: %s
             "block number: %s", await client.http_client().eth.get_block_number()
         )
         [update_receipt] = await client.update_entities(
-            [ArkivUpdate(entity_key, b"hello", 60, [Annotation("app", "demo")], [])]
+            [
+                ArkivUpdate(
+                    entity_key=entity_key,
+                    data=b"hello",
+                    string_annotations=[Annotation("app", "demo")],
+                    numeric_annotations=[],
+                    btl=60,
+                )
+            ]
         )
         logger.info("receipt: %s", update_receipt)
         entity_key = update_receipt.entity_key
 
-        logger.info("entity metadata: %s", await client.get_entity_metadata(entity_key))
+        metadata = await client.get_entity_metadata(entity_key)
+        logger.info("entity metadata: %s", metadata)
 
         logger.info("""\n
         *************************
@@ -222,7 +273,14 @@ Got extend event: %s
         """)
 
         create_receipt = await client.create_entities(
-            [ArkivCreate(b"hello", 60, [Annotation("app", "demo")], [])]
+            [
+                ArkivCreate(
+                    data=b"hello",
+                    string_annotations=[Annotation("app", "demo")],
+                    numeric_annotations=[],
+                    btl=60,
+                )
+            ]
         )
         entity_key = create_receipt[0].entity_key
         logger.info("receipt: %s", create_receipt)
