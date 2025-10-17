@@ -19,7 +19,7 @@ from typing import (
 from eth_typing import ChecksumAddress, HexStr
 from web3 import AsyncWeb3, WebSocketProvider
 from web3.contract import AsyncContract
-from web3.exceptions import ProviderConnectionError, Web3RPCError
+from web3.exceptions import ProviderConnectionError, Web3RPCError, Web3ValueError
 from web3.method import Method, default_root_munger
 from web3.middleware import SignAndSendRawMiddlewareBuilder
 from web3.types import LogReceipt, RPCEndpoint, TxParams, TxReceipt, Wei
@@ -367,18 +367,19 @@ class ArkivROClient:
             logger.debug("New log: %s", log_receipt)
             res = await self._process_arkiv_log_receipt(log_receipt)
 
-            if create_callback:
-                for create in res.creates:
-                    create_callback(create)
-            if update_callback:
-                for update in res.updates:
-                    update_callback(update)
-            if delete_callback:
-                for key in res.deletes:
-                    delete_callback(key)
-            if extend_callback:
-                for extension in res.extensions:
-                    extend_callback(extension)
+            if res:
+                if create_callback:
+                    for create in res.creates:
+                        create_callback(create)
+                if update_callback:
+                    for update in res.updates:
+                        update_callback(update)
+                if delete_callback:
+                    for key in res.deletes:
+                        delete_callback(key)
+                if extend_callback:
+                    for extension in res.extensions:
+                        extend_callback(extension)
 
         def create_subscription(topic: HexStr) -> LogsSubscription:
             return LogsSubscription(
@@ -442,15 +443,19 @@ class ArkivROClient:
     async def _process_arkiv_log_receipt(
         self,
         log_receipt: LogReceipt,
-    ) -> ArkivTransactionReceipt:
+    ) -> ArkivTransactionReceipt | None:
         # Read the first entry of the topics array,
         # which is the hash of the event signature, identifying the event
         topic = AsyncWeb3.to_hex(log_receipt["topics"][0])
-        # Look up the corresponding event
-        # If there is no such event in the ABI, it probably needs to be added
-        event = self.arkiv_contract.get_event_by_topic(topic)
-        # Use the event to process the whole log
-        event_data = event.process_log(log_receipt)
+        try:
+            # Look up the corresponding event
+            # If there is no such event in the ABI, it probably needs to be added
+            event = self.arkiv_contract.get_event_by_topic(topic)
+
+            # Use the event to process the whole log
+            event_data = event.process_log(log_receipt)
+        except Web3ValueError:
+            return None
 
         creates: list[CreateEntityReturnType] = []
         updates: list[UpdateEntityReturnType] = []
@@ -521,7 +526,9 @@ class ArkivROClient:
             receipt: TxReceipt,
         ) -> AsyncGenerator[ArkivTransactionReceipt, None]:
             for log in receipt["logs"]:
-                yield await self._process_arkiv_log_receipt(log)
+                processed = await self._process_arkiv_log_receipt(log)
+                if processed:
+                    yield processed
 
         creates: list[CreateEntityReturnType] = []
         updates: list[UpdateEntityReturnType] = []
