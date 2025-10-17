@@ -17,6 +17,7 @@ from .types import (
     PAYLOAD,
     Annotations,
     CreateOp,
+    DeleteOp,
     Entity,
     EntityKey,
     ExtendOp,
@@ -175,6 +176,36 @@ class AsyncArkivModule(ArkivModuleBase["AsyncArkiv"]):
         if len(receipt.extensions) != 1:
             raise RuntimeError(
                 f"Expected 1 extension in receipt, got {len(receipt.extensions)}"
+            )
+
+        return receipt.tx_hash
+
+    async def delete_entity(
+        self,
+        entity_key: EntityKey,
+        tx_params: TxParams | None = None,
+    ) -> TxHash:
+        """
+        Delete an entity from the Arkiv storage contract (async).
+
+        Args:
+            entity_key: The entity key to delete
+            tx_params: Optional additional transaction parameters
+
+        Returns:
+            Transaction hash of the delete operation
+        """
+        # Create the delete operation
+        delete_op = DeleteOp(entity_key=entity_key)
+
+        # Wrap in Operations container and execute
+        operations = Operations(deletes=[delete_op])
+        receipt = await self.execute(operations, tx_params)
+
+        # Verify the delete succeeded
+        if len(receipt.deletes) != 1:
+            raise RuntimeError(
+                f"Expected 1 delete in receipt, got {len(receipt.deletes)}"
             )
 
         return receipt.tx_hash
