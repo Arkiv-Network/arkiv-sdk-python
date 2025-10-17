@@ -8,6 +8,8 @@ import rlp
 from .types import (
     Annotation,
     ArkivTransaction,
+    resolve_expiration_blocks,
+    resolve_extension_blocks,
 )
 
 logger = logging.getLogger(__name__)
@@ -29,7 +31,7 @@ def rlp_encode_transaction(tx: ArkivTransaction) -> bytes:
         list(
             map(
                 lambda el: [
-                    el.btl,
+                    resolve_expiration_blocks(el.expires_in, el.btl),
                     el.data,
                     list(map(format_annotation, el.string_annotations)),
                     list(map(format_annotation, el.numeric_annotations)),
@@ -42,7 +44,7 @@ def rlp_encode_transaction(tx: ArkivTransaction) -> bytes:
             map(
                 lambda el: [
                     el.entity_key.generic_bytes,
-                    el.btl,
+                    resolve_expiration_blocks(el.expires_in, el.btl),
                     el.data,
                     list(map(format_annotation, el.string_annotations)),
                     list(map(format_annotation, el.numeric_annotations)),
@@ -62,7 +64,7 @@ def rlp_encode_transaction(tx: ArkivTransaction) -> bytes:
             map(
                 lambda el: [
                     el.entity_key.generic_bytes,
-                    el.number_of_blocks,
+                    resolve_extension_blocks(el.duration, el.number_of_blocks),
                 ],
                 tx.extensions,
             )
