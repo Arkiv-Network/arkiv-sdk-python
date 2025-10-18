@@ -68,9 +68,10 @@ class ArkivCreate:
     """Class to represent a create operation in Arkiv."""
 
     data: bytes
-    btl: int
     string_annotations: Sequence[Annotation[str]]
     numeric_annotations: Sequence[Annotation[int]]
+    btl: int | None = None
+    expires_in: int | None = None
 
 
 @dataclass(frozen=True)
@@ -79,9 +80,10 @@ class ArkivUpdate:
 
     entity_key: EntityKey
     data: bytes
-    btl: int
     string_annotations: Sequence[Annotation[str]]
     numeric_annotations: Sequence[Annotation[int]]
+    btl: int | None = None
+    expires_in: int | None = None
 
 
 @dataclass(frozen=True)
@@ -96,7 +98,8 @@ class ArkivExtend:
     """Class to represent a BTL extend operation in Arkiv."""
 
     entity_key: EntityKey
-    number_of_blocks: int
+    number_of_blocks: int | None = None
+    number_of_seconds: int | None = None
 
 
 @dataclass(frozen=True)
