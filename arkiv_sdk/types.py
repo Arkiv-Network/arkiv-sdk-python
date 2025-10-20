@@ -168,6 +168,30 @@ class ExpirationTime:
         return f"ExpirationTime(blocks={self._blocks}, seconds={self.to_seconds()})"
 
 
+def getBTL(duration: int | ExpirationTime | None, blocks: int | None) -> int:
+    """Resolve the BTL given either a duration or a number of blocks."""
+    if duration is not None:
+        if isinstance(duration, int):
+            # Treat as seconds and convert to blocks
+            return ExpirationTime.from_seconds(duration).blocks
+        # It's an ExpirationTime object
+        return duration.blocks
+
+    if blocks is not None:
+        # Warn about deprecated BTL
+        warnings.warn(
+            "⚠️  BTL is deprecated and will be removed in a future version. "
+            "Please use 'expires_in' instead. "
+            "Example: expires_in=3600 (seconds) or "
+            "expires_in=ExpirationTime.from_hours(1)",
+            DeprecationWarning,
+            stacklevel=3,
+        )
+        return blocks
+
+    raise ValueError("Either 'expires_in' or 'btl' must be specified")
+
+
 def resolve_expiration_blocks(
     expires_in: int | ExpirationTime | None,
     btl: int | None,
@@ -188,27 +212,7 @@ def resolve_expiration_blocks(
         ValueError: If neither expires_in nor btl is specified
 
     """
-    # Priority: expires_in takes precedence
-    if expires_in is not None:
-        if isinstance(expires_in, int):
-            # Treat as seconds and convert to blocks
-            return ExpirationTime.from_seconds(expires_in).blocks
-        # It's an ExpirationTime object
-        return expires_in.blocks
-
-    if btl is not None:
-        # Warn about deprecated BTL
-        warnings.warn(
-            "⚠️  BTL is deprecated and will be removed in a future version. "
-            "Please use 'expires_in' instead. "
-            "Example: expires_in=3600 (seconds) or "
-            "expires_in=ExpirationTime.from_hours(1)",
-            DeprecationWarning,
-            stacklevel=3,
-        )
-        return btl
-
-    raise ValueError("Either 'expires_in' or 'btl' must be specified")
+    return getBTL(expires_in, btl)
 
 
 def resolve_extension_blocks(
@@ -231,27 +235,7 @@ def resolve_extension_blocks(
         ValueError: If neither duration nor number_of_blocks is specified
 
     """
-    # Priority: duration takes precedence
-    if duration is not None:
-        if isinstance(duration, int):
-            # Treat as seconds and convert to blocks
-            return ExpirationTime.from_seconds(duration).blocks
-        # It's an ExpirationTime object
-        return duration.blocks
-
-    if number_of_blocks is not None:
-        # Warn about deprecated number_of_blocks
-        warnings.warn(
-            "⚠️  number_of_blocks is deprecated and will be removed in a "
-            "future version. Please use 'duration' instead. "
-            "Example: duration=86400 (seconds) or "
-            "duration=ExpirationTime.from_days(1)",
-            DeprecationWarning,
-            stacklevel=3,
-        )
-        return number_of_blocks
-
-    raise ValueError("Either 'duration' or 'number_of_blocks' must be specified")
+    return getBTL(duration, number_of_blocks)
 
 
 # TODO: use new generic syntax once we can bump to python 3.12 or higher
