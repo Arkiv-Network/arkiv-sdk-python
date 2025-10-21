@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 ClientT = TypeVar("ClientT")
 
 
-class ArkivModuleBase(Generic[ClientT]):  # noqa: UP046 - Generic syntax for Python 3.10+ compat
+class ArkivModuleBase(Generic[ClientT]):
     """Base class for Arkiv modules with shared functionality.
 
     This class contains the common initialization and utility methods

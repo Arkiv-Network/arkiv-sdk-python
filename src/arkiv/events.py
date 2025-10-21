@@ -7,46 +7,44 @@ import threading
 import time
 from typing import TYPE_CHECKING, cast
 
-from eth_typing import HexStr
 from web3._utils.filters import LogFilter
 from web3.contract import Contract
 from web3.contract.contract import ContractEvent
 from web3.types import EventData, LogReceipt
 
-from .contract import EVENTS
+from .events_base import EventFilterBase
 from .types import (
     CreateCallback,
-    CreateEvent,
     DeleteCallback,
-    DeleteEvent,
     EventType,
     ExtendCallback,
-    ExtendEvent,
-    TxHash,
     UpdateCallback,
-    UpdateEvent,
 )
-from .utils import to_entity_key
 
 if TYPE_CHECKING:
     pass
 
 logger = logging.getLogger(__name__)
 
+# Union of all sync callback types
+SyncCallback = CreateCallback | UpdateCallback | ExtendCallback | DeleteCallback
 
-class EventFilter:
+
+class EventFilter(EventFilterBase[SyncCallback]):
     """
     Handle for watching entity events using HTTP polling.
 
     Uses polling-based filter with get_new_entries() for event monitoring.
     WebSocket providers are not supported by the sync Arkiv client.
+
+    Inherits shared event parsing logic from EventFilterBase.
     """
 
     def __init__(
         self,
         contract: Contract,
         event_type: EventType,
-        callback: CreateCallback | UpdateCallback | ExtendCallback | DeleteCallback,
+        callback: SyncCallback,
         from_block: str | int = "latest",
         auto_start: bool = True,
     ) -> None:
@@ -56,22 +54,16 @@ class EventFilter:
         Args:
             contract: Web3 contract instance
             event_type: Type of event to watch
-            callback: Callback function for the event
+            callback: Callback function for the event (sync)
             from_block: Starting block for the filter
             auto_start: If True, starts polling immediately
         """
-        self.contract: Contract = contract
-        self.event_type: EventType = event_type
-        self.callback: (
-            CreateCallback | UpdateCallback | ExtendCallback | DeleteCallback
-        ) = callback
-        self.from_block: str | int = from_block
+        # Initialize base class (but don't auto-start yet)
+        super().__init__(contract, event_type, callback, from_block, auto_start=False)
 
-        # Internal state for HTTP polling
-        self._running: bool = False
+        # Sync-specific state for HTTP polling
         self._thread: threading.Thread | None = None
         self._filter: LogFilter | None = None
-        self._poll_interval: float = 2.0  # seconds
 
         if auto_start:
             self.start()
@@ -86,16 +78,10 @@ class EventFilter:
 
         logger.info(f"Starting event filter for {self.event_type}")
 
-        # Create the Web3 filter
-        contract_event: ContractEvent
-        if self.event_type in EVENTS.keys():
-            event_name = EVENTS[self.event_type]
-            contract_event = self.contract.events[event_name]
-            self._filter = contract_event.create_filter(from_block=self.from_block)
-        else:
-            raise NotImplementedError(
-                f"Event type {self.event_type} not yet implemented"
-            )
+        # Create the Web3 filter using base class helper
+        event_name = self._get_contract_event_name()
+        contract_event: ContractEvent = self.contract.events[event_name]
+        self._filter = contract_event.create_filter(from_block=self.from_block)
 
         # Start polling thread
         self._running = True
@@ -121,16 +107,6 @@ class EventFilter:
             self._thread = None
 
         logger.info(f"Event filter for {self.event_type} stopped")
-
-    @property
-    def is_running(self) -> bool:
-        """
-        Check if the filter is currently running.
-
-        Returns:
-            True if the filter's polling loop is active, False otherwise
-        """
-        return self._running
 
     def uninstall(self) -> None:
         """Uninstall the filter and cleanup resources."""
@@ -174,85 +150,16 @@ class EventFilter:
 
     def _process_event(self, event_data: EventData) -> None:
         """
-        Process a single event and trigger callback.
+        Process a single event and trigger sync callback.
 
         Args:
             event_data: Event data from Web3 filter
         """
-        logger.info(f"Processing event: {event_data}")
+        # Use base class to parse event data
+        event, tx_hash = self._parse_event_data(event_data)
 
-        # Extract common data
-        entity_key = to_entity_key(event_data["args"]["entityKey"])
-        tx_hash = self._extract_tx_hash(event_data)
-
-        # Create event object and trigger callback based on type
-        if self.event_type == "created":
-            create_event = CreateEvent(
-                entity_key=entity_key,
-                expiration_block=event_data["args"]["expirationBlock"],
-            )
-            self._trigger_callback(
-                cast(CreateCallback, self.callback), create_event, tx_hash
-            )
-
-        elif self.event_type == "updated":
-            update_event = UpdateEvent(
-                entity_key=entity_key,
-                expiration_block=event_data["args"]["expirationBlock"],
-            )
-            self._trigger_callback(
-                cast(UpdateCallback, self.callback), update_event, tx_hash
-            )
-
-        elif self.event_type == "extended":
-            extend_event = ExtendEvent(
-                entity_key=entity_key,
-                old_expiration_block=event_data["args"]["oldExpirationBlock"],
-                new_expiration_block=event_data["args"]["newExpirationBlock"],
-            )
-            self._trigger_callback(
-                cast(ExtendCallback, self.callback), extend_event, tx_hash
-            )
-
-        elif self.event_type == "deleted":
-            delete_event = DeleteEvent(entity_key=entity_key)
-            self._trigger_callback(
-                cast(DeleteCallback, self.callback), delete_event, tx_hash
-            )
-
-        else:
-            logger.warning(f"Unknown event type: {self.event_type}")
-
-    def _extract_tx_hash(self, event_data: EventData) -> TxHash:
-        """
-        Extract and normalize transaction hash from event data.
-
-        Args:
-            event_data: Event data from Web3 filter
-
-        Returns:
-            Transaction hash with 0x prefix
-        """
-        tx_hash_hex = event_data["transactionHash"].hex()
-        if not tx_hash_hex.startswith("0x"):
-            tx_hash_hex = f"0x{tx_hash_hex}"
-        return TxHash(HexStr(tx_hash_hex))
-
-    def _trigger_callback(
-        self,
-        callback: CreateCallback | UpdateCallback | ExtendCallback | DeleteCallback,
-        event: CreateEvent | UpdateEvent | ExtendEvent | DeleteEvent,
-        tx_hash: TxHash,
-    ) -> None:
-        """
-        Trigger callback with error handling.
-
-        Args:
-            callback: Callback function to invoke
-            event: Event object to pass to callback
-            tx_hash: Transaction hash to pass to callback
-        """
+        # Trigger sync callback with error handling
         try:
-            callback(event, tx_hash)  # type: ignore[arg-type]
+            self.callback(event, tx_hash)  # type: ignore[arg-type]
         except Exception as e:
             logger.error(f"Error in callback: {e}", exc_info=True)
