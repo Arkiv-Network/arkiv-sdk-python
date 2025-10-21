@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import logging
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
@@ -9,8 +10,16 @@ from eth_typing import ChecksumAddress
 from web3 import Web3
 from web3.types import TxReceipt
 
-from arkiv.types import Annotations, TransactionReceipt, TxHash
-from arkiv.utils import to_receipt
+from arkiv.types import (
+    Annotations,
+    Cursor,
+    Entity,
+    QueryEntitiesResult,
+    QueryResult,
+    TransactionReceipt,
+    TxHash,
+)
+from arkiv.utils import to_entity, to_receipt
 
 from .contract import EVENTS_ABI, FUNCTIONS_ABI, STORAGE_ADDRESS
 
@@ -123,3 +132,63 @@ class ArkivModuleBase(Generic[ClientT]):  # noqa: UP046 - Generic syntax for Pyt
         if expires_at_block_metadata is None:
             raise ValueError("Entity metadata missing required 'expiresAtBlock' field")
         return int(expires_at_block_metadata)
+
+    def _validate_query_entities_params(
+        self,
+        query: str | None,
+        limit: int | None,
+        at_block: int | str,
+        cursor: Cursor | None,
+    ) -> None:
+        """
+        Validate query_entities parameters.
+
+        Args:
+            query: SQL-like query string
+            cursor: Cursor from previous query result
+
+        Raises:
+            ValueError: If both query and cursor are provided, or if neither is provided.
+        """
+        logger.info(
+            f"query: '{query}', limit={limit}, at_block={at_block}, cursor={cursor}"
+        )
+
+        # Validate mutual exclusivity of query and cursor
+        if cursor is not None and query is not None:
+            raise ValueError("Cannot provide both query and cursor")
+
+        if cursor is None and query is None:
+            raise ValueError("Must provide either query or cursor")
+
+        if query is not None and len(query.strip()) == 0:
+            raise ValueError("Query string cannot be empty")
+
+    def _build_query_result(self, raw_results: Any, block_number: int) -> QueryResult:
+        """
+        Build a QueryResult from raw RPC query results.
+
+        Args:
+            raw_results: Raw results from the RPC query_entities call
+            block_number: Block number at which the query was executed
+
+        Returns:
+            QueryResult with transformed entities and metadata
+        """
+        # Transform and log each result
+        entities: list[Entity] = []
+        for result in raw_results:
+            entity_result = QueryEntitiesResult(
+                entity_key=result.key, storage_value=base64.b64decode(result.value)
+            )
+            logger.info(f"Query result item: {entity_result}")
+            entities.append(to_entity(entity_result))
+
+        logger.info(f"Query returned {len(entities)} result(s)")
+
+        # Return query result (cursor-based pagination not yet implemented)
+        return QueryResult(
+            entities=entities,
+            block_number=block_number,
+            next_cursor=None,
+        )

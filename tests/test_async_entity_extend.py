@@ -71,6 +71,10 @@ class TestAsyncEntityExtend:
             entity = await async_arkiv_client_http.arkiv.get_entity(entity_key)
             initial_expirations.append(entity.expires_at_block)
 
+        # Check that initial expirations are not None
+        for i, expiration in enumerate(initial_expirations):
+            assert expiration is not None, f"Entity {i} should have an expiration block"
+
         # Extend all entities sequentially
         number_of_blocks = 50
         for i, entity_key in enumerate(entity_keys):

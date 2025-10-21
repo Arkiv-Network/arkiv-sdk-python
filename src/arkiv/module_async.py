@@ -23,13 +23,12 @@ from .types import (
     EntityKey,
     ExtendOp,
     Operations,
-    QueryEntitiesResult,
     QueryResult,
     TransactionReceipt,
     TxHash,
     UpdateOp,
 )
-from .utils import merge_annotations, to_entity, to_tx_params
+from .utils import merge_annotations, to_tx_params
 
 # Deal with potential circular imports between client.py and module_async.py
 if TYPE_CHECKING:
@@ -332,37 +331,16 @@ class AsyncArkivModule(ArkivModuleBase["AsyncArkiv"]):
         Note:
             For automatic pagination across all pages, use query_all_entities() instead.
         """
-        # Validate mutual exclusivity of query and cursor
-        if cursor is not None and query is not None:
-            raise ValueError("Cannot provide both query and cursor")
-        if cursor is None and query is None:
-            raise ValueError("Must provide either query or cursor")
+        # Validate parameters using base class helper
+        self._validate_query_entities_params(query, limit, at_block, cursor)
 
-        if query is not None and len(query.strip()) > 0:
-            logger.info(
-                f"Query: '{query}', limit={limit}, at_block={at_block}, cursor={cursor}"
-            )
-
+        if query:
             # Fetch raw results from RPC
             raw_results = await self.client.eth.query_entities(query)
+            block_number = await self.client.eth.get_block_number()
 
-            # Transform and log each result
-            entities: list[Entity] = []
-            for result in raw_results:
-                entity_result = QueryEntitiesResult(
-                    entity_key=result.key, storage_value=base64.b64decode(result.value)
-                )
-                logger.info(f"Query result item: {entity_result}")
-                entities.append(to_entity(entity_result))
-
-            logger.info(f"Query returned {len(entities)} result(s)")
-
-            # return dummy result for now
-            return QueryResult(
-                entities=entities,
-                block_number=await self.client.eth.get_block_number(),
-                next_cursor=None,
-            )
+            # Transform raw results into QueryResult using base class helper
+            return self._build_query_result(raw_results, block_number)
 
         # Cursor based pagination not implemented yet
         raise NotImplementedError("query_entities is not yet implemented for cursors")
