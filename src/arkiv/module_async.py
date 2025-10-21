@@ -17,16 +17,19 @@ from .types import (
     PAYLOAD,
     Annotations,
     CreateOp,
+    Cursor,
     DeleteOp,
     Entity,
     EntityKey,
     ExtendOp,
     Operations,
+    QueryEntitiesResult,
+    QueryResult,
     TransactionReceipt,
     TxHash,
     UpdateOp,
 )
-from .utils import merge_annotations, to_tx_params
+from .utils import merge_annotations, to_entity, to_tx_params
 
 # Deal with potential circular imports between client.py and module_async.py
 if TYPE_CHECKING:
@@ -280,6 +283,89 @@ class AsyncArkivModule(ArkivModuleBase["AsyncArkiv"]):
             payload=payload,
             annotations=annotations,
         )
+
+    async def query_entities(
+        self,
+        query: str | None = None,
+        *,
+        limit: int | None = None,
+        at_block: int | str = "latest",
+        cursor: Cursor | None = None,
+    ) -> QueryResult:
+        """
+        Query entities with manual pagination control (async).
+
+        Execute a query against entity storage and return a single page of results.
+        Use the returned cursor to fetch subsequent pages.
+
+        Args:
+            query: SQL-like query string for the first page. Mutually exclusive with cursor.
+                Example: "SELECT * WHERE owner = '0x...' ORDER BY created_at DESC"
+            limit: Maximum number of entities to return per page.
+                Server may enforce a maximum limit. Can be modified between pagination requests.
+            at_block: Block number or "latest" at which to execute query.
+                Ensures consistency across paginated results. Ignored when using cursor
+                (cursor already contains the block number).
+            cursor: Cursor from previous QueryResult to fetch next page.
+                Mutually exclusive with query. The cursor encodes the query and block number.
+
+        Returns:
+            QueryResult with entities, block number, and optional next cursor.
+
+        Raises:
+            ValueError: If both query and cursor are provided, or if neither is provided.
+            NotImplementedError: This method is not yet implemented.
+
+        Examples:
+            First page:
+                >>> result = await arkiv.arkiv.query_entities(
+                ...     "SELECT * WHERE owner = '0x1234...'",
+                ...     limit=100
+                ... )
+                >>> for entity in result:
+                ...     print(entity.entity_key)
+
+            Next page:
+                >>> if result.has_more():
+                ...     next_page = await arkiv.arkiv.query_entities(cursor=result.next_cursor)
+
+        Note:
+            For automatic pagination across all pages, use query_all_entities() instead.
+        """
+        # Validate mutual exclusivity of query and cursor
+        if cursor is not None and query is not None:
+            raise ValueError("Cannot provide both query and cursor")
+        if cursor is None and query is None:
+            raise ValueError("Must provide either query or cursor")
+
+        if query is not None and len(query.strip()) > 0:
+            logger.info(
+                f"Query: '{query}', limit={limit}, at_block={at_block}, cursor={cursor}"
+            )
+
+            # Fetch raw results from RPC
+            raw_results = await self.client.eth.query_entities(query)
+
+            # Transform and log each result
+            entities: list[Entity] = []
+            for result in raw_results:
+                entity_result = QueryEntitiesResult(
+                    entity_key=result.key, storage_value=base64.b64decode(result.value)
+                )
+                logger.info(f"Query result item: {entity_result}")
+                entities.append(to_entity(entity_result))
+
+            logger.info(f"Query returned {len(entities)} result(s)")
+
+            # return dummy result for now
+            return QueryResult(
+                entities=entities,
+                block_number=await self.client.eth.get_block_number(),
+                next_cursor=None,
+            )
+
+        # Cursor based pagination not implemented yet
+        raise NotImplementedError("query_entities is not yet implemented for cursors")
 
     async def _get_storage_value(self, entity_key: EntityKey) -> bytes:
         """Get the storage value stored in the given entity (async)."""

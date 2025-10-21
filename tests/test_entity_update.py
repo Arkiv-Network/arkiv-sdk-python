@@ -132,6 +132,9 @@ class TestEntityUpdate:
             for i in range(3)
         ]
 
+        for i in range(3):
+            logger.info(f"crt op[{i}]: {create_ops[i]}")
+
         # Use helper function for bulk creation
         entity_keys = bulk_create_entities(
             arkiv_client_http, create_ops, "create_bulk_for_update"
@@ -152,13 +155,16 @@ class TestEntityUpdate:
             UpdateOp(
                 entity_key=key,
                 payload=f"Updated entity {i}".encode(),
-                annotations=Annotations({"updated": True, "index": i}),
+                annotations=Annotations({"batch": "bulk", "index": i, "updated": True}),
                 btl=150,
             )
             for i, key in enumerate(entity_keys)
         ]
-        operations = Operations(updates=update_ops)
-        receipt = arkiv_client_http.arkiv.execute(operations)
+
+        for i in range(len(update_ops)):
+            logger.info(f"upd op[{i}]: {update_ops[i]}")
+
+        receipt = arkiv_client_http.arkiv.execute(Operations(updates=update_ops))
 
         # Check transaction hash of bulk update
         check_tx_hash("update_bulk_entity", receipt.tx_hash)
@@ -174,7 +180,7 @@ class TestEntityUpdate:
             expected = replace(
                 entities_before[i],
                 payload=f"Updated entity {i}".encode(),
-                annotations=Annotations({"updated": True, "index": i}),
+                annotations=Annotations({"batch": "bulk", "index": i, "updated": True}),
             )
             check_entity(f"bulk_update_{i}", arkiv_client_http, expected)
 
