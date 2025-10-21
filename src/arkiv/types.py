@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator, Sequence
+from collections.abc import Awaitable, Callable, Iterator, Sequence
 from dataclasses import dataclass
 from typing import Literal, NewType
 
@@ -242,6 +242,12 @@ CreateCallback = Callable[[CreateEvent, TxHash], None]
 UpdateCallback = Callable[[UpdateEvent, TxHash], None]
 DeleteCallback = Callable[[DeleteEvent, TxHash], None]
 ExtendCallback = Callable[[ExtendEvent, TxHash], None]
+
+# Async event callback types
+AsyncCreateCallback = Callable[[CreateEvent, TxHash], Awaitable[None]]
+AsyncUpdateCallback = Callable[[UpdateEvent, TxHash], Awaitable[None]]
+AsyncDeleteCallback = Callable[[DeleteEvent, TxHash], Awaitable[None]]
+AsyncExtendCallback = Callable[[ExtendEvent, TxHash], Awaitable[None]]
 
 # Event type literal
 EventType = Literal["created", "updated", "deleted", "extended"]
