@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 from eth_typing import HexStr
 from web3.types import EventData
@@ -96,6 +96,25 @@ class EventFilterBase(ABC, Generic[CallbackT]):
             )
         return EVENTS[self.event_type]
 
+    def _create_filter(self) -> Any:
+        """
+        Create a Web3 contract event filter for HTTP polling.
+
+        This method creates a LogFilter using the contract's create_filter method.
+        Subclasses that use different subscription mechanisms (e.g., WebSocket)
+        should override this method to return an appropriate subscription handle.
+
+        Returns:
+            LogFilter for HTTP providers, or subscription handle for WebSocket providers
+
+        Note:
+            Default implementation is for HTTP polling. WebSocket subclasses should
+            override to create subscription handles via provider-specific APIs.
+        """
+        event_name = self._get_contract_event_name()
+        contract_event = self.contract.events[event_name]
+        return contract_event.create_filter(from_block=self.from_block)
+
     def _extract_tx_hash(self, event_data: EventData) -> TxHash:
         """
         Extract and normalize transaction hash from event data.
@@ -161,34 +180,34 @@ class EventFilterBase(ABC, Generic[CallbackT]):
 
     # Abstract methods that subclasses must implement
     @abstractmethod
-    def start(self) -> None:
+    def start(self) -> Any:
         """
         Start monitoring for events.
 
         Subclasses implement this as either:
-        - Sync method that starts a polling thread (EventFilter)
-        - Async method that starts an asyncio task (AsyncEventFilter)
+        - Sync method that starts a polling thread (EventFilter) -> None
+        - Async method that starts an asyncio task (AsyncEventFilter) -> Awaitable[None]
         """
         ...
 
     @abstractmethod
-    def stop(self) -> None:
+    def stop(self) -> Any:
         """
         Stop monitoring for events.
 
         Subclasses implement this as either:
-        - Sync method that stops the polling thread (EventFilter)
-        - Async method that cancels the asyncio task (AsyncEventFilter)
+        - Sync method that stops the polling thread (EventFilter) -> None
+        - Async method that cancels the asyncio task (AsyncEventFilter) -> Awaitable[None]
         """
         ...
 
     @abstractmethod
-    def uninstall(self) -> None:
+    def uninstall(self) -> Any:
         """
         Uninstall the filter and cleanup resources.
 
         Subclasses implement this as either:
-        - Sync method that cleans up thread and filter (EventFilter)
-        - Async method that cleans up task and filter (AsyncEventFilter)
+        - Sync method that cleans up thread and filter (EventFilter) -> None
+        - Async method that cleans up task and filter (AsyncEventFilter) -> Awaitable[None]
         """
         ...

@@ -24,7 +24,7 @@ from arkiv.utils import to_entity, to_receipt
 from .contract import EVENTS_ABI, FUNCTIONS_ABI, STORAGE_ADDRESS
 
 if TYPE_CHECKING:
-    from .events import EventFilter
+    pass
 
 TX_SUCCESS = 1
 
@@ -65,8 +65,8 @@ class ArkivModuleBase(Generic[ClientT]):
         for event in self.contract.all_events():
             logger.debug(f"Entity event {event.topic}: {event.signature}")
 
-        # Track active event filters for cleanup
-        self._active_filters: list[EventFilter] = []
+        # Track active event filters for cleanup (type will be EventFilter or AsyncEventFilter)
+        self._active_filters: list[Any] = []
 
     def is_available(self) -> bool:
         """Check if Arkiv functionality is available. Should always be true for Arkiv clients."""

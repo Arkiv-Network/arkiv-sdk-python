@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any
 from eth_typing import ChecksumAddress, HexStr
 from web3.types import TxParams, TxReceipt
 
+from .events_async import AsyncEventFilter
 from .module_base import ArkivModuleBase
 from .types import (
     ALL,
@@ -16,11 +17,16 @@ from .types import (
     METADATA,
     PAYLOAD,
     Annotations,
+    AsyncCreateCallback,
+    AsyncDeleteCallback,
+    AsyncExtendCallback,
+    AsyncUpdateCallback,
     CreateOp,
     Cursor,
     DeleteOp,
     Entity,
     EntityKey,
+    EventType,
     ExtendOp,
     Operations,
     QueryResult,
@@ -344,6 +350,226 @@ class AsyncArkivModule(ArkivModuleBase["AsyncArkiv"]):
 
         # Cursor based pagination not implemented yet
         raise NotImplementedError("query_entities is not yet implemented for cursors")
+
+    async def watch_entity_created(
+        self,
+        callback: AsyncCreateCallback,
+        *,
+        from_block: str | int = "latest",
+        auto_start: bool = True,
+    ) -> AsyncEventFilter:
+        """
+        Watch for entity creation events (async).
+
+        Creates an async event filter that monitors entity creation events. The callback
+        receives (CreateEvent, TxHash) for each created entity.
+
+        See `_watch_entity_event` for detailed documentation on parameters, return
+        value, error handling, and usage examples.
+
+        Note:
+            If auto_start=True, you should await the filter's start() method
+            to ensure it has started before continuing.
+        """
+        return await self._watch_entity_event(
+            "created", callback, from_block=from_block, auto_start=auto_start
+        )
+
+    async def watch_entity_updated(
+        self,
+        callback: AsyncUpdateCallback,
+        *,
+        from_block: str | int = "latest",
+        auto_start: bool = True,
+    ) -> AsyncEventFilter:
+        """
+        Watch for entity update events (async).
+
+        Creates an async event filter that monitors entity update events. The callback
+        receives (UpdateEvent, TxHash) for each updated entity.
+
+        See `_watch_entity_event` for detailed documentation on parameters, return
+        value, error handling, and usage examples.
+
+        Note:
+            If auto_start=True, you should await the filter's start() method
+            to ensure it has started before continuing.
+        """
+        return await self._watch_entity_event(
+            "updated", callback, from_block=from_block, auto_start=auto_start
+        )
+
+    async def watch_entity_extended(
+        self,
+        callback: AsyncExtendCallback,
+        *,
+        from_block: str | int = "latest",
+        auto_start: bool = True,
+    ) -> AsyncEventFilter:
+        """
+        Watch for entity extension events (async).
+
+        Creates an async event filter that monitors entity lifetime extension events. The
+        callback receives (ExtendEvent, TxHash) for each extended entity.
+
+        See `_watch_entity_event` for detailed documentation on parameters, return
+        value, error handling, and usage examples.
+
+        Note:
+            If auto_start=True, you should await the filter's start() method
+            to ensure it has started before continuing.
+        """
+        return await self._watch_entity_event(
+            "extended", callback, from_block=from_block, auto_start=auto_start
+        )
+
+    async def watch_entity_deleted(
+        self,
+        callback: AsyncDeleteCallback,
+        *,
+        from_block: str | int = "latest",
+        auto_start: bool = True,
+    ) -> AsyncEventFilter:
+        """
+        Watch for entity deletion events (async).
+
+        Creates an async event filter that monitors entity deletion events. The
+        callback receives (DeleteEvent, TxHash) for each deleted entity.
+
+        See `_watch_entity_event` for detailed documentation on parameters, return
+        value, error handling, and usage examples.
+
+        Note:
+            If auto_start=True, you should await the filter's start() method
+            to ensure it has started before continuing.
+        """
+        return await self._watch_entity_event(
+            "deleted", callback, from_block=from_block, auto_start=auto_start
+        )
+
+    async def cleanup_filters(self) -> None:
+        """
+        Stop and uninstall all active async event filters.
+
+        This is automatically called when the AsyncArkiv client exits its context,
+        but can be called manually if needed.
+        """
+        if not self._active_filters:
+            logger.debug("No active filters to cleanup")
+            return
+
+        logger.info(
+            f"Cleaning up {len(self._active_filters)} active async event filter(s)..."
+        )
+
+        for event_filter in self._active_filters:
+            try:
+                await event_filter.uninstall()
+            except Exception as e:
+                logger.warning(f"Error cleaning up async filter: {e}")
+
+        self._active_filters.clear()
+        logger.info("All async event filters cleaned up")
+
+    @property
+    def active_filters(self) -> list[AsyncEventFilter]:
+        """Get a copy of currently active async event filters."""
+        return list(self._active_filters)
+
+    async def _watch_entity_event(
+        self,
+        event_type: EventType,
+        callback: (
+            AsyncCreateCallback
+            | AsyncUpdateCallback
+            | AsyncExtendCallback
+            | AsyncDeleteCallback
+        ),
+        *,
+        from_block: str | int = "latest",
+        auto_start: bool = True,
+    ) -> AsyncEventFilter:
+        """
+        Internal method to watch for entity events (async).
+
+        This method creates an async event filter that monitors for entity events on the
+        Arkiv storage contract. The callback is invoked each time the specified event
+        occurs, receiving details about the event and the transaction hash.
+
+        Args:
+            event_type: Type of event to watch for ("created", "updated", "extended", "deleted")
+            callback: Async function to call when an event is detected.
+                     Receives (Event, TxHash) as arguments where Event is one of:
+                     CreateEvent, UpdateEvent, ExtendEvent, or DeleteEvent depending on event_type.
+            from_block: Starting block for the filter. Can be:
+                       - "latest": Only watch for new events (default)
+                       - Block number (int): Watch from a specific historical block
+            auto_start: If True, starts polling immediately (default: True).
+                       If False, you must manually await filter.start()
+
+        Returns:
+            AsyncEventFilter instance for controlling the watch. Use this to:
+            - Stop polling: await filter.stop()
+            - Resume polling: await filter.start()
+            - Check status: filter.is_running
+            - Cleanup: await filter.uninstall()
+
+        Raises:
+            ValueError: If callback is not callable
+            RuntimeError: If filter creation fails
+
+        Example:
+            Basic usage with automatic start:
+                >>> async def on_event(event: CreateEvent, tx_hash: TxHash) -> None:
+                ...     print(f"Event occurred: {event.entity_key}")
+                ...
+                >>> filter = await arkiv.arkiv.watch_entity_created(on_event)
+                >>> # Filter is now running and will call on_event for each event
+                >>> # ... later ...
+                >>> await filter.stop()  # Pause watching
+                >>> await filter.uninstall()  # Cleanup resources
+
+            Manual start/stop control:
+                >>> async def on_event(event: UpdateEvent, tx_hash: TxHash) -> None:
+                ...     print(f"Event occurred: {event.entity_key}")
+                ...
+                >>> filter = await arkiv.arkiv.watch_entity_updated(on_event, auto_start=False)
+                >>> # Do some setup work...
+                >>> await filter.start()  # Begin watching
+                >>> # ... later ...
+                >>> await filter.stop()  # Stop watching
+                >>> await filter.uninstall()  # Cleanup
+
+            Historical events from specific block:
+                >>> filter = await arkiv.arkiv.watch_entity_extended(
+                ...     on_event,
+                ...     from_block=1000  # Start from block 1000
+                ... )
+
+        Note:
+            - Only captures the specified event type (not other lifecycle events)
+            - With from_block="latest", misses events before filter creation
+            - Filter must be uninstalled via await filter.uninstall() to free resources
+            - All active filters are automatically cleaned up when AsyncArkiv client
+              context exits
+            - Callback exceptions are caught and logged but don't stop the filter
+            - Requires explicit await of start() when auto_start=True
+        """
+        event_filter = AsyncEventFilter(
+            contract=self.contract,
+            event_type=event_type,
+            callback=callback,
+            from_block=from_block,
+        )
+
+        # Start the filter if auto_start is enabled
+        if auto_start:
+            await event_filter.start()
+
+        # Track the filter for cleanup
+        self._active_filters.append(event_filter)
+
+        return event_filter
 
     async def _get_storage_value(self, entity_key: EntityKey) -> bytes:
         """Get the storage value stored in the given entity (async)."""

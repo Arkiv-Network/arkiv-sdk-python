@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, cast
 
 from web3._utils.filters import LogFilter
 from web3.contract import Contract
-from web3.contract.contract import ContractEvent
 from web3.types import EventData, LogReceipt
 
 from .events_base import EventFilterBase
@@ -79,9 +78,7 @@ class EventFilter(EventFilterBase[SyncCallback]):
         logger.info(f"Starting event filter for {self.event_type}")
 
         # Create the Web3 filter using base class helper
-        event_name = self._get_contract_event_name()
-        contract_event: ContractEvent = self.contract.events[event_name]
-        self._filter = contract_event.create_filter(from_block=self.from_block)
+        self._filter = self._create_filter()
 
         # Start polling thread
         self._running = True

@@ -5,6 +5,7 @@ from importlib.metadata import PackageNotFoundError, version
 from .account import NamedAccount
 from .client import Arkiv, AsyncArkiv
 from .events import EventFilter
+from .events_async import AsyncEventFilter
 from .node import ArkivNode
 from .query import QueryIterator
 from .types import (
@@ -25,6 +26,7 @@ __all__ = [
     "Arkiv",
     "ArkivNode",
     "AsyncArkiv",
+    "AsyncEventFilter",
     "CreateEvent",
     "DeleteEvent",
     "EventFilter",
