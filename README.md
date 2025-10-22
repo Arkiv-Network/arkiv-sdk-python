@@ -29,13 +29,15 @@ A `client.arkiv.*` approach is in line with web3.py's module pattern.
 It clearly communicates that arkiv is a module extension just like eth, net, etc.
 
 ## Hello World
+
+### Synchronous API
 Here's a "Hello World!" example showing how to use the Python Arkiv SDK:
 
 ```python
 from arkiv import Arkiv
 
-# Create Arkiv client with default settings:
-# - starting and connecting to a containerized Arkiv node
+# Create Arkiv client with default settings:
+# - starting and connecting to a containerized Arkiv node
 # - creating a funded default account
 client = Arkiv()
 print(f"Client: {client}, connected: {client.is_connected()}")
@@ -46,7 +48,7 @@ print(f"Balance: {client.from_wei(client.eth.get_balance(client.eth.default_acco
 entity_key, tx_hash = client.arkiv.create_entity(
     payload=b"Hello World!",
     annotations={"type": "greeting", "version": 1},
-    btl = 1000
+    btl=1000
 )
 
 # Check and print entity key
@@ -60,6 +62,33 @@ print(f"Entity: {entity}")
 # Clean up - delete entity
 client.arkiv.delete_entity(entity_key)
 print("Entity deleted")
+```
+
+### Asynchronous API
+For async/await support, use `AsyncArkiv`:
+
+```python
+import asyncio
+from arkiv import AsyncArkiv
+
+async def main():
+    # Create async client with default settings
+    async with AsyncArkiv() as client:
+        # Create entity with data and annotations
+        entity_key, tx_hash = await client.arkiv.create_entity(
+            payload=b"Hello Async World!",
+            annotations={"type": "greeting", "version": 1},
+            btl=1000
+        )
+
+        # Get entity and check existence
+        entity = await client.arkiv.get_entity(entity_key)
+        exists = await client.arkiv.entity_exists(entity_key)
+
+        # Clean up - delete entity
+        await client.arkiv.delete_entity(entity_key)
+
+asyncio.run(main())
 ```
 
 ### Web3 Standard Support
