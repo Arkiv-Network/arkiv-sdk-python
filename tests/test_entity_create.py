@@ -8,9 +8,13 @@ from web3.types import TxReceipt
 from arkiv.client import Arkiv
 from arkiv.contract import STORAGE_ADDRESS
 from arkiv.types import Annotations, CreateOp, Operations
-from arkiv.utils import check_entity_key, to_receipt, to_tx_params
+from arkiv.utils import (
+    check_entity_key,
+    to_receipt,
+    to_tx_params,
+)
 
-from .utils import check_tx_hash
+from .utils import check_tx_hash, get_custom_annotations
 
 logger = logging.getLogger(__name__)
 
@@ -136,23 +140,30 @@ class TestEntityCreate:
     def test_create_entity_simple(self, arkiv_client_http: Arkiv) -> None:
         """Test create_entity."""
         pl: bytes = b"Hello world!"
+        content_type = "text/plain"
         ann: Annotations = Annotations({"type": "Greeting", "version": 1})
         btl: int = 60
 
         entity_key, tx_hash = arkiv_client_http.arkiv.create_entity(
-            payload=pl, annotations=ann, btl=btl
+            payload=pl, content_type=content_type, annotations=ann, btl=btl
         )
 
         label = "create_entity (a)"
         check_entity_key(entity_key, label)
         check_tx_hash(label, tx_hash)
 
-        entity = arkiv_client_http.arkiv.get_entity(entity_key)
-        logger.info(f"{label}: Retrieved entity: {entity}")
+        query_result = arkiv_client_http.arkiv.query(f"$key = {entity_key}")
+        assert len(query_result.entities) == 1, (
+            f"{label}: Should return exactly one entity"
+        )
+        entity = query_result.entities[0]
+        # logger.info(f"{label}: Retrieved entity:\n{entity}")
 
         assert entity.entity_key == entity_key, f"{label}: Entity key should match"
         assert entity.payload == pl, f"{label}: Entity payload should match"
-        assert entity.annotations == ann, f"{label}: Entity annotations should match"
+        assert get_custom_annotations(entity) == ann, (
+            f"{label}: Entity annotations should match"
+        )
         assert entity.owner == arkiv_client_http.eth.default_account, (
             f"{label}: Entity owner should match transaction sender"
         )

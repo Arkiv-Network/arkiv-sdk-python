@@ -130,6 +130,8 @@ class EventFilterBase(ABC, Generic[CallbackT]):
             tx_hash_hex = f"0x{tx_hash_hex}"
         return TxHash(HexStr(tx_hash_hex))
 
+    # TODO (1) check/match against utils.py::to_receipt
+    # TODO (2) update to new log/event definition in contract.py
     def _parse_event_data(self, event_data: EventData) -> tuple[EventObject, TxHash]:
         """
         Parse event data and create appropriate event object.
@@ -158,21 +160,31 @@ class EventFilterBase(ABC, Generic[CallbackT]):
         if self.event_type == "created":
             event = CreateEvent(
                 entity_key=entity_key,
+                owner_address=event_data["args"]["ownerAddress"],
                 expiration_block=event_data["args"]["expirationBlock"],
+                cost=event_data["args"]["cost"],
             )
         elif self.event_type == "updated":
             event = UpdateEvent(
                 entity_key=entity_key,
-                expiration_block=event_data["args"]["expirationBlock"],
+                owner_address=event_data["args"]["ownerAddress"],
+                old_expiration_block=event_data["args"]["oldExpirationBlock"],
+                new_expiration_block=event_data["args"]["newExpirationBlock"],
+                cost=event_data["args"]["cost"],
             )
         elif self.event_type == "extended":
             event = ExtendEvent(
                 entity_key=entity_key,
+                owner_address=event_data["args"]["ownerAddress"],
                 old_expiration_block=event_data["args"]["oldExpirationBlock"],
                 new_expiration_block=event_data["args"]["newExpirationBlock"],
+                cost=event_data["args"]["cost"],
             )
         elif self.event_type == "deleted":
-            event = DeleteEvent(entity_key=entity_key)
+            event = DeleteEvent(
+                entity_key=entity_key,
+                owner_address=event_data["args"]["ownerAddress"],
+            )
         else:
             raise ValueError(f"Unknown event type: {self.event_type}")
 

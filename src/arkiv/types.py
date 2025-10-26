@@ -10,11 +10,37 @@ from eth_typing import ChecksumAddress, HexStr
 from web3.datastructures import AttributeDict
 
 # Field bitmask values to specify which entity fields are populated
-PAYLOAD = 1
+KEY = 1
 ANNOTATIONS = 2
-METADATA = 4
+PAYLOAD = 4
+CONTENT_TYPE = 8
+EXPIRATION = 16
+OWNER = 32
+
+
 NONE = 0
-ALL = PAYLOAD | ANNOTATIONS | METADATA
+ALL = KEY | ANNOTATIONS | PAYLOAD | CONTENT_TYPE | EXPIRATION | OWNER
+
+# TODO remove after refactoring
+METADATA = 4
+
+# Cursor type for entity set pagination for query results
+Cursor = NewType("Cursor", str)
+
+
+@dataclass(frozen=True)
+class QueryOptions:
+    """Options for querying entities."""
+
+    fields: int = ALL  # Bitmask of fields to populate
+    at_block: int | None = (
+        None  # Block number to pin query to specific block, or None to use latest block available
+    )
+    max_results_per_page: int = 100  # Max number of entities to fetch per page
+    cursor: Cursor | None = None  # Cursor for pagination
+
+
+QUERY_OPTIONS_DEFAULT: QueryOptions = QueryOptions()
 
 # Transaction hash type
 TxHash = NewType("TxHash", HexStr)
@@ -61,18 +87,19 @@ class Entity:
     fields: int  # Bitmask representing which fields are populated
 
     # Populated when fields | METADATA returns true
-    owner: ChecksumAddress | None
-    expires_at_block: int | None
+    owner: ChecksumAddress | None = None
+    created_at_block: int | None = None
+    last_modified_at_block: int | None = None
+    expires_at_block: int | None = None
+    transaction_index: int | None = None
+    operation_index: int | None = None
 
     # Populated when fields | PAYLOAD returns true
-    payload: bytes | None
+    payload: bytes | None = None
+    content_type: str | None = None
 
     # Populated when fields | ANNOTATIONS returns true
-    annotations: Annotations | None
-
-
-# Cursor type for entity set pagination for query results
-Cursor = NewType("Cursor", str)
+    annotations: Annotations | None = None
 
 
 @dataclass(frozen=True)
@@ -102,7 +129,7 @@ class QueryResult:
 
     entities: list[Entity]
     block_number: int
-    next_cursor: Cursor | None = None
+    cursor: Cursor | None = None
 
     def __len__(self) -> int:
         """len(result) -> number of entities"""
@@ -122,7 +149,7 @@ class QueryResult:
 
     def has_more(self) -> bool:
         """Check if more results available"""
-        return self.next_cursor is not None
+        return self.cursor is not None
 
 
 @dataclass(frozen=True)
@@ -130,6 +157,7 @@ class CreateOp:
     """Class to represent a create operation."""
 
     payload: bytes
+    content_type: str
     annotations: Annotations
     btl: int
 
@@ -140,6 +168,7 @@ class UpdateOp:
 
     entity_key: EntityKey
     payload: bytes
+    content_type: str
     annotations: Annotations
     btl: int
 
@@ -160,6 +189,14 @@ class ExtendOp:
 
 
 @dataclass(frozen=True)
+class ChangeOwnerOp:
+    """Class to represent a change owner operation."""
+
+    entity_key: EntityKey
+    new_owner: ChecksumAddress
+
+
+@dataclass(frozen=True)
 class Operations:
     """
     Class to represent a transaction operations.
@@ -169,6 +206,7 @@ class Operations:
     - `EntityUpdate`
     - `EntityDelete`
     - `EntityExtend`
+    - `ChangeOwner`
     operations.
     """
 
@@ -179,51 +217,98 @@ class Operations:
         updates: Sequence[UpdateOp] | None = None,
         deletes: Sequence[DeleteOp] | None = None,
         extensions: Sequence[ExtendOp] | None = None,
+        change_owners: Sequence[ChangeOwnerOp] | None = None,
     ):
         """Initialise the GolemBaseTransaction instance."""
         object.__setattr__(self, "creates", creates or [])
         object.__setattr__(self, "updates", updates or [])
         object.__setattr__(self, "deletes", deletes or [])
         object.__setattr__(self, "extensions", extensions or [])
-        if not (self.creates or self.updates or self.deletes or self.extensions):
+        object.__setattr__(self, "change_owners", change_owners or [])
+        if not (
+            self.creates
+            or self.updates
+            or self.deletes
+            or self.extensions
+            or self.change_owners
+        ):
             raise ValueError("At least one operation must be provided")
 
     creates: Sequence[CreateOp]
     updates: Sequence[UpdateOp]
     deletes: Sequence[DeleteOp]
     extensions: Sequence[ExtendOp]
+    change_owners: Sequence[ChangeOwnerOp]
 
 
 @dataclass(frozen=True)
-class CreateEvent:
+class EntityEvent:
+    """Base class for events emitted when an entity is modified."""
+
+    entity_key: EntityKey
+
+
+@dataclass(frozen=True)
+class EntityOwnerEvent(EntityEvent):
+    """Base class for events emitted when an entity is modified."""
+
+    owner_address: ChecksumAddress
+
+
+@dataclass(frozen=True)
+class CreateEvent(EntityOwnerEvent):
     """Event emitted when an entity is created."""
 
-    entity_key: EntityKey
     expiration_block: int
+    cost: int
 
 
 @dataclass(frozen=True)
-class UpdateEvent:
+class UpdateEvent(EntityOwnerEvent):
     """Event emitted when an entity is updated."""
 
-    entity_key: EntityKey
-    expiration_block: int
-
-
-@dataclass(frozen=True)
-class ExtendEvent:
-    """Event emitted when an entity's lifetime is extended."""
-
-    entity_key: EntityKey
     old_expiration_block: int
     new_expiration_block: int
+    cost: int
 
 
 @dataclass(frozen=True)
-class DeleteEvent:
+class ExpiryEvent(EntityOwnerEvent):
+    """Event emitted when an entity is expired."""
+
+    pass
+
+
+@dataclass(frozen=True)
+class DeleteEvent(EntityOwnerEvent):
     """Event emitted when an entity is deleted."""
 
-    entity_key: EntityKey
+    pass
+
+
+@dataclass(frozen=True)
+class ExtendEvent(EntityOwnerEvent):
+    """Event emitted when an entity's lifetime is extended."""
+
+    old_expiration_block: int
+    new_expiration_block: int
+    cost: int
+
+
+@dataclass(frozen=True)
+class ChangeOwnerEvent(EntityEvent):
+    """Event emitted when an entity's owner is changed."""
+
+    old_owner_address: ChecksumAddress
+    new_owner_address: ChecksumAddress
+
+
+@dataclass(frozen=True)
+class CreateEventLegacy(EntityEvent):
+    """Event emitted when an entity is created (legacy)."""
+
+    expiration_block: int
+    cost: int
 
 
 @dataclass(frozen=True)
@@ -235,6 +320,7 @@ class TransactionReceipt:
     updates: Sequence[UpdateEvent]
     extensions: Sequence[ExtendEvent]
     deletes: Sequence[DeleteEvent]
+    change_owners: Sequence[ChangeOwnerEvent]
 
 
 # Event callback types
@@ -242,15 +328,17 @@ CreateCallback = Callable[[CreateEvent, TxHash], None]
 UpdateCallback = Callable[[UpdateEvent, TxHash], None]
 DeleteCallback = Callable[[DeleteEvent, TxHash], None]
 ExtendCallback = Callable[[ExtendEvent, TxHash], None]
+ChangeOwnerCallback = Callable[[ChangeOwnerEvent, TxHash], None]
 
 # Async event callback types
 AsyncCreateCallback = Callable[[CreateEvent, TxHash], Awaitable[None]]
 AsyncUpdateCallback = Callable[[UpdateEvent, TxHash], Awaitable[None]]
 AsyncDeleteCallback = Callable[[DeleteEvent, TxHash], Awaitable[None]]
 AsyncExtendCallback = Callable[[ExtendEvent, TxHash], Awaitable[None]]
+AsyncChangeOwnerCallback = Callable[[ChangeOwnerEvent, TxHash], Awaitable[None]]
 
 # Event type literal
-EventType = Literal["created", "updated", "deleted", "extended"]
+EventType = Literal["created", "updated", "deleted", "extended", "ownerChanged"]
 
 # Low level annotations for RLP encoding
 StringAnnotationsRlp = NewType("StringAnnotationsRlp", list[tuple[str, str]])

@@ -94,7 +94,7 @@ class QueryIterator:
         # Fetch next page if available
         if self._current_result.has_more() and not self._exhausted:
             self._current_result = self._client.arkiv.query_entities(
-                cursor=self._current_result.next_cursor
+                cursor=self._current_result.cursor
             )
             self._current_index = 0
 

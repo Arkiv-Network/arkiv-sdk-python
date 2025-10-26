@@ -7,7 +7,7 @@ from eth_typing import HexStr
 from web3 import Web3
 from web3.types import Nonce, TxParams, Wei
 
-from arkiv.contract import STORAGE_ADDRESS
+from arkiv.contract import STORAGE_ADDRESS_NEW
 from arkiv.exceptions import AnnotationException, EntityKeyException
 from arkiv.types import (
     Annotations,
@@ -137,6 +137,7 @@ class TestToCreateOperation:
         """Test CreateOp with minimal valid input."""
         op = CreateOp(
             payload=b"",
+            content_type="",
             btl=0,
             annotations=Annotations({}),
         )
@@ -157,6 +158,7 @@ class TestToCreateOperation:
 
         op = CreateOp(
             payload=payload,
+            content_type="",
             btl=btl,
             annotations=annotations,
         )
@@ -171,12 +173,14 @@ class TestToTxParams:
 
     def test_to_tx_params_minimal(self) -> None:
         """Test to_tx_params with minimal operations."""
-        create_op = CreateOp(payload=b"minimal", btl=0, annotations=Annotations({}))
+        create_op = CreateOp(
+            payload=b"minimal", content_type="", btl=0, annotations=Annotations({})
+        )
         operations = Operations(creates=[create_op])
 
         tx_params = to_tx_params(operations)
 
-        assert tx_params["to"] == STORAGE_ADDRESS
+        assert tx_params["to"] == STORAGE_ADDRESS_NEW
         assert tx_params["value"] == 0
         assert "data" in tx_params
         assert isinstance(tx_params["data"], bytes)
@@ -185,6 +189,7 @@ class TestToTxParams:
         """Test to_tx_params with create operation."""
         create_op = CreateOp(
             payload=b"test data",
+            content_type="text/plain",
             btl=100,
             annotations=Annotations(
                 {
@@ -197,14 +202,19 @@ class TestToTxParams:
 
         tx_params = to_tx_params(operations)
 
-        assert tx_params["to"] == STORAGE_ADDRESS
+        assert tx_params["to"] == STORAGE_ADDRESS_NEW
         assert tx_params["value"] == 0
         assert "data" in tx_params
         assert len(tx_params["data"]) > 0
 
     def test_to_tx_params_with_additional_params(self) -> None:
         """Test to_tx_params with additional transaction parameters."""
-        create_op = CreateOp(payload=b"test", btl=0, annotations=Annotations({}))
+        create_op = CreateOp(
+            payload=b"test",
+            content_type="text/plain",
+            btl=0,
+            annotations=Annotations({}),
+        )
         operations = Operations(creates=[create_op])
         additional_params: TxParams = {
             "gas": 100000,
@@ -215,7 +225,7 @@ class TestToTxParams:
         tx_params = to_tx_params(operations, additional_params)
 
         # Arkiv-specific fields should be present
-        assert tx_params["to"] == STORAGE_ADDRESS
+        assert tx_params["to"] == STORAGE_ADDRESS_NEW
         assert tx_params["value"] == 0
         assert "data" in tx_params
 
@@ -226,7 +236,12 @@ class TestToTxParams:
 
     def test_to_tx_params_overrides_arkiv_fields(self) -> None:
         """Test that to_tx_params overrides 'to', 'value', and 'data' fields."""
-        create_op = CreateOp(payload=b"test", btl=0, annotations=Annotations({}))
+        create_op = CreateOp(
+            payload=b"test",
+            content_type="text/plain",
+            btl=0,
+            annotations=Annotations({}),
+        )
         operations = Operations(creates=[create_op])
         conflicting_params: TxParams = {
             "to": "0x999999999999999999999999999999999999999",
@@ -238,7 +253,7 @@ class TestToTxParams:
         tx_params = to_tx_params(operations, conflicting_params)
 
         # Arkiv fields should override user input
-        assert tx_params["to"] == STORAGE_ADDRESS
+        assert tx_params["to"] == STORAGE_ADDRESS_NEW
         assert tx_params["value"] == 0
         assert tx_params["data"] != b"should be overridden"
 
@@ -247,12 +262,17 @@ class TestToTxParams:
 
     def test_to_tx_params_none_tx_params(self) -> None:
         """Test to_tx_params with None tx_params."""
-        create_op = CreateOp(payload=b"test", btl=0, annotations=Annotations({}))
+        create_op = CreateOp(
+            payload=b"test",
+            content_type="text/plain",
+            btl=0,
+            annotations=Annotations({}),
+        )
         operations = Operations(creates=[create_op])
 
         tx_params = to_tx_params(operations, None)
 
-        assert tx_params["to"] == STORAGE_ADDRESS
+        assert tx_params["to"] == STORAGE_ADDRESS_NEW
         assert tx_params["value"] == 0
         assert "data" in tx_params
 
@@ -264,6 +284,7 @@ class TestRlpEncodeTransaction:
         """Test RLP encoding with minimal operations."""
         create_op = CreateOp(
             payload=b"",
+            content_type="",
             btl=0,
             annotations=Annotations({}),
         )
@@ -278,6 +299,7 @@ class TestRlpEncodeTransaction:
         """Test RLP encoding with create operation."""
         create_op = CreateOp(
             payload=b"test data",
+            content_type="text/plain",
             btl=1000,
             annotations=Annotations({"name": "test", "priority": 5}),
         )
@@ -296,6 +318,7 @@ class TestRlpEncodeTransaction:
         update_op = UpdateOp(
             entity_key=entity_key,
             payload=b"updated data",
+            content_type="text/plain",
             btl=2000,
             annotations=Annotations({"status": "updated", "version": 2}),
         )
@@ -336,6 +359,7 @@ class TestRlpEncodeTransaction:
         """Test RLP encoding with mixed operations."""
         create_op = CreateOp(
             payload=b"create data",
+            content_type="text/plain",
             btl=1000,
             annotations=Annotations({"type": "mixed_test", "batch": 1}),
         )
@@ -346,6 +370,7 @@ class TestRlpEncodeTransaction:
         update_op = UpdateOp(
             entity_key=entity_key_obj,
             payload=b"update data",
+            content_type="text/plain",
             btl=1500,
             annotations=Annotations({"status": "modified", "revision": 3}),
         )
@@ -369,12 +394,14 @@ class TestRlpEncodeTransaction:
         """Test RLP encoding with multiple create operations."""
         create_op1 = CreateOp(
             payload=b"first entity",
+            content_type="text/plain",
             btl=1000,
             annotations=Annotations({"name": "first", "id": 1}),
         )
 
         create_op2 = CreateOp(
             payload=b"second entity",
+            content_type="text/plain",
             btl=2000,
             annotations=Annotations({"name": "second", "id": 2}),
         )
@@ -390,6 +417,7 @@ class TestRlpEncodeTransaction:
         """Test RLP encoding with operations that have no annotations."""
         create_op = CreateOp(
             payload=b"no annotations",
+            content_type="text/plain",
             btl=500,
             annotations=Annotations({}),
         )

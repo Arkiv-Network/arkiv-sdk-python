@@ -116,7 +116,7 @@ class TestQueryEntitiesBasic:
         assert result  # Check __bool__()
         assert result.block_number > 0
         assert result.has_more() is False
-        assert result.next_cursor is None  # only 3 results, no pagination needed
+        assert result.cursor is None  # only 3 results, no pagination needed
 
         # Verify we got back all 3 entities
         assert len(result.entities) == 3

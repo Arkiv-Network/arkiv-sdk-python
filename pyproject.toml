@@ -53,6 +53,9 @@ lint = [
     "ruff==0.13.2",
     "pre-commit>=4.0.0",
 ]
+dev = [
+    "ipython>=8.37.0",
+]
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]

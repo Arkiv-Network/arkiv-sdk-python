@@ -7,6 +7,7 @@ from web3.types import TxParams
 
 from arkiv.account import NamedAccount
 from arkiv.types import (
+    Annotations,
     CreateOp,
     DeleteOp,
     Entity,
@@ -24,6 +25,14 @@ WALLET_FILE_ENV_PREFIX = "WALLET_FILE"
 WALLET_PASSWORD_ENV_PREFIX = "WALLET_PASSWORD"
 
 logger = logging.getLogger(__name__)
+
+
+def get_custom_annotations(entity: Entity) -> Annotations:
+    """Extract custom annotations from an entity, excluding standard fields."""
+    custom_annotations = {
+        key: value for key, value in entity.annotations.items() if key[0] != "$"
+    }
+    return Annotations(custom_annotations)
 
 
 def check_tx_hash(label: str, tx_hash: TxHash) -> None:

@@ -174,4 +174,5 @@ ehthumbs_vista.db
 .testcontainers/
 
 # Project specific
+tmp.*
 wallet_*json

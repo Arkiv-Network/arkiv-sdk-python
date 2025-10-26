@@ -86,7 +86,7 @@ class TestAsyncQueryEntitiesBasic:
         assert result  # Check __bool__()
         assert result.block_number > 0
         assert result.has_more() is False
-        assert result.next_cursor is None
+        assert result.cursor is None
 
         # Verify we got back all 3 entities
         assert len(result.entities) == 3

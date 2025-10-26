@@ -19,14 +19,15 @@ from arkiv.types import (
     TransactionReceipt,
     TxHash,
 )
-from arkiv.utils import to_entity, to_receipt
+from arkiv.utils import to_entity_legacy, to_receipt
 
-from .contract import EVENTS_ABI, FUNCTIONS_ABI, STORAGE_ADDRESS
+from .contract import EVENTS_ABI, FUNCTIONS_ABI, STORAGE_ADDRESS_NEW
 
 if TYPE_CHECKING:
     pass
 
 TX_SUCCESS = 1
+CONTENT_TYPE_DEFAULT = "application/octet-stream"
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +62,7 @@ class ArkivModuleBase(Generic[ClientT]):
             logger.debug(f"Custom RPC method: eth.{method_name}")
 
         # Create contract instance for events (using EVENTS_ABI)
-        self.contract = client.eth.contract(address=STORAGE_ADDRESS, abi=EVENTS_ABI)  # type: ignore[attr-defined]
+        self.contract = client.eth.contract(address=STORAGE_ADDRESS_NEW, abi=EVENTS_ABI)  # type: ignore[attr-defined]
         for event in self.contract.all_events():
             logger.debug(f"Entity event {event.topic}: {event.signature}")
 
@@ -75,18 +76,21 @@ class ArkivModuleBase(Generic[ClientT]):
     def _check_and_set_argument_defaults(
         self,
         payload: bytes | None,
+        content_type: str | None,
         annotations: Annotations | None,
         btl: int | None,
-    ) -> tuple[bytes, Annotations, int]:
+    ) -> tuple[bytes, str, Annotations, int]:
         """Check and set defaults for entity management arguments."""
         if btl is None:
             btl = self.btl_default
         if not payload:
             payload = b""
+        if not content_type:
+            content_type = CONTENT_TYPE_DEFAULT
         if not annotations:
             annotations = Annotations({})
 
-        return payload, annotations, btl
+        return payload, content_type, annotations, btl
 
     def _check_tx_and_get_receipt(
         self, tx_hash: TxHash, tx_receipt: TxReceipt
@@ -99,14 +103,14 @@ class ArkivModuleBase(Generic[ClientT]):
         # Parse and return receipt
         receipt: TransactionReceipt = to_receipt(self.contract, tx_hash, tx_receipt)
 
-        logger.debug(f"Arkiv receipt: {receipt}")
+        logger.info(f"Arkiv receipt: {receipt}")
         return receipt
 
     def _check_entity_metadata(
         self, entity_key: str, metadata: dict[str, Any]
     ) -> dict[str, Any]:
         """Check and validate entity metadata structure."""
-        logger.debug(f"Raw metadata: {metadata}")
+        logger.info(f"Raw metadata: {metadata}")
 
         # Basic validation of metadata content
         if not metadata:
@@ -132,6 +136,15 @@ class ArkivModuleBase(Generic[ClientT]):
         if expires_at_block_metadata is None:
             raise ValueError("Entity metadata missing required 'expiresAtBlock' field")
         return int(expires_at_block_metadata)
+
+    def _get_metadata_numeric_field(
+        self, metadata: dict[str, Any], field_name: str
+    ) -> int:
+        """Get a numeric field from the entity metadata."""
+        field_value = metadata.get(field_name)
+        if field_value is None:
+            raise ValueError(f"Entity metadata missing required '{field_name}' field")
+        return int(field_value)
 
     def _validate_query_entities_params(
         self,
@@ -182,7 +195,7 @@ class ArkivModuleBase(Generic[ClientT]):
                 entity_key=result.key, storage_value=base64.b64decode(result.value)
             )
             logger.info(f"Query result item: {entity_result}")
-            entities.append(to_entity(entity_result))
+            entities.append(to_entity_legacy(entity_result))
 
         logger.info(f"Query returned {len(entities)} result(s)")
 
@@ -190,5 +203,5 @@ class ArkivModuleBase(Generic[ClientT]):
         return QueryResult(
             entities=entities,
             block_number=block_number,
-            next_cursor=None,
+            cursor=None,
         )

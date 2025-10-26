@@ -6,7 +6,7 @@ import logging
 from typing import Any
 
 import rlp  # type: ignore[import-untyped]
-from eth_typing import HexStr
+from eth_typing import ChecksumAddress, HexStr
 from hexbytes import HexBytes
 from web3 import Web3
 from web3.contract import Contract
@@ -14,20 +14,29 @@ from web3.contract.base_contract import BaseContractEvent
 from web3.types import EventData, LogReceipt, TxParams, TxReceipt
 
 from . import contract
-from .contract import STORAGE_ADDRESS
+from .contract import STORAGE_ADDRESS_NEW
 from .exceptions import AnnotationException, EntityKeyException
 from .types import (
+    ANNOTATIONS,
+    CONTENT_TYPE,
+    EXPIRATION,
+    KEY,
+    OWNER,
     PAYLOAD,
     Annotations,
+    ChangeOwnerEvent,
     CreateEvent,
     DeleteEvent,
     Entity,
     EntityKey,
+    ExpiryEvent,
     ExtendEvent,
     NumericAnnotations,
     NumericAnnotationsRlp,
     Operations,
     QueryEntitiesResult,
+    QueryOptions,
+    QueryResult,
     StringAnnotations,
     StringAnnotationsRlp,
     TransactionReceipt,
@@ -50,7 +59,8 @@ def entity_key_to_bytes(entity_key: EntityKey) -> bytes:
     return bytes.fromhex(entity_key[2:])  # Strip '0x' prefix and convert to bytes
 
 
-def to_entity(query_result: QueryEntitiesResult) -> Entity:
+# TODO remove once transition to new arkiv api is complete
+def to_entity_legacy(query_result: QueryEntitiesResult) -> Entity:
     """
     Convert a QueryEntitiesResult to an Entity.
 
@@ -146,12 +156,166 @@ def to_tx_params(
 
     # Merge provided tx_params with encoded transaction data
     tx_params |= {
-        "to": STORAGE_ADDRESS,
+        "to": STORAGE_ADDRESS_NEW,
         "value": Web3.to_wei(0, "ether"),
         "data": rlp_encode_transaction(operations),
     }
 
     return tx_params
+
+
+def to_query_options(
+    options: QueryOptions | None = None,
+) -> dict[str, Any]:
+    """
+    Convert QueryOptions to a dictionary for RPC calls.
+
+    Args:
+        options: QueryOptions instance
+
+    Returns:
+        Dictionary representation of the query options
+    """
+    if not options:
+        options = QueryOptions()
+
+    # see https://github.com/Golem-Base/golembase-op-geth/blob/main/eth/api_arkiv.go
+    rpc_query_options = {
+        "atBlock": options.at_block,
+        "includeData": {
+            "key": options.fields & KEY != 0,
+            "annotations": options.fields & ANNOTATIONS != 0,
+            "payload": options.fields & PAYLOAD != 0,
+            "contentType": options.fields & CONTENT_TYPE != 0,
+            "expiration": options.fields & EXPIRATION != 0,
+            "owner": options.fields & OWNER != 0,
+        },
+        "resultsPerPage": options.max_results_per_page,
+        "cursor": options.cursor,
+    }
+
+    logger.info(f"RPC query options: {rpc_query_options}")
+    return rpc_query_options
+
+
+def to_entity(fields: int, response_item: dict[str, Any]) -> Entity:
+    """Convert a low-level RPC query response to a high-level Entity."""
+
+    logger.info(f"Item: {response_item}")
+
+    # Set defaults
+    entity_key: EntityKey | None = None
+    owner: ChecksumAddress | None = None
+    expires_at_block: int | None = None
+    payload: bytes | None = None
+    content_type: str | None = None
+    annotations: Annotations | None = None
+
+    # Extract entity key if present
+    if fields & KEY != 0:
+        if not hasattr(response_item, "key"):
+            raise ValueError("RPC query response item missing 'key' field")
+        entity_key = EntityKey(response_item.key)
+
+    # Extract owner if present
+    if fields & OWNER != 0:
+        if not hasattr(response_item, "owner"):
+            raise ValueError("RPC query response item missing 'owner' field")
+        owner = Web3.to_checksum_address(response_item.owner)
+
+    # Extract expiration if present
+    if fields & EXPIRATION != 0:
+        if not hasattr(response_item, "expiresAt"):
+            raise ValueError("RPC query response item missing 'expiresAt' field")
+        expires_at_block = int(response_item.expiresAt)
+
+    # Extract payload if present
+    if fields & PAYLOAD != 0:
+        if not hasattr(response_item, "value"):
+            raise ValueError("RPC query response item missing 'value' field")
+
+        # Value is hex-encoded, convert to bytes
+        payload = bytes.fromhex(
+            response_item.value[2:]
+            if response_item.value.startswith("0x")
+            else response_item.value
+        )
+
+    # Extract content type if present
+    if fields & CONTENT_TYPE != 0:
+        if not hasattr(response_item, "contentType"):
+            raise ValueError("RPC query response item missing 'contentType' field")
+        content_type = response_item.contentType
+
+    # Extract and merge annotations if present
+    if fields & ANNOTATIONS != 0:
+        string_annotations = (
+            response_item.stringAnnotations
+            if hasattr(response_item, "stringAnnotations")
+            else None
+        )
+        numeric_annotations = (
+            response_item.numericAnnotations
+            if hasattr(response_item, "numericAnnotations")
+            else None
+        )
+        annotations = merge_annotations(string_annotations, numeric_annotations)
+
+    entity = Entity(
+        entity_key=entity_key,
+        fields=fields,
+        owner=owner,
+        created_at_block=None,  # Not provided in query response
+        last_modified_at_block=None,  # Not provided in query response
+        expires_at_block=expires_at_block,
+        transaction_index=None,  # Not provided in query response
+        operation_index=None,  # Not provided in query response
+        payload=payload,
+        content_type=content_type,
+        annotations=annotations,
+    )
+
+    logger.info(f"Entity: {entity}")
+    return entity
+
+
+def to_query_result(fields: int, rpc_query_response: dict[str, Any]) -> QueryResult:
+    """Convert a low-level RPC query response to a high-level QueryResult."""
+
+    logger.info(f"Raw query result(s): {rpc_query_response}")
+    if not rpc_query_response:
+        raise ValueError("RPC query response is empty")
+
+    # Get and check response (element) data
+    if not hasattr(rpc_query_response, "data"):
+        raise ValueError("RPC query response missing 'data' field")
+
+    response_data = rpc_query_response.data
+    if not isinstance(response_data, list):
+        raise ValueError("RPC query response 'data' field is not an array")
+
+    entities: list[Entity] = []
+    for item in response_data:
+        entity = to_entity(fields, item)
+        entities.append(entity)
+
+    # Extract block number from rpc_query_response. Raises exception when element is missing.
+    if not hasattr(rpc_query_response, "blockNumber"):
+        raise ValueError("RPC query response missing 'blockNumber' field")
+
+    block_number: int = rpc_query_response.blockNumber
+
+    # Extracts cursor from rpc_query_response. Sets cursor to None if element is missing.
+    cursor: str | None = (
+        rpc_query_response.cursor if hasattr(rpc_query_response, "cursor") else None
+    )
+
+    query_result = QueryResult(
+        entities=entities, block_number=block_number, cursor=cursor
+    )
+
+    logger.info(f"Query result: {query_result}")
+    return query_result
 
 
 def to_hex_bytes(tx_hash: TxHash) -> HexBytes:
@@ -169,6 +333,90 @@ def to_hex_bytes(tx_hash: TxHash) -> HexBytes:
         hex_bytes = to_hex_bytes(tx_hash)
     """
     return HexBytes(tx_hash)
+
+
+def to_event(
+    contract_: Contract, log: LogReceipt
+) -> (
+    CreateEvent
+    | UpdateEvent
+    | ExpiryEvent
+    | DeleteEvent
+    | ExtendEvent
+    | ChangeOwnerEvent
+    | None
+):
+    """Convert a log receipt to event object."""
+    logger.info(f"Log: {log}")
+
+    event_data: EventData = get_event_data(contract_, log)
+    event_args: dict[str, Any] = event_data["args"]
+    event_name = event_data["event"]
+
+    entity_key: EntityKey = to_entity_key(event_args["entityKey"])
+    owner_address: ChecksumAddress | None = event_args.get("ownerAddress")
+    cost: int | None = event_args.get("cost")
+    logger.info(
+        f"Processing event: {event_name}, entity_key: {entity_key}, owner_address: {owner_address}, cost: {cost}"
+    )
+
+    match event_name:
+        case contract.CREATED_EVENT:
+            return CreateEvent(
+                entity_key=entity_key,
+                owner_address=owner_address,
+                expiration_block=event_args["expirationBlock"],
+                cost=cost,
+            )
+        case contract.UPDATED_EVENT:
+            return UpdateEvent(
+                entity_key=entity_key,
+                owner_address=owner_address,
+                old_expiration_block=event_args["oldExpirationBlock"],
+                new_expiration_block=event_args["newExpirationBlock"],
+                cost=cost,
+            )
+        case contract.EXPIRED_EVENT:
+            return ExpiryEvent(
+                entity_key=entity_key,
+                owner_address=owner_address,
+            )
+        case contract.DELETED_EVENT:
+            return DeleteEvent(
+                entity_key=entity_key,
+                owner_address=owner_address,
+            )
+        case contract.EXTENDED_EVENT:
+            return ExtendEvent(
+                entity_key=entity_key,
+                owner_address=owner_address,
+                old_expiration_block=event_args["oldExpirationBlock"],
+                new_expiration_block=event_args["newExpirationBlock"],
+                cost=cost,
+            )
+        case contract.OWNER_CHANGED_EVENT:
+            return ChangeOwnerEvent(
+                entity_key=entity_key,
+                old_owner_address=event_args["oldOwnerAddress"],
+                new_owner_address=event_args["newOwnerAddress"],
+            )
+        # Legacy events - skip with info log
+        case contract.CREATED_EVENT_LEGACY:
+            logger.info(f"Skipping legacy event: {event_name}")
+            return None
+        case contract.UPDATED_EVENT_LEGACY:
+            logger.info(f"Skipping legacy event: {event_name}")
+            return None
+        case contract.DELETED_EVENT_LEGACY:
+            logger.info(f"Skipping legacy event: {event_name}")
+            return None
+        case contract.EXTENDED_EVENT_LEGACY:
+            logger.info(f"Skipping legacy event: {event_name}")
+            return None
+        # Unknown events - return None with warning log
+        case _:
+            logger.warning(f"Unknown event type: {event_name}")
+            return None
 
 
 def to_receipt(
@@ -189,6 +437,7 @@ def to_receipt(
     updates: list[UpdateEvent] = []
     extensions: list[ExtendEvent] = []
     deletes: list[DeleteEvent] = []
+    change_owners: list[ChangeOwnerEvent] = []
 
     receipt = TransactionReceipt(
         tx_hash=tx_hash,
@@ -196,48 +445,44 @@ def to_receipt(
         updates=updates,
         extensions=extensions,
         deletes=deletes,
+        change_owners=change_owners,
     )
 
     logs: list[LogReceipt] = tx_receipt["logs"]
     for log in logs:
         try:
             event_data: EventData = get_event_data(contract_, log)
-            event_args: dict[str, Any] = event_data["args"]
             event_name = event_data["event"]
-
-            entity_key: EntityKey = to_entity_key(event_args["entityKey"])
-
+            event = to_event(contract_, log)
+            if event is None:
+                continue
             match event_name:
                 case contract.CREATED_EVENT:
-                    expiration_block: int = event_args["expirationBlock"]
-                    creates.append(
-                        CreateEvent(
-                            entity_key=entity_key,
-                            expiration_block=expiration_block,
-                        )
-                    )
+                    if isinstance(event, CreateEvent):
+                        creates.append(event)
                 case contract.UPDATED_EVENT:
-                    expiration_block = event_args["expirationBlock"]
-                    updates.append(
-                        UpdateEvent(
-                            entity_key=entity_key,
-                            expiration_block=expiration_block,
-                        )
-                    )
+                    if isinstance(event, UpdateEvent):
+                        updates.append(event)
+                case contract.EXPIRED_EVENT:
+                    logger.warning(f"Not yet implemented: {event_name}")
                 case contract.DELETED_EVENT:
-                    deletes.append(
-                        DeleteEvent(
-                            entity_key=entity_key,
-                        )
-                    )
+                    if isinstance(event, DeleteEvent):
+                        deletes.append(event)
                 case contract.EXTENDED_EVENT:
-                    extensions.append(
-                        ExtendEvent(
-                            entity_key=entity_key,
-                            old_expiration_block=event_args["oldExpirationBlock"],
-                            new_expiration_block=event_args["newExpirationBlock"],
-                        )
-                    )
+                    if isinstance(event, ExtendEvent):
+                        extensions.append(event)
+                case contract.OWNER_CHANGED_EVENT:
+                    if isinstance(event, ChangeOwnerEvent):
+                        change_owners.append(event)
+                case contract.CREATED_EVENT_LEGACY:
+                    logger.info(f"Skipping legacy event: {event_name}")
+                case contract.UPDATED_EVENT_LEGACY:
+                    logger.info(f"Skipping legacy event: {event_name}")
+                case contract.DELETED_EVENT_LEGACY:
+                    logger.info(f"Skipping legacy event: {event_name}")
+                case contract.EXTENDED_EVENT_LEGACY:
+                    logger.info(f"Skipping legacy event: {event_name}")
+                # Unknown events - skip with warning log
                 case _:
                     logger.warning(f"Unknown event type: {event_name}")
         except Exception:
@@ -276,6 +521,7 @@ def rlp_encode_transaction(tx: Operations) -> bytes:
         [
             [
                 element.btl,
+                element.content_type,
                 element.payload,
                 *split_annotations(element.annotations),
             ]
@@ -286,6 +532,7 @@ def rlp_encode_transaction(tx: Operations) -> bytes:
             [
                 entity_key_to_bytes(element.entity_key),
                 element.btl,
+                element.content_type,
                 element.payload,
                 *split_annotations(element.annotations),
             ]
@@ -300,6 +547,14 @@ def rlp_encode_transaction(tx: Operations) -> bytes:
                 element.number_of_blocks,
             ]
             for element in tx.extensions
+        ],
+        # ChangeOwner
+        [
+            [
+                entity_key_to_bytes(element.entity_key),
+                element.new_owner,
+            ]
+            for element in tx.change_owners
         ],
     ]
     logger.debug("Payload: %s", payload)
@@ -344,6 +599,10 @@ def merge_annotations(
         # example: [AttributeDict({'key': 'type', 'value': 'Greeting'})]
         for element in string_annotations:
             logger.debug(f"String annotation element: {element}")
+            # Filter out system attributes
+            if element.key.startswith("$"):
+                continue
+
             if isinstance(element.value, str):
                 annotations[element.key] = element.value
             else:
@@ -355,6 +614,10 @@ def merge_annotations(
         # example: [AttributeDict({'key': 'version', 'value': 1})]
         for element in numeric_annotations:
             logger.debug(f"Numeric annotation element: {element}")
+            # Filter out system attributes
+            if element.key.startswith("$"):
+                continue
+
             if isinstance(element.value, int):
                 annotations[element.key] = element.value
             else:
