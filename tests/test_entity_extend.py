@@ -32,6 +32,7 @@ class TestEntityExtend:
 
         # Get initial expiration block
         entity_before = arkiv_client_http.arkiv.get_entity(entity_key)
+        logger.info(f"Entity before extension: {entity_before}")
         initial_expiration = entity_before.expires_at_block
         assert initial_expiration is not None, "Entity should have expiration block"
         logger.info(f"Initial expiration block: {initial_expiration}")
@@ -50,6 +51,7 @@ class TestEntityExtend:
 
         # Verify the entity still exists and expiration increased
         entity_after = arkiv_client_http.arkiv.get_entity(entity_key)
+        logger.info(f"Entity after extension: {entity_after}")
         assert entity_after.expires_at_block == initial_expiration + number_of_blocks, (
             f"Expiration should increase by {number_of_blocks} blocks"
         )

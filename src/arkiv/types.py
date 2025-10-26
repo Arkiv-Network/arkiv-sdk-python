@@ -62,7 +62,11 @@ class Entity:
 
     # Populated when fields | METADATA returns true
     owner: ChecksumAddress | None
+    created_at_block: int | None
+    last_modified_at_block: int | None
     expires_at_block: int | None
+    transaction_index: int | None
+    operation_index: int | None
 
     # Populated when fields | PAYLOAD returns true
     payload: bytes | None

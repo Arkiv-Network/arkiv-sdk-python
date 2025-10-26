@@ -15,20 +15,36 @@ STORAGE_ADDRESS: Final[ChecksumAddress] = Web3.to_checksum_address(
 )
 
 
-CREATED_EVENT: Final[str] = "GolemBaseStorageEntityCreated"
-UPDATED_EVENT: Final[str] = "GolemBaseStorageEntityUpdated"
-EXTENDED_EVENT: Final[str] = "GolemBaseStorageEntityBTLExtended"
-DELETED_EVENT: Final[str] = "GolemBaseStorageEntityDeleted"
+CREATED_EVENT_LEGACY: Final[str] = "GolemBaseStorageEntityCreated"
+UPDATED_EVENT_LEGACY: Final[str] = "GolemBaseStorageEntityUpdated"
+EXTENDED_EVENT_LEGACY: Final[str] = "GolemBaseStorageEntityBTLExtended"
+DELETED_EVENT_LEGACY: Final[str] = "GolemBaseStorageEntityDeleted"
+
+CREATED_EVENT: Final[str] = "ArkivEntityCreated"
+UPDATED_EVENT: Final[str] = "ArkivEntityUpdated"
+DELETED_EVENT: Final[str] = "ArkivEntityDeleted"
+EXPIRED_EVENT: Final[str] = "ArkivEntityExpired"
+EXTENDED_EVENT: Final[str] = "ArkivEntityBTLExtended"
+OWNER_CHANGED_EVENT: Final[str] = "ArkivEntityOwnerChanged"
+
 
 EVENTS: dict[str, str] = {
+    "created_legacy": CREATED_EVENT_LEGACY,
+    "updated_legacy": UPDATED_EVENT_LEGACY,
+    "extended_legacy": EXTENDED_EVENT_LEGACY,
+    "deleted_legacy": DELETED_EVENT_LEGACY,
     "created": CREATED_EVENT,
     "updated": UPDATED_EVENT,
     "extended": EXTENDED_EVENT,
     "deleted": DELETED_EVENT,
+    "expired": EXPIRED_EVENT,
+    "owner_changed": OWNER_CHANGED_EVENT,
 }
 
 TYPE_EVENT = "event"
 TYPE_UINT = "uint256"
+TYPE_ADDRESS = "address"
+
 EVENTS_ABI: Final[Sequence[dict[str, Any]]] = [
     {
         "anonymous": False,
@@ -36,7 +52,7 @@ EVENTS_ABI: Final[Sequence[dict[str, Any]]] = [
             {"indexed": True, "name": "entityKey", "type": TYPE_UINT},
             {"indexed": False, "name": "expirationBlock", "type": TYPE_UINT},
         ],
-        "name": CREATED_EVENT,
+        "name": CREATED_EVENT_LEGACY,
         "type": TYPE_EVENT,
     },
     {
@@ -45,13 +61,13 @@ EVENTS_ABI: Final[Sequence[dict[str, Any]]] = [
             {"indexed": True, "name": "entityKey", "type": TYPE_UINT},
             {"indexed": False, "name": "expirationBlock", "type": TYPE_UINT},
         ],
-        "name": UPDATED_EVENT,
+        "name": UPDATED_EVENT_LEGACY,
         "type": TYPE_EVENT,
     },
     {
         "anonymous": False,
         "inputs": [{"indexed": True, "name": "entityKey", "type": TYPE_UINT}],
-        "name": DELETED_EVENT,
+        "name": DELETED_EVENT_LEGACY,
         "type": TYPE_EVENT,
     },
     {
@@ -61,7 +77,70 @@ EVENTS_ABI: Final[Sequence[dict[str, Any]]] = [
             {"indexed": False, "name": "oldExpirationBlock", "type": TYPE_UINT},
             {"indexed": False, "name": "newExpirationBlock", "type": TYPE_UINT},
         ],
+        "name": EXTENDED_EVENT_LEGACY,
+        "type": TYPE_EVENT,
+    },
+    {
+        "anonymous": False,
+        "inputs": [
+            {"indexed": True, "name": "entityKey", "type": TYPE_UINT},
+            {"indexed": True, "name": "ownerAddress", "type": TYPE_ADDRESS},
+            {"indexed": False, "name": "expirationBlock", "type": TYPE_UINT},
+            {"indexed": False, "name": "cost", "type": TYPE_UINT},
+        ],
+        "name": CREATED_EVENT,
+        "type": TYPE_EVENT,
+    },
+    {
+        "anonymous": False,
+        "inputs": [
+            {"indexed": True, "name": "entityKey", "type": TYPE_UINT},
+            {"indexed": True, "name": "ownerAddress", "type": TYPE_ADDRESS},
+            {"indexed": False, "name": "oldExpirationBlock", "type": TYPE_UINT},
+            {"indexed": False, "name": "newExpirationBlock", "type": TYPE_UINT},
+            {"indexed": False, "name": "cost", "type": TYPE_UINT},
+        ],
+        "name": UPDATED_EVENT,
+        "type": TYPE_EVENT,
+    },
+    {
+        "anonymous": False,
+        "inputs": [
+            {"indexed": True, "name": "entityKey", "type": TYPE_UINT},
+            {"indexed": True, "name": "ownerAddress", "type": TYPE_ADDRESS},
+        ],
+        "name": DELETED_EVENT,
+        "type": TYPE_EVENT,
+    },
+    {
+        "anonymous": False,
+        "inputs": [
+            {"indexed": True, "name": "entityKey", "type": TYPE_UINT},
+            {"indexed": True, "name": "ownerAddress", "type": TYPE_ADDRESS},
+        ],
         "name": EXTENDED_EVENT,
+        "type": TYPE_EVENT,
+    },
+    {
+        "anonymous": False,
+        "inputs": [
+            {"indexed": True, "name": "entityKey", "type": TYPE_UINT},
+            {"indexed": True, "name": "ownerAddress", "type": TYPE_ADDRESS},
+            {"indexed": False, "name": "oldExpirationBlock", "type": TYPE_UINT},
+            {"indexed": False, "name": "newExpirationBlock", "type": TYPE_UINT},
+            {"indexed": False, "name": "cost", "type": TYPE_UINT},
+        ],
+        "name": EXPIRED_EVENT,
+        "type": TYPE_EVENT,
+    },
+    {
+        "anonymous": False,
+        "inputs": [
+            {"indexed": True, "name": "entityKey", "type": TYPE_UINT},
+            {"indexed": True, "name": "oldOwnerAddress", "type": TYPE_ADDRESS},
+            {"indexed": True, "name": "newOwnerAddress", "type": TYPE_ADDRESS},
+        ],
+        "name": OWNER_CHANGED_EVENT,
         "type": TYPE_EVENT,
     },
 ]

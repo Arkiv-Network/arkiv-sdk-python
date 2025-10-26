@@ -148,7 +148,7 @@ class TestEntityCreate:
         check_tx_hash(label, tx_hash)
 
         entity = arkiv_client_http.arkiv.get_entity(entity_key)
-        logger.info(f"{label}: Retrieved entity: {entity}")
+        logger.info(f"{label}: Retrieved entity:\n{entity}")
 
         assert entity.entity_key == entity_key, f"{label}: Entity key should match"
         assert entity.payload == pl, f"{label}: Entity payload should match"

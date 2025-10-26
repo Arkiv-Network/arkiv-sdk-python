@@ -130,6 +130,8 @@ class EventFilterBase(ABC, Generic[CallbackT]):
             tx_hash_hex = f"0x{tx_hash_hex}"
         return TxHash(HexStr(tx_hash_hex))
 
+    # TODO (1) check/match against utils.py::to_receipt
+    # TODO (2) update to new log/event definition in contract.py
     def _parse_event_data(self, event_data: EventData) -> tuple[EventObject, TxHash]:
         """
         Parse event data and create appropriate event object.

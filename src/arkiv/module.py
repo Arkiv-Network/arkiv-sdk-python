@@ -295,6 +295,10 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
         """
         # Gather the requested data
         owner: ChecksumAddress | None = None
+        created_at_block: int | None = None
+        last_modified_at_block: int | None = None
+        transaction_index: int | None = None
+        operation_index: int | None = None
         expires_at_block: int | None = None
         payload: bytes | None = None
         annotations: Annotations | None = None
@@ -308,11 +312,28 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
             # get and decode annotations and/or metadata if requested
             if fields & METADATA or fields & ANNOTATIONS:
                 metadata_all = self._get_entity_metadata(entity_key)
+                logger.info(
+                    f"Fetched metadata for entity[{entity_key}]: {metadata_all}"
+                )
 
                 if fields & METADATA:
                     # Convert owner address to checksummed format
                     owner = self._get_owner(metadata_all)
-                    expires_at_block = self._get_expires_at_block(metadata_all)
+                    created_at_block = self._get_metadata_numeric_field(
+                        metadata_all, "createdAtBlock"
+                    )
+                    last_modified_at_block = self._get_metadata_numeric_field(
+                        metadata_all, "lastModifiedAtBlock"
+                    )
+                    expires_at_block = self._get_metadata_numeric_field(
+                        metadata_all, "expiresAtBlock"
+                    )
+                    transaction_index = self._get_metadata_numeric_field(
+                        metadata_all, "transactionIndex"
+                    )
+                    operation_index = self._get_metadata_numeric_field(
+                        metadata_all, "operationIndex"
+                    )
 
                 if fields & ANNOTATIONS:
                     annotations = merge_annotations(
@@ -327,7 +348,11 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
             entity_key=entity_key,
             fields=fields,
             owner=owner,
+            created_at_block=created_at_block,
+            last_modified_at_block=last_modified_at_block,
             expires_at_block=expires_at_block,
+            transaction_index=transaction_index,
+            operation_index=operation_index,
             payload=payload,
             annotations=annotations,
         )

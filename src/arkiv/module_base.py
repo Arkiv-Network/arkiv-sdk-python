@@ -133,6 +133,15 @@ class ArkivModuleBase(Generic[ClientT]):
             raise ValueError("Entity metadata missing required 'expiresAtBlock' field")
         return int(expires_at_block_metadata)
 
+    def _get_metadata_numeric_field(
+        self, metadata: dict[str, Any], field_name: str
+    ) -> int:
+        """Get a numeric field from the entity metadata."""
+        field_value = metadata.get(field_name)
+        if field_value is None:
+            raise ValueError(f"Entity metadata missing required '{field_name}' field")
+        return int(field_value)
+
     def _validate_query_entities_params(
         self,
         query: str | None,
