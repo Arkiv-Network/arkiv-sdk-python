@@ -74,6 +74,7 @@ class ExpirationTime:
 
     """
 
+    # TODO: derive this from the chain using RPC
     BLOCK_TIME_SECONDS = 2
     """Block time in seconds (Arkiv produces blocks every 2 seconds)"""
 
