@@ -153,13 +153,13 @@ class ArkivHttpClient(AsyncWeb3):
             string_annotations=list(
                 map(
                     lambda ann: Annotation(key=ann["key"], value=ann["value"]),
-                    metadata.stringAnnotations,
+                    metadata.stringAnnotations or list(),
                 )
             ),
             numeric_annotations=list(
                 map(
                     lambda ann: Annotation(key=ann["key"], value=ann["value"]),
-                    metadata.numericAnnotations,
+                    metadata.numericAnnotations or list(),
                 )
             ),
         )
