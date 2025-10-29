@@ -12,10 +12,12 @@ from xdg import BaseDirectory
 
 WALLET_PATH = Path(BaseDirectory.xdg_config_home) / "golembase" / "wallet.json"
 
+
 class WalletError(Exception):
     """Base class for wallet-related errors."""
 
     pass
+
 
 async def decrypt_wallet() -> bytes:
     """Decrypts the wallet and returns the private key bytes."""
@@ -41,4 +43,3 @@ async def decrypt_wallet() -> bytes:
             raise WalletError("Incorrect password or corrupted wallet file.") from e
 
         return cast(bytes, private_key)
-
