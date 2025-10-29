@@ -7,7 +7,7 @@ name = "arkiv-sdk"
 authors = [
     {name = "rvdp", email = "online@well-founded.dev"},
 ]
-version = "0.2.1"
+version = "0.2.2"
 readme = "README.md"
 license = "GPL-3.0-only"
 requires-python = ">=3.10"
