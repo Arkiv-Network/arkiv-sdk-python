@@ -203,13 +203,22 @@ class TestWatchEntityCreated:
             # Create 3 entities in a single bulk transaction
             create_ops = [
                 CreateOp(
-                    payload=b"bulk entity 1", annotations=Annotations({}), btl=100
+                    payload=b"bulk entity 1",
+                    content_type="text/plain",
+                    annotations=Annotations({}),
+                    btl=100,
                 ),
                 CreateOp(
-                    payload=b"bulk entity 2", annotations=Annotations({}), btl=100
+                    payload=b"bulk entity 2",
+                    content_type="text/plain",
+                    annotations=Annotations({}),
+                    btl=100,
                 ),
                 CreateOp(
-                    payload=b"bulk entity 3", annotations=Annotations({}), btl=100
+                    payload=b"bulk entity 3",
+                    content_type="text/plain",
+                    annotations=Annotations({}),
+                    btl=100,
                 ),
             ]
             entity_keys, tx_hash = create_entities(arkiv_client_http, create_ops)

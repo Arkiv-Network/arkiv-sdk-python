@@ -123,6 +123,7 @@ class TestEntityExists:
         create_ops = [
             CreateOp(
                 payload=f"bulk entity {i}".encode(),
+                content_type="text/plain",
                 annotations=Annotations({}),
                 btl=1000,
             )

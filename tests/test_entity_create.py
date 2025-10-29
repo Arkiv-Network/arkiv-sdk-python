@@ -6,7 +6,7 @@ from hexbytes import HexBytes
 from web3.types import TxReceipt
 
 from arkiv.client import Arkiv
-from arkiv.contract import STORAGE_ADDRESS
+from arkiv.contract import STORAGE_ADDRESS_NEW
 from arkiv.types import Annotations, CreateOp, Operations
 from arkiv.utils import (
     check_entity_key,
@@ -34,7 +34,9 @@ class TestEntityCreate:
         expected_from_address = arkiv_client_http.eth.default_account
 
         # Wrap in Operations container
-        create_op = CreateOp(payload=payload, annotations=annotations, btl=btl)
+        create_op = CreateOp(
+            payload=payload, content_type="text/plain", annotations=annotations, btl=btl
+        )
         operations = Operations(creates=[create_op])
 
         # Convert to transaction parameters and send
@@ -89,8 +91,8 @@ class TestEntityCreate:
         )
 
         # Verify transaction was sent to the correct Arkiv storage contract
-        assert tx_details["to"] == STORAGE_ADDRESS, (
-            f"Transaction should be sent to Arkiv storage contract {STORAGE_ADDRESS}, got {tx_details['to']}"
+        assert tx_details["to"] == STORAGE_ADDRESS_NEW, (
+            f"Transaction should be sent to Arkiv storage contract {STORAGE_ADDRESS_NEW}, got {tx_details['to']}"
         )
 
         # Verify transaction value is 0 (no ETH should be sent)
@@ -152,7 +154,7 @@ class TestEntityCreate:
         check_entity_key(entity_key, label)
         check_tx_hash(label, tx_hash)
 
-        query_result = arkiv_client_http.arkiv.query(f"$key = {entity_key}")
+        query_result = arkiv_client_http.arkiv.query_entities(f"$key = {entity_key}")
         assert len(query_result.entities) == 1, (
             f"{label}: Should return exactly one entity"
         )

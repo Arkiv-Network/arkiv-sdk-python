@@ -39,6 +39,25 @@ class QueryOptions:
     max_results_per_page: int = 100  # Max number of entities to fetch per page
     cursor: Cursor | None = None  # Cursor for pagination
 
+    def validate(self, query: str | None) -> None:
+        # Validates fields
+        if self.fields is not None:
+            if self.fields < 0:
+                raise ValueError(f"Fields cannot be negative: {self.fields}")
+
+            if self.fields > ALL:
+                raise ValueError(f"Fields contains unknown field flags: {self.fields}")
+
+        # Validate mutual exclusivity of query and cursor
+        if self.cursor is None and query is None:
+            raise ValueError("Must provide either query or cursor")
+
+        if self.cursor is not None and query is not None:
+            raise ValueError("Cannot provide both query and cursor")
+
+        if query is not None and len(query.strip()) == 0:
+            raise ValueError("Query string cannot be empty")
+
 
 QUERY_OPTIONS_DEFAULT: QueryOptions = QueryOptions()
 

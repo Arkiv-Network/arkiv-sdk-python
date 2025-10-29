@@ -22,7 +22,6 @@ from .types import (
     Annotations,
     CreateCallback,
     CreateOp,
-    Cursor,
     DeleteOp,
     Entity,
     EntityKey,
@@ -37,7 +36,7 @@ from .types import (
     UpdateCallback,
     UpdateOp,
 )
-from .utils import to_query_options, to_query_result, to_tx_params
+from .utils import to_query_result, to_rpc_query_options, to_tx_params
 
 # Deal with potential circular imports between client.py and module.py
 if TYPE_CHECKING:
@@ -144,8 +143,8 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
             Transaction hash of the update operation
         """
         # Create the update operation
-        payload, annotations, btl = self._check_and_set_argument_defaults(
-            payload, annotations, btl
+        payload, content_type, annotations, btl = self._check_and_set_argument_defaults(
+            payload, content_type, annotations, btl
         )
         update_op = UpdateOp(
             entity_key=entity_key,
@@ -282,8 +281,10 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
         """
         try:
             options = QueryOptions(fields=NONE, at_block=at_block)
-            self.query(f"$key = {entity_key}", options=options)
-            return True
+            query_result: QueryResult = self.query_entities(
+                f"$key = {entity_key}", options=options
+            )
+            return len(query_result.entities) > 0
         except Exception:
             return False
 
@@ -302,8 +303,10 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
             Entity object with the requested fields
         """
 
-        options = QueryOptions(fields=NONE, at_block=at_block)
-        query_result: QueryResult = self.query(f"$key = {entity_key}", options=options)
+        options = QueryOptions(fields=fields, at_block=at_block)
+        query_result: QueryResult = self.query_entities(
+            f"$key = {entity_key}", options=options
+        )
 
         if not query_result:
             raise ValueError(f"Entity not found: {entity_key}")
@@ -317,68 +320,6 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
     def query_entities(
         self,
         query: str | None = None,
-        *,
-        limit: int | None = None,
-        at_block: int | str = "latest",
-        cursor: Cursor | None = None,
-    ) -> QueryResult:
-        """
-        Query entities with manual pagination control.
-
-        Execute a query against entity storage and return a single page of results.
-        Use the returned cursor to fetch subsequent pages.
-
-        Args:
-            query: SQL-like query string for the first page. Mutually exclusive with cursor.
-                Example: "SELECT * WHERE owner = '0x...' ORDER BY created_at DESC"
-            limit: Maximum number of entities to return per page.
-                Server may enforce a maximum limit. Can be modified between pagination requests.
-            at_block: Block number or "latest" at which to execute query.
-                Ensures consistency across paginated results. Ignored when using cursor
-                (cursor already contains the block number).
-            cursor: Cursor from previous QueryResult to fetch next page.
-                Mutually exclusive with query. The cursor encodes the query and block number.
-
-        Returns:
-            QueryResult with entities, block number, and optional next cursor.
-
-        Raises:
-            ValueError: If both query and cursor are provided, or if neither is provided.
-            NotImplementedError: This method is not yet implemented.
-
-        Examples:
-            First page:
-                >>> result = arkiv.arkiv.query_entities(
-                ...     "SELECT * WHERE owner = '0x1234...'",
-                ...     limit=100
-                ... )
-                >>> for entity in result:
-                ...     print(entity.entity_key)
-
-            Next page:
-                >>> if result.has_more():
-                ...     next_page = arkiv.arkiv.query_entities(cursor=result.next_cursor)
-
-        Note:
-            For automatic pagination across all pages, use query_all_entities() instead.
-        """
-        # Validate parameters using base class helper
-        self._validate_query_entities_params(query, limit, at_block, cursor)
-
-        if query:
-            # Fetch raw results from RPC
-            raw_results = self.client.eth.query_entities(query)
-            block_number = self.client.eth.get_block_number()
-
-            # Transform raw results into QueryResult using base class helper
-            return self._build_query_result(raw_results, block_number)
-
-        # Cursor based pagination not implemented yet
-        raise NotImplementedError("query_entities is not yet implemented for cursors")
-
-    def query(
-        self,
-        query: str,
         options: QueryOptions = QUERY_OPTIONS_DEFAULT,
     ) -> QueryResult:
         """
@@ -388,11 +329,15 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
             query: SQL-like query string
             options: QueryOptions for the query execution
 
+        Raises:
+            ValueError: if invalid query options are provided.
+
         Returns:
             QueryResult with entities, block number, and an optional cursor to fetch the next page
         """
-        # Fetch raw results from RPC
-        rpc_options = to_query_options(options)
+
+        options.validate(query)
+        rpc_options = to_rpc_query_options(options)
         raw_results = self.client.eth.query(query, rpc_options)
 
         return to_query_result(options.fields, raw_results)

@@ -17,6 +17,7 @@ from . import contract
 from .contract import STORAGE_ADDRESS_NEW
 from .exceptions import AnnotationException, EntityKeyException
 from .types import (
+    ALL,
     ANNOTATIONS,
     CONTENT_TYPE,
     EXPIRATION,
@@ -26,6 +27,7 @@ from .types import (
     Annotations,
     ChangeOwnerEvent,
     CreateEvent,
+    Cursor,
     DeleteEvent,
     Entity,
     EntityKey,
@@ -165,6 +167,52 @@ def to_tx_params(
 
 
 def to_query_options(
+    fields: int = ALL,  # Bitmask of fields to populate
+    max_results_per_page: int | None = None,
+    at_block: int | None = None,
+    cursor: Cursor | None = None,
+) -> QueryOptions:
+    """
+    Validates query options and returns them as QueryOptions.
+
+    Args:
+        fields: Bitmask of fields to populate
+        max_results_per_page: Maximum number of results to return
+        at_block: Block number for the query or None for latest available block
+        cursor: Cursor for pagination
+
+    Returns:
+        QueryOptions instance
+    """
+
+    logger.info(
+        f"max_results_per_page={max_results_per_page}, at_block={at_block}, cursor={cursor}"
+    )
+
+    # Validations
+    if fields is not None and fields < 0:
+        raise ValueError(f"Fields bitmask cannot be negative: {fields}")
+
+    if fields is not None and fields > ALL:
+        raise ValueError(f"Fields bitmask contains unknown field flags: {fields}")
+
+    if max_results_per_page is not None and max_results_per_page <= 0:
+        raise ValueError(
+            f"max_results_per_page cannot be negative or zero: {max_results_per_page}"
+        )
+
+    if at_block is not None and at_block < 0:
+        raise ValueError(f"at_block cannot be negative: {at_block}")
+
+    return QueryOptions(
+        fields=fields,
+        max_results_per_page=max_results_per_page,
+        at_block=at_block,
+        cursor=cursor,
+    )
+
+
+def to_rpc_query_options(
     options: QueryOptions | None = None,
 ) -> dict[str, Any]:
     """
@@ -232,14 +280,13 @@ def to_entity(fields: int, response_item: dict[str, Any]) -> Entity:
     # Extract payload if present
     if fields & PAYLOAD != 0:
         if not hasattr(response_item, "value"):
-            raise ValueError("RPC query response item missing 'value' field")
-
-        # Value is hex-encoded, convert to bytes
-        payload = bytes.fromhex(
-            response_item.value[2:]
-            if response_item.value.startswith("0x")
-            else response_item.value
-        )
+            payload = b""
+        else:
+            payload = bytes.fromhex(
+                response_item.value[2:]
+                if response_item.value.startswith("0x")
+                else response_item.value
+            )
 
     # Extract content type if present
     if fields & CONTENT_TYPE != 0:
@@ -531,8 +578,8 @@ def rlp_encode_transaction(tx: Operations) -> bytes:
         [
             [
                 entity_key_to_bytes(element.entity_key),
-                element.btl,
                 element.content_type,
+                element.btl,
                 element.payload,
                 *split_annotations(element.annotations),
             ]

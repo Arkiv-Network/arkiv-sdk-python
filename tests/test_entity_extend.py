@@ -21,11 +21,12 @@ class TestEntityExtend:
         """Test extending a single entity's lifetime."""
         # Create an entity to extend
         payload = b"Test entity for extension"
+        content_type = "text/plain"
         annotations: Annotations = Annotations({"type": "test", "purpose": "extension"})
         btl = 100
 
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
-            payload=payload, annotations=annotations, btl=btl
+            payload=payload, content_type=content_type, annotations=annotations, btl=btl
         )
 
         logger.info(f"Created entity {entity_key} for extension test")

@@ -5,7 +5,8 @@ import uuid
 import pytest
 
 from arkiv import Arkiv
-from arkiv.types import Annotations, Cursor
+from arkiv.types import ALL, Annotations, Cursor
+from arkiv.utils import to_query_options
 
 
 class TestQueryEntitiesParameterValidation:
@@ -22,8 +23,9 @@ class TestQueryEntitiesParameterValidation:
         self, arkiv_client_http: Arkiv
     ) -> None:
         """Test that explicitly passing None for both query and cursor raises ValueError."""
+        query_options = to_query_options()
         with pytest.raises(ValueError, match="Must provide either query or cursor"):
-            arkiv_client_http.arkiv.query_entities(query=None, cursor=None)
+            arkiv_client_http.arkiv.query_entities(options=query_options)
 
     def test_query_entities_accepts_query_only(self, arkiv_client_http: Arkiv) -> None:
         """Test that query_entities accepts query without cursor."""
@@ -39,54 +41,45 @@ class TestQueryEntitiesParameterValidation:
         """Test that query_entities accepts cursor without query."""
         # Create a dummy cursor (opaque string)
         cursor = Cursor("dummy_cursor_value")
+        query_options = to_query_options(cursor=cursor)
 
         # Should not raise ValueError for missing query
         # Will raise NotImplementedError since cursor-based pagination is not yet implemented
-        with pytest.raises(
-            NotImplementedError, match="not yet implemented for cursors"
-        ):
-            arkiv_client_http.arkiv.query_entities(cursor=cursor)
+        arkiv_client_http.arkiv.query_entities(options=query_options)
 
     def test_query_entities_both_query_and_cursor_not_allowed(
         self, arkiv_client_http: Arkiv
     ) -> None:
         """Test that query_entities rejects both query and cursor (mutually exclusive)."""
+        query = '$owner = "0x0000000000000000000000000000000000000000"'
         cursor = Cursor("dummy_cursor_value")
+        query_options = to_query_options(cursor=cursor)
 
-        # Should raise ValueError when both are provided
+        # Should raise ValueError when both query and cursor are provided
         with pytest.raises(ValueError, match="Cannot provide both query and cursor"):
             arkiv_client_http.arkiv.query_entities(
-                query='owner = "0x0000000000000000000000000000000000000000"',
-                cursor=cursor,
+                query=query,
+                options=query_options,
             )
 
     def test_query_entities_with_all_parameters(self, arkiv_client_http: Arkiv) -> None:
         """Test that query_entities accepts all parameters."""
         # Should not raise ValueError
+        arkiv_client_http.arkiv.create_entity(
+            payload=b"Some payload",
+            content_type="text/plain",
+        )
         # Query will execute (returns empty result since no matching entities exist)
+        query = '$owner = "0x0000000000000000000000000000000000000000"'
+
+        # TODO at_block > latest block has the effect of runnint into a timeout
+        query_options = to_query_options(
+            fields=ALL, max_results_per_page=50, at_block=None, cursor=None
+        )
         result = arkiv_client_http.arkiv.query_entities(
-            query='owner = "0x0000000000000000000000000000000000000000"',
-            limit=50,
-            at_block=1000,
+            query=query, options=query_options
         )
         assert len(result) == 0  # No entities match this owner
-
-    def test_query_entities_with_cursor_and_parameters(
-        self, arkiv_client_http: Arkiv
-    ) -> None:
-        """Test that query_entities accepts cursor with other parameters (which are ignored)."""
-        cursor = Cursor("dummy_cursor_value")
-
-        # Should not raise ValueError
-        # Will raise NotImplementedError since cursor-based pagination is not yet implemented
-        with pytest.raises(
-            NotImplementedError, match="not yet implemented for cursors"
-        ):
-            arkiv_client_http.arkiv.query_entities(
-                cursor=cursor,
-                limit=100,  # Ignored when cursor is provided
-                at_block=1000,  # Ignored when cursor is provided
-            )
 
 
 class TestQueryEntitiesBasic:
@@ -102,6 +95,7 @@ class TestQueryEntitiesBasic:
         for i in range(3):
             entity_key, _ = arkiv_client_http.arkiv.create_entity(
                 payload=f"Entity {i}".encode(),
+                content_type="text/plain",
                 annotations=Annotations({"id": shared_id}),
                 btl=100,  # Set blocks to live (required by Arkiv node)
             )

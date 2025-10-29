@@ -113,7 +113,7 @@ EVENTS_ABI: Final[Sequence[dict[str, Any]]] = [
             {"indexed": True, "name": "entityKey", "type": TYPE_UINT},
             {"indexed": True, "name": "ownerAddress", "type": TYPE_ADDRESS},
         ],
-        "name": DELETED_EVENT,
+        "name": EXPIRED_EVENT,
         "type": TYPE_EVENT,
     },
     {
@@ -122,7 +122,7 @@ EVENTS_ABI: Final[Sequence[dict[str, Any]]] = [
             {"indexed": True, "name": "entityKey", "type": TYPE_UINT},
             {"indexed": True, "name": "ownerAddress", "type": TYPE_ADDRESS},
         ],
-        "name": EXTENDED_EVENT,
+        "name": DELETED_EVENT,
         "type": TYPE_EVENT,
     },
     {
@@ -134,7 +134,7 @@ EVENTS_ABI: Final[Sequence[dict[str, Any]]] = [
             {"indexed": False, "name": "newExpirationBlock", "type": TYPE_UINT},
             {"indexed": False, "name": "cost", "type": TYPE_UINT},
         ],
-        "name": EXPIRED_EVENT,
+        "name": EXTENDED_EVENT,
         "type": TYPE_EVENT,
     },
     {

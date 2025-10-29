@@ -94,6 +94,7 @@ class TestEntityDelete:
         create_ops = [
             CreateOp(
                 payload=f"Bulk entity {i}".encode(),
+                content_type="text/plain",
                 annotations=Annotations({"batch": "bulk", "index": i}),
                 btl=100,
             )

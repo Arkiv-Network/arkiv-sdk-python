@@ -126,6 +126,7 @@ class TestEntityUpdate:
         create_ops = [
             CreateOp(
                 payload=f"Original entity {i}".encode(),
+                content_type="text/plain",
                 annotations=Annotations({"batch": "bulk", "index": i}),
                 btl=100,
             )
@@ -155,6 +156,7 @@ class TestEntityUpdate:
             UpdateOp(
                 entity_key=key,
                 payload=f"Updated entity {i}".encode(),
+                content_type="text/plain",
                 annotations=Annotations({"batch": "bulk", "index": i, "updated": True}),
                 btl=150,
             )
@@ -190,7 +192,7 @@ class TestEntityUpdate:
         """Test updating an entity with an empty payload."""
         # Create an entity with some payload
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
-            payload=b"Non-empty payload", btl=100
+            payload=b"Non-empty payload", content_type="text/plain", btl=100
         )
         entity_before = arkiv_client_http.arkiv.get_entity(entity_key)
 
@@ -208,7 +210,9 @@ class TestEntityUpdate:
     def test_update_entity_from_empty_payload(self, arkiv_client_http: Arkiv) -> None:
         """Test updating an entity with an empty payload."""
         # Create an entity with some payload
-        entity_key, _ = arkiv_client_http.arkiv.create_entity(payload=b"", btl=100)
+        entity_key, _ = arkiv_client_http.arkiv.create_entity(
+            payload=b"", content_type="text/plain", btl=100
+        )
         entity_before = arkiv_client_http.arkiv.get_entity(entity_key)
 
         # Update with empty payload
@@ -292,9 +296,10 @@ class TestEntityUpdate:
         """Test that updating an entity with a higher btl extends its lifetime."""
         # Create an entity with initial btl
         payload = b"Test payload"
+        content_type = "text/plain"
         initial_btl = 100
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
-            payload=payload, btl=initial_btl
+            payload=payload, content_type=content_type, btl=initial_btl
         )
 
         # Get initial expiration
@@ -306,7 +311,7 @@ class TestEntityUpdate:
         # Update with higher btl
         new_btl = 200
         update_tx_hash = arkiv_client_http.arkiv.update_entity(
-            entity_key, payload=payload, btl=new_btl
+            entity_key, payload=payload, content_type=content_type, btl=new_btl
         )
         check_tx_hash("update_btl", update_tx_hash)
 
