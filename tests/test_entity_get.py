@@ -29,25 +29,6 @@ class TestEntityExists:
         assert not exists, "Entity should not exist"
 
 
-def create_entity(
-    arkiv_client_http: Arkiv,
-) -> tuple[EntityKey, bytes, str, Annotations]:
-    # Create an entity with all data
-    payload = b"Test entity data"
-    content_type = "text/plain"
-    annotations = Annotations({"type": "test", "version": 1})
-    btl = 100
-
-    entity_key, _ = arkiv_client_http.arkiv.create_entity(
-        payload=payload,
-        content_type=content_type,
-        annotations=annotations,
-        btl=btl,
-    )
-
-    return entity_key, payload, content_type, annotations
-
-
 class TestEntityGetDefault:
     """Test suite for entity retrieval default."""
 
@@ -133,3 +114,22 @@ class TestEntityGetProjections:
         logger.info(
             "test_get_entity_no_fields: Successfully retrieved entity with no fields"
         )
+
+
+def create_entity(
+    arkiv_client_http: Arkiv,
+) -> tuple[EntityKey, bytes, str, Annotations]:
+    # Create an entity with all data
+    payload = b"Test entity data"
+    content_type = "text/plain"
+    annotations = Annotations({"type": "test", "version": 1})
+    btl = 100
+
+    entity_key, _ = arkiv_client_http.arkiv.create_entity(
+        payload=payload,
+        content_type=content_type,
+        annotations=annotations,
+        btl=btl,
+    )
+
+    return entity_key, payload, content_type, annotations

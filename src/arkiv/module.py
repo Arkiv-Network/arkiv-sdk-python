@@ -102,7 +102,6 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
         create_op = CreateOp(
             payload=payload, content_type=content_type, annotations=annotations, btl=btl
         )
-        logger.info(f"Creating entity:{create_op}")
 
         # Wrap in Operations container and execute
         operations = Operations(creates=[create_op])

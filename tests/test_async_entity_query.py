@@ -6,7 +6,8 @@ import uuid
 import pytest
 
 from arkiv import AsyncArkiv
-from arkiv.types import Annotations, Cursor
+from arkiv.types import Annotations, Cursor, QueryOptions
+from arkiv.utils import to_query_options
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,9 @@ class TestAsyncQueryEntitiesParameterValidation:
     ) -> None:
         """Test that explicitly passing None for both query and cursor raises ValueError."""
         with pytest.raises(ValueError, match="Must provide either query or cursor"):
-            await async_arkiv_client_http.arkiv.query_entities(query=None, cursor=None)
+            await async_arkiv_client_http.arkiv.query_entities(
+                query=None, options=QueryOptions()
+            )
 
     @pytest.mark.asyncio
     async def test_async_query_entities_accepts_query_only(
@@ -48,12 +51,13 @@ class TestAsyncQueryEntitiesParameterValidation:
     ) -> None:
         """Test that query_entities rejects both query and cursor (mutually exclusive)."""
         cursor = Cursor("dummy_cursor_value")
+        query_options = to_query_options(cursor=cursor)
 
         # Should raise ValueError when both are provided
         with pytest.raises(ValueError, match="Cannot provide both query and cursor"):
             await async_arkiv_client_http.arkiv.query_entities(
                 query='owner = "0x0000000000000000000000000000000000000000"',
-                cursor=cursor,
+                options=query_options,
             )
 
 

@@ -1,5 +1,6 @@
 """Tests for entity update event watching functionality."""
 
+import logging
 import time
 from threading import Event as ThreadEvent
 
@@ -8,6 +9,8 @@ import pytest
 from arkiv.types import Annotations, TxHash, UpdateEvent, UpdateOp
 
 from .utils import bulk_update_entities
+
+logger = logging.getLogger(__name__)
 
 
 @pytest.mark.usefixtures("arkiv_client_http")
@@ -54,10 +57,12 @@ class TestWatchEntityUpdated:
             # Verify we received the event
             assert len(received_events) == 1
             event, event_tx_hash = received_events[0]
+            logger.info(f"Received update event: {event}")
 
             # Verify event data
             assert event.entity_key == entity_key
-            assert event.expiration_block > 0
+            assert event.new_expiration_block > 0
+            assert event.new_expiration_block >= event.old_expiration_block
             assert event_tx_hash == update_tx_hash
 
         finally:
@@ -246,18 +251,21 @@ class TestWatchEntityUpdated:
                 UpdateOp(
                     entity_key=entity_keys[0],
                     payload=b"bulk update 1",
+                    content_type="text/plain",
                     annotations=Annotations({}),
                     btl=100,
                 ),
                 UpdateOp(
                     entity_key=entity_keys[1],
                     payload=b"bulk update 2",
+                    content_type="text/plain",
                     annotations=Annotations({}),
                     btl=100,
                 ),
                 UpdateOp(
                     entity_key=entity_keys[2],
                     payload=b"bulk update 3",
+                    content_type="text/plain",
                     annotations=Annotations({}),
                     btl=100,
                 ),
