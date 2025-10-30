@@ -1,6 +1,6 @@
 [project]
 name = "arkiv-sdk"
-version = "1.0.0a3"
+version = "1.0.0a4"
 description = "Python SDK for Arkiv networks - Web3.py + Entities"
 readme = "README.md"
 requires-python = ">=3.10"

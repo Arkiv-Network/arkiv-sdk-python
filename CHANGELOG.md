@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0a4] - 2025-10-30
+
+### Added Features
+- Added AsyncArkiv
+
+### Other Changes
+- Major refactorings introducing base classes for code shared between Arkiv and AsyncArkiv
+- Docstrings for entity methods pushed to ArkivModuleBase
+
+### Known Bugs
+- Entity extension broken with latest Arkiv Node version
+
+## [1.0.0a3] - 2025-10-09
+
+- Minor changes only
+
 ## [1.0.0a2] - 2025-10-09
 
 ### Documentation
