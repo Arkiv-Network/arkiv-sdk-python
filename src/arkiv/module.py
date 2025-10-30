@@ -317,15 +317,13 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
         return result_entity
 
     def query_entities(
-        self,
-        query: str | None = None,
-        options: QueryOptions = QUERY_OPTIONS_DEFAULT,
+        self, query: str | None = None, options: QueryOptions = QUERY_OPTIONS_DEFAULT
     ) -> QueryResult:
         """
-        Execute a query against entity storage.
+        Execute a query against entity storage (with paging).
 
         Args:
-            query: SQL-like query string
+            query: SQL-like where clause
             options: QueryOptions for the query execution
 
         Raises:
@@ -341,50 +339,33 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
 
         return to_query_result(options.fields, raw_results)
 
-    def query_all_entities(
-        self,
-        query: str,
-        *,
-        limit: int = 100,
-        at_block: int | str = "latest",
+    def iterate_entities(
+        self, query: str, options: QueryOptions = QUERY_OPTIONS_DEFAULT
     ) -> QueryIterator:
         """
-        Query entities with automatic pagination.
+        Provides an iterator over entity results for the providedquery.
 
-        Returns an iterator that automatically fetches all pages of results,
-        allowing you to seamlessly process all matching entities without
+        The iterator allows to seamlessly process all matching entities without
         manual pagination.
 
         Args:
-            query: SQL-like query string to filter and order entities.
-                Example: "SELECT * FROM entities WHERE owner = '0x...' ORDER BY created_at DESC"
-            limit: Number of entities to fetch per page (default: 100).
-                Server may enforce a maximum limit.
-            at_block: Block number or "latest" at which to execute query.
-                Ensures all pages are fetched from the same blockchain state.
+            query: SQL-like where clause
+            options: QueryOptions for the query execution
 
         Returns:
             QueryIterator that yields Entity objects across all pages.
 
         Examples:
             Process all matching entities:
-                >>> for entity in arkiv.arkiv.query_all_entities(
-                ...     "SELECT * WHERE owner = '0x1234...'",
-                ...     limit=100
+                >>> for entity in arkiv.arkiv.iterate_entities(
+                ...     "$owner = '0x1234...'"
                 ... ):
                 ...     process(entity)
 
             Collect all results:
-                >>> entities = list(arkiv.arkiv.query_all_entities(
-                ...     "SELECT * ORDER BY created_at DESC",
-                ...     limit=50
-                ... ))
+                >>> entities = list(arkiv.arkiv.iterate_entities(
+                ...     "$owner = '0x1234...'"
                 >>> print(f"Total: {len(entities)}")
-
-            Check which block was queried:
-                >>> iterator = arkiv.arkiv.query_all_entities("SELECT *")
-                >>> first_entity = next(iterator)
-                >>> print(f"Queried at block: {iterator.block_number}")
 
         Warning:
             This method may make many network requests to fetch all pages.
@@ -394,13 +375,11 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
         Note:
             - All pages maintain consistency by querying the same block
             - The iterator cannot be reused once exhausted
-            - Results reflect state at a specific point in time
         """
         return QueryIterator(
             client=self.client,
             query=query,
-            limit=limit,
-            at_block=at_block,
+            options=options,
         )
 
     def watch_entity_created(

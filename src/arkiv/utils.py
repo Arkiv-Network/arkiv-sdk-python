@@ -22,6 +22,7 @@ from .types import (
     CONTENT_TYPE,
     EXPIRATION,
     KEY,
+    MAX_RESULTS_PER_PAGE_DEFAULT,
     OWNER,
     PAYLOAD,
     Annotations,
@@ -168,7 +169,7 @@ def to_tx_params(
 
 def to_query_options(
     fields: int = ALL,  # Bitmask of fields to populate
-    max_results_per_page: int | None = None,
+    max_results_per_page: int = MAX_RESULTS_PER_PAGE_DEFAULT,
     at_block: int | None = None,
     cursor: Cursor | None = None,
 ) -> QueryOptions:
@@ -337,7 +338,7 @@ def to_query_result(fields: int, rpc_query_response: dict[str, Any]) -> QueryRes
     if not hasattr(rpc_query_response, "data"):
         raise ValueError("RPC query response missing 'data' field")
 
-    response_data = rpc_query_response.data
+    response_data = rpc_query_response["data"]
     if not isinstance(response_data, list):
         raise ValueError("RPC query response 'data' field is not an array")
 
@@ -350,11 +351,11 @@ def to_query_result(fields: int, rpc_query_response: dict[str, Any]) -> QueryRes
     if not hasattr(rpc_query_response, "blockNumber"):
         raise ValueError("RPC query response missing 'blockNumber' field")
 
-    block_number: int = rpc_query_response.blockNumber
+    block_number: int = rpc_query_response["blockNumber"]
 
     # Extracts cursor from rpc_query_response. Sets cursor to None if element is missing.
-    cursor: str | None = (
-        rpc_query_response.cursor if hasattr(rpc_query_response, "cursor") else None
+    cursor: Cursor | None = (
+        rpc_query_response["cursor"] if "cursor" in rpc_query_response else None
     )
 
     query_result = QueryResult(
@@ -400,46 +401,44 @@ def to_event(
     event_args: dict[str, Any] = event_data["args"]
     event_name = event_data["event"]
 
-    entity_key: EntityKey = to_entity_key(event_args["entityKey"])
-    owner_address: ChecksumAddress | None = event_args.get("ownerAddress")
-    cost: int | None = event_args.get("cost")
+    entity_key: EntityKey = to_entity_key(event_args[ENTITY_KEY])
     logger.info(
-        f"Processing event: {event_name}, entity_key: {entity_key}, owner_address: {owner_address}, cost: {cost}"
+        f"Processing event: {event_name}, entity_key: {entity_key}, owner_address: {event_args.get('ownerAddress')}"
     )
 
     match event_name:
         case contract.CREATED_EVENT:
             return CreateEvent(
                 entity_key=entity_key,
-                owner_address=owner_address,
+                owner_address=ChecksumAddress(event_args["ownerAddress"]),
                 expiration_block=event_args["expirationBlock"],
-                cost=cost,
+                cost=int(event_args["cost"]),
             )
         case contract.UPDATED_EVENT:
             return UpdateEvent(
                 entity_key=entity_key,
-                owner_address=owner_address,
+                owner_address=ChecksumAddress(event_args["ownerAddress"]),
                 old_expiration_block=event_args["oldExpirationBlock"],
                 new_expiration_block=event_args["newExpirationBlock"],
-                cost=cost,
+                cost=int(event_args["cost"]),
             )
         case contract.EXPIRED_EVENT:
             return ExpiryEvent(
                 entity_key=entity_key,
-                owner_address=owner_address,
+                owner_address=ChecksumAddress(event_args["ownerAddress"]),
             )
         case contract.DELETED_EVENT:
             return DeleteEvent(
                 entity_key=entity_key,
-                owner_address=owner_address,
+                owner_address=ChecksumAddress(event_args["ownerAddress"]),
             )
         case contract.EXTENDED_EVENT:
             return ExtendEvent(
                 entity_key=entity_key,
-                owner_address=owner_address,
+                owner_address=ChecksumAddress(event_args["ownerAddress"]),
                 old_expiration_block=event_args["oldExpirationBlock"],
                 new_expiration_block=event_args["newExpirationBlock"],
-                cost=cost,
+                cost=int(event_args["cost"]),
             )
         case contract.OWNER_CHANGED_EVENT:
             return ChangeOwnerEvent(
@@ -449,16 +448,16 @@ def to_event(
             )
         # Legacy events - skip with info log
         case contract.CREATED_EVENT_LEGACY:
-            logger.info(f"Skipping legacy event: {event_name}")
+            logger.debug(f"Skipping legacy event: {event_name}")
             return None
         case contract.UPDATED_EVENT_LEGACY:
-            logger.info(f"Skipping legacy event: {event_name}")
+            logger.debug(f"Skipping legacy event: {event_name}")
             return None
         case contract.DELETED_EVENT_LEGACY:
-            logger.info(f"Skipping legacy event: {event_name}")
+            logger.debug(f"Skipping legacy event: {event_name}")
             return None
         case contract.EXTENDED_EVENT_LEGACY:
-            logger.info(f"Skipping legacy event: {event_name}")
+            logger.debug(f"Skipping legacy event: {event_name}")
             return None
         # Unknown events - return None with warning log
         case _:

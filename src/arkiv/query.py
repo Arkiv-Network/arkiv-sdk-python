@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import TYPE_CHECKING
 
-from .types import Entity, QueryResult
+from .types import Entity, QueryOptions, QueryResult
 
 if TYPE_CHECKING:
     from .client import Arkiv
@@ -40,14 +40,7 @@ class QueryIterator:
         - All pages are fetched from the same blockchain state (block_number)
     """
 
-    def __init__(
-        self,
-        client: Arkiv,
-        query: str,
-        *,
-        limit: int = 100,
-        at_block: int | str = "latest",
-    ):
+    def __init__(self, client: Arkiv, query: str, options: QueryOptions):
         """
         Initialize the query iterator.
 
@@ -59,8 +52,7 @@ class QueryIterator:
         """
         self._client = client
         self._query = query
-        self._limit = limit
-        self._at_block = at_block
+        self._options = options
         self._current_result: QueryResult | None = None
         self._current_index = 0
         self._exhausted = False
@@ -82,7 +74,7 @@ class QueryIterator:
         # Lazy initialization - fetch first page on first next()
         if self._current_result is None:
             self._current_result = self._client.arkiv.query_entities(
-                self._query, limit=self._limit, at_block=self._at_block
+                self._query, options=self._options
             )
 
         # Yield from current page
@@ -93,9 +85,8 @@ class QueryIterator:
 
         # Fetch next page if available
         if self._current_result.has_more() and not self._exhausted:
-            self._current_result = self._client.arkiv.query_entities(
-                cursor=self._current_result.cursor
-            )
+            options = QueryOptions(cursor=self._current_result.cursor)
+            self._current_result = self._client.arkiv.query_entities(options=options)
             self._current_index = 0
 
             # Check if next page has entities

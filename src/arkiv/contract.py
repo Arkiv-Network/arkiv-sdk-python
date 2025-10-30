@@ -44,6 +44,18 @@ TYPE_EVENT = "event"
 TYPE_UINT = "uint256"
 TYPE_ADDRESS = "address"
 
+ENTITY_KEY = "entityKey"
+
+OWNER_ADDRESS = "ownerAddress"
+OLD_OWNER_ADDRESS = "oldOwnerAddress"
+NEW_OWNER_ADDRESS = "newOwnerAddress"
+
+EXPIRATION_BLOCK = "expirationBlock"
+OLD_EXPIRATION_BLOCK = "oldExpirationBlock"
+NEW_EXPIRATION_BLOCK = "newExpirationBlock"
+
+COST = "cost"
+
 EVENTS_ABI: Final[Sequence[dict[str, Any]]] = [
     {
         "anonymous": False,

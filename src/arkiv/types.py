@@ -17,12 +17,10 @@ CONTENT_TYPE = 8
 EXPIRATION = 16
 OWNER = 32
 
-
 NONE = 0
 ALL = KEY | ANNOTATIONS | PAYLOAD | CONTENT_TYPE | EXPIRATION | OWNER
 
-# TODO remove after refactoring
-METADATA = 4
+MAX_RESULTS_PER_PAGE_DEFAULT = 20
 
 # Cursor type for entity set pagination for query results
 Cursor = NewType("Cursor", str)
@@ -36,7 +34,9 @@ class QueryOptions:
     at_block: int | None = (
         None  # Block number to pin query to specific block, or None to use latest block available
     )
-    max_results_per_page: int = 100  # Max number of entities to fetch per page
+    max_results_per_page: int = (
+        MAX_RESULTS_PER_PAGE_DEFAULT  # Max number of entities to fetch per page
+    )
     cursor: Cursor | None = None  # Cursor for pagination
 
     def validate(self, query: str | None) -> None:
@@ -102,10 +102,8 @@ class Entity:
         existing values with new ones.
     """
 
-    entity_key: EntityKey  # Unique identifier for the entity
-    fields: int  # Bitmask representing which fields are populated
-
-    # Populated when fields | METADATA returns true
+    entity_key: EntityKey | None = None  # Unique identifier for the entity
+    fields: int = ALL  # Bitmask representing which fields are populated
     owner: ChecksumAddress | None = None
     created_at_block: int | None = None
     last_modified_at_block: int | None = None

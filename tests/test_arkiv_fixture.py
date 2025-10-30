@@ -2,8 +2,6 @@
 
 import logging
 
-import pytest
-
 from arkiv import Arkiv
 from arkiv.account import NamedAccount
 from arkiv.module import ArkivModule
@@ -111,7 +109,7 @@ def test_arkiv_transfer_eth_account(
 # TODO: Fix flaky test - timing issue with balance assertion after transfer
 # The test occasionally fails because the balance check happens before the
 # transaction is fully processed. Need to add proper wait/retry logic.
-@pytest.mark.skip(reason="Flaky test due to timing issue with balance assertion")
+# @pytest.mark.skip(reason="Flaky test due to timing issue with balance assertion")
 def test_arkiv_transfer_eth_address(
     arkiv_client_http: Arkiv, account_1: NamedAccount, account_2: NamedAccount
 ) -> None:
