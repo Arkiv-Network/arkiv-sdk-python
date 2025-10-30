@@ -7,7 +7,7 @@ from eth_typing import HexStr
 from web3 import Web3
 from web3.types import Nonce, TxParams, Wei
 
-from arkiv.contract import STORAGE_ADDRESS_NEW
+from arkiv.contract import STORAGE_ADDRESS
 from arkiv.exceptions import AnnotationException, EntityKeyException
 from arkiv.types import (
     Annotations,
@@ -180,7 +180,7 @@ class TestToTxParams:
 
         tx_params = to_tx_params(operations)
 
-        assert tx_params["to"] == STORAGE_ADDRESS_NEW
+        assert tx_params["to"] == STORAGE_ADDRESS
         assert tx_params["value"] == 0
         assert "data" in tx_params
         assert isinstance(tx_params["data"], bytes)
@@ -202,7 +202,7 @@ class TestToTxParams:
 
         tx_params = to_tx_params(operations)
 
-        assert tx_params["to"] == STORAGE_ADDRESS_NEW
+        assert tx_params["to"] == STORAGE_ADDRESS
         assert tx_params["value"] == 0
         assert "data" in tx_params
         assert len(tx_params["data"]) > 0
@@ -225,7 +225,7 @@ class TestToTxParams:
         tx_params = to_tx_params(operations, additional_params)
 
         # Arkiv-specific fields should be present
-        assert tx_params["to"] == STORAGE_ADDRESS_NEW
+        assert tx_params["to"] == STORAGE_ADDRESS
         assert tx_params["value"] == 0
         assert "data" in tx_params
 
@@ -253,7 +253,7 @@ class TestToTxParams:
         tx_params = to_tx_params(operations, conflicting_params)
 
         # Arkiv fields should override user input
-        assert tx_params["to"] == STORAGE_ADDRESS_NEW
+        assert tx_params["to"] == STORAGE_ADDRESS
         assert tx_params["value"] == 0
         assert tx_params["data"] != b"should be overridden"
 
@@ -272,7 +272,7 @@ class TestToTxParams:
 
         tx_params = to_tx_params(operations, None)
 
-        assert tx_params["to"] == STORAGE_ADDRESS_NEW
+        assert tx_params["to"] == STORAGE_ADDRESS
         assert tx_params["value"] == 0
         assert "data" in tx_params
 

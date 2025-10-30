@@ -14,7 +14,7 @@ from web3.contract.base_contract import BaseContractEvent
 from web3.types import EventData, LogReceipt, TxParams, TxReceipt
 
 from . import contract
-from .contract import STORAGE_ADDRESS_NEW
+from .contract import STORAGE_ADDRESS
 from .exceptions import AnnotationException, EntityKeyException
 from .types import (
     ALL,
@@ -158,7 +158,7 @@ def to_tx_params(
 
     # Merge provided tx_params with encoded transaction data
     tx_params |= {
-        "to": STORAGE_ADDRESS_NEW,
+        "to": STORAGE_ADDRESS,
         "value": Web3.to_wei(0, "ether"),
         "data": rlp_encode_transaction(operations),
     }

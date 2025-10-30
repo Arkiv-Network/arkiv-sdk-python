@@ -6,7 +6,7 @@ from hexbytes import HexBytes
 from web3.types import TxReceipt
 
 from arkiv.client import Arkiv
-from arkiv.contract import STORAGE_ADDRESS_NEW
+from arkiv.contract import STORAGE_ADDRESS
 from arkiv.types import Annotations, CreateOp, Operations
 from arkiv.utils import (
     check_entity_key,
@@ -91,8 +91,8 @@ class TestEntityCreate:
         )
 
         # Verify transaction was sent to the correct Arkiv storage contract
-        assert tx_details["to"] == STORAGE_ADDRESS_NEW, (
-            f"Transaction should be sent to Arkiv storage contract {STORAGE_ADDRESS_NEW}, got {tx_details['to']}"
+        assert tx_details["to"] == STORAGE_ADDRESS, (
+            f"Transaction should be sent to Arkiv storage contract {STORAGE_ADDRESS}, got {tx_details['to']}"
         )
 
         # Verify transaction value is 0 (no ETH should be sent)

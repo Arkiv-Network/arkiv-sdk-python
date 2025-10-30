@@ -9,7 +9,7 @@ from web3.method import Method, default_root_munger
 from web3.types import RPCEndpoint
 
 # ArkivProcessorAddress
-STORAGE_ADDRESS_NEW: Final[ChecksumAddress] = Web3.to_checksum_address(
+STORAGE_ADDRESS: Final[ChecksumAddress] = Web3.to_checksum_address(
     "0x00000000000000000000000000000061726B6976"
 )
 
@@ -20,11 +20,6 @@ EXPIRED_EVENT: Final[str] = "ArkivEntityExpired"
 DELETED_EVENT: Final[str] = "ArkivEntityDeleted"
 EXTENDED_EVENT: Final[str] = "ArkivEntityBTLExtended"
 OWNER_CHANGED_EVENT: Final[str] = "ArkivEntityOwnerChanged"
-
-# GolemBaseStorageProcessorAddress
-STORAGE_ADDRESS: Final[ChecksumAddress] = Web3.to_checksum_address(
-    "0x0000000000000000000000000000000060138453"
-)
 
 CREATED_EVENT_LEGACY: Final[str] = "GolemBaseStorageEntityCreated"
 UPDATED_EVENT_LEGACY: Final[str] = "GolemBaseStorageEntityUpdated"
