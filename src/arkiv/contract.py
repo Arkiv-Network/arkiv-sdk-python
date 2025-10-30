@@ -60,8 +60,8 @@ EVENTS_ABI: Final[Sequence[dict[str, Any]]] = [
     {
         "anonymous": False,
         "inputs": [
-            {"indexed": True, "name": "entityKey", "type": TYPE_UINT},
-            {"indexed": False, "name": "expirationBlock", "type": TYPE_UINT},
+            {"indexed": True, "name": ENTITY_KEY, "type": TYPE_UINT},
+            {"indexed": False, "name": EXPIRATION_BLOCK, "type": TYPE_UINT},
         ],
         "name": CREATED_EVENT_LEGACY,
         "type": TYPE_EVENT,
@@ -69,24 +69,24 @@ EVENTS_ABI: Final[Sequence[dict[str, Any]]] = [
     {
         "anonymous": False,
         "inputs": [
-            {"indexed": True, "name": "entityKey", "type": TYPE_UINT},
-            {"indexed": False, "name": "expirationBlock", "type": TYPE_UINT},
+            {"indexed": True, "name": ENTITY_KEY, "type": TYPE_UINT},
+            {"indexed": False, "name": EXPIRATION_BLOCK, "type": TYPE_UINT},
         ],
         "name": UPDATED_EVENT_LEGACY,
         "type": TYPE_EVENT,
     },
     {
         "anonymous": False,
-        "inputs": [{"indexed": True, "name": "entityKey", "type": TYPE_UINT}],
+        "inputs": [{"indexed": True, "name": ENTITY_KEY, "type": TYPE_UINT}],
         "name": DELETED_EVENT_LEGACY,
         "type": TYPE_EVENT,
     },
     {
         "anonymous": False,
         "inputs": [
-            {"indexed": True, "name": "entityKey", "type": TYPE_UINT},
-            {"indexed": False, "name": "oldExpirationBlock", "type": TYPE_UINT},
-            {"indexed": False, "name": "newExpirationBlock", "type": TYPE_UINT},
+            {"indexed": True, "name": ENTITY_KEY, "type": TYPE_UINT},
+            {"indexed": False, "name": OLD_EXPIRATION_BLOCK, "type": TYPE_UINT},
+            {"indexed": False, "name": NEW_EXPIRATION_BLOCK, "type": TYPE_UINT},
         ],
         "name": EXTENDED_EVENT_LEGACY,
         "type": TYPE_EVENT,
@@ -94,10 +94,10 @@ EVENTS_ABI: Final[Sequence[dict[str, Any]]] = [
     {
         "anonymous": False,
         "inputs": [
-            {"indexed": True, "name": "entityKey", "type": TYPE_UINT},
-            {"indexed": True, "name": "ownerAddress", "type": TYPE_ADDRESS},
-            {"indexed": False, "name": "expirationBlock", "type": TYPE_UINT},
-            {"indexed": False, "name": "cost", "type": TYPE_UINT},
+            {"indexed": True, "name": ENTITY_KEY, "type": TYPE_UINT},
+            {"indexed": True, "name": OWNER_ADDRESS, "type": TYPE_ADDRESS},
+            {"indexed": False, "name": EXPIRATION_BLOCK, "type": TYPE_UINT},
+            {"indexed": False, "name": COST, "type": TYPE_UINT},
         ],
         "name": CREATED_EVENT,
         "type": TYPE_EVENT,
@@ -105,11 +105,11 @@ EVENTS_ABI: Final[Sequence[dict[str, Any]]] = [
     {
         "anonymous": False,
         "inputs": [
-            {"indexed": True, "name": "entityKey", "type": TYPE_UINT},
-            {"indexed": True, "name": "ownerAddress", "type": TYPE_ADDRESS},
-            {"indexed": False, "name": "oldExpirationBlock", "type": TYPE_UINT},
-            {"indexed": False, "name": "newExpirationBlock", "type": TYPE_UINT},
-            {"indexed": False, "name": "cost", "type": TYPE_UINT},
+            {"indexed": True, "name": ENTITY_KEY, "type": TYPE_UINT},
+            {"indexed": True, "name": OWNER_ADDRESS, "type": TYPE_ADDRESS},
+            {"indexed": False, "name": OLD_EXPIRATION_BLOCK, "type": TYPE_UINT},
+            {"indexed": False, "name": NEW_EXPIRATION_BLOCK, "type": TYPE_UINT},
+            {"indexed": False, "name": COST, "type": TYPE_UINT},
         ],
         "name": UPDATED_EVENT,
         "type": TYPE_EVENT,
@@ -117,8 +117,8 @@ EVENTS_ABI: Final[Sequence[dict[str, Any]]] = [
     {
         "anonymous": False,
         "inputs": [
-            {"indexed": True, "name": "entityKey", "type": TYPE_UINT},
-            {"indexed": True, "name": "ownerAddress", "type": TYPE_ADDRESS},
+            {"indexed": True, "name": ENTITY_KEY, "type": TYPE_UINT},
+            {"indexed": True, "name": OWNER_ADDRESS, "type": TYPE_ADDRESS},
         ],
         "name": EXPIRED_EVENT,
         "type": TYPE_EVENT,
@@ -126,8 +126,8 @@ EVENTS_ABI: Final[Sequence[dict[str, Any]]] = [
     {
         "anonymous": False,
         "inputs": [
-            {"indexed": True, "name": "entityKey", "type": TYPE_UINT},
-            {"indexed": True, "name": "ownerAddress", "type": TYPE_ADDRESS},
+            {"indexed": True, "name": ENTITY_KEY, "type": TYPE_UINT},
+            {"indexed": True, "name": OWNER_ADDRESS, "type": TYPE_ADDRESS},
         ],
         "name": DELETED_EVENT,
         "type": TYPE_EVENT,
@@ -135,11 +135,11 @@ EVENTS_ABI: Final[Sequence[dict[str, Any]]] = [
     {
         "anonymous": False,
         "inputs": [
-            {"indexed": True, "name": "entityKey", "type": TYPE_UINT},
-            {"indexed": True, "name": "ownerAddress", "type": TYPE_ADDRESS},
-            {"indexed": False, "name": "oldExpirationBlock", "type": TYPE_UINT},
-            {"indexed": False, "name": "newExpirationBlock", "type": TYPE_UINT},
-            {"indexed": False, "name": "cost", "type": TYPE_UINT},
+            {"indexed": True, "name": ENTITY_KEY, "type": TYPE_UINT},
+            {"indexed": True, "name": OWNER_ADDRESS, "type": TYPE_ADDRESS},
+            {"indexed": False, "name": OLD_EXPIRATION_BLOCK, "type": TYPE_UINT},
+            {"indexed": False, "name": NEW_EXPIRATION_BLOCK, "type": TYPE_UINT},
+            {"indexed": False, "name": COST, "type": TYPE_UINT},
         ],
         "name": EXTENDED_EVENT,
         "type": TYPE_EVENT,
@@ -147,9 +147,9 @@ EVENTS_ABI: Final[Sequence[dict[str, Any]]] = [
     {
         "anonymous": False,
         "inputs": [
-            {"indexed": True, "name": "entityKey", "type": TYPE_UINT},
-            {"indexed": True, "name": "oldOwnerAddress", "type": TYPE_ADDRESS},
-            {"indexed": True, "name": "newOwnerAddress", "type": TYPE_ADDRESS},
+            {"indexed": True, "name": ENTITY_KEY, "type": TYPE_UINT},
+            {"indexed": True, "name": OLD_OWNER_ADDRESS, "type": TYPE_ADDRESS},
+            {"indexed": True, "name": NEW_OWNER_ADDRESS, "type": TYPE_ADDRESS},
         ],
         "name": OWNER_CHANGED_EVENT,
         "type": TYPE_EVENT,

@@ -6,7 +6,7 @@ from collections.abc import Awaitable, Callable, Iterator, Sequence
 from dataclasses import dataclass
 from typing import Literal, NewType
 
-from eth_typing import ChecksumAddress, HexStr
+from eth_typing import BlockNumber, ChecksumAddress, HexStr
 from web3.datastructures import AttributeDict
 
 # Field bitmask values to specify which entity fields are populated
@@ -332,6 +332,7 @@ class CreateEventLegacy(EntityEvent):
 class TransactionReceipt:
     """Receipt of a transaction containing all emitted events."""
 
+    block_number: BlockNumber
     tx_hash: TxHash
     creates: Sequence[CreateEvent]
     updates: Sequence[UpdateEvent]

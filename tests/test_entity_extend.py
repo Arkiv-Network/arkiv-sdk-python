@@ -127,7 +127,7 @@ class TestEntityExtend:
         receipt = arkiv_client_http.arkiv.execute(operations)
 
         # Check transaction hash of bulk extend
-        check_tx_hash("extend_bulk_entity", receipt.tx_hash)
+        check_tx_hash("extend_bulk_entity", receipt)
 
         # Verify all extensions succeeded
         if len(receipt.extensions) != len(extend_ops):

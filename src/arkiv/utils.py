@@ -6,7 +6,7 @@ import logging
 from typing import Any
 
 import rlp  # type: ignore[import-untyped]
-from eth_typing import ChecksumAddress, HexStr
+from eth_typing import BlockNumber, ChecksumAddress, HexStr
 from hexbytes import HexBytes
 from web3 import Web3
 from web3.contract import Contract
@@ -14,7 +14,17 @@ from web3.contract.base_contract import BaseContractEvent
 from web3.types import EventData, LogReceipt, TxParams, TxReceipt
 
 from . import contract
-from .contract import STORAGE_ADDRESS
+from .contract import (
+    COST,
+    ENTITY_KEY,
+    EXPIRATION_BLOCK,
+    NEW_EXPIRATION_BLOCK,
+    NEW_OWNER_ADDRESS,
+    OLD_EXPIRATION_BLOCK,
+    OLD_OWNER_ADDRESS,
+    OWNER_ADDRESS,
+    STORAGE_ADDRESS,
+)
 from .exceptions import AnnotationException, EntityKeyException
 from .types import (
     ALL,
@@ -28,6 +38,7 @@ from .types import (
     Annotations,
     ChangeOwnerEvent,
     CreateEvent,
+    CreateOp,
     Cursor,
     DeleteEvent,
     Entity,
@@ -45,6 +56,12 @@ from .types import (
     TransactionReceipt,
     TxHash,
     UpdateEvent,
+    UpdateOp,
+)
+
+CONTENT_TYPE_DEFAULT = "application/octet-stream"
+BTL_DEFAULT = (
+    1000  # Default blocks to live for created entities (~30 mins with 2s blocks)
 )
 
 logger = logging.getLogger(__name__)
@@ -60,6 +77,58 @@ def to_entity_key(entity_key_int: int) -> EntityKey:
 
 def entity_key_to_bytes(entity_key: EntityKey) -> bytes:
     return bytes.fromhex(entity_key[2:])  # Strip '0x' prefix and convert to bytes
+
+
+def to_create_op(
+    payload: bytes | None = None,
+    content_type: str | None = None,
+    annotations: Annotations | None = None,
+    btl: int | None = None,
+) -> CreateOp:
+    payload, content_type, annotations, btl = check_and_set_entity_op_defaults(
+        payload, content_type, annotations, btl
+    )
+    return CreateOp(
+        payload=payload, content_type=content_type, annotations=annotations, btl=btl
+    )
+
+
+def to_update_op(
+    entity_key: EntityKey,
+    payload: bytes | None = None,
+    content_type: str | None = None,
+    annotations: Annotations | None = None,
+    btl: int | None = None,
+) -> UpdateOp:
+    payload, content_type, annotations, btl = check_and_set_entity_op_defaults(
+        payload, content_type, annotations, btl
+    )
+    return UpdateOp(
+        entity_key=entity_key,
+        payload=payload,
+        content_type=content_type,
+        annotations=annotations,
+        btl=btl,
+    )
+
+
+def check_and_set_entity_op_defaults(
+    payload: bytes | None,
+    content_type: str | None,
+    annotations: Annotations | None,
+    btl: int | None,
+) -> tuple[bytes, str, Annotations, int]:
+    """Check and set defaults for entity management arguments."""
+    if btl is None:
+        btl = BTL_DEFAULT
+    if not payload:
+        payload = b""
+    if not content_type:
+        content_type = CONTENT_TYPE_DEFAULT
+    if not annotations:
+        annotations = Annotations({})
+
+    return payload, content_type, annotations, btl
 
 
 # TODO remove once transition to new arkiv api is complete
@@ -410,41 +479,41 @@ def to_event(
         case contract.CREATED_EVENT:
             return CreateEvent(
                 entity_key=entity_key,
-                owner_address=ChecksumAddress(event_args["ownerAddress"]),
-                expiration_block=event_args["expirationBlock"],
-                cost=int(event_args["cost"]),
+                owner_address=ChecksumAddress(event_args[OWNER_ADDRESS]),
+                expiration_block=event_args[EXPIRATION_BLOCK],
+                cost=int(event_args[COST]),
             )
         case contract.UPDATED_EVENT:
             return UpdateEvent(
                 entity_key=entity_key,
-                owner_address=ChecksumAddress(event_args["ownerAddress"]),
-                old_expiration_block=event_args["oldExpirationBlock"],
-                new_expiration_block=event_args["newExpirationBlock"],
-                cost=int(event_args["cost"]),
+                owner_address=ChecksumAddress(event_args[OWNER_ADDRESS]),
+                old_expiration_block=event_args[OLD_EXPIRATION_BLOCK],
+                new_expiration_block=event_args[NEW_EXPIRATION_BLOCK],
+                cost=int(event_args[COST]),
             )
         case contract.EXPIRED_EVENT:
             return ExpiryEvent(
                 entity_key=entity_key,
-                owner_address=ChecksumAddress(event_args["ownerAddress"]),
+                owner_address=ChecksumAddress(event_args[OWNER_ADDRESS]),
             )
         case contract.DELETED_EVENT:
             return DeleteEvent(
                 entity_key=entity_key,
-                owner_address=ChecksumAddress(event_args["ownerAddress"]),
+                owner_address=ChecksumAddress(event_args[OWNER_ADDRESS]),
             )
         case contract.EXTENDED_EVENT:
             return ExtendEvent(
                 entity_key=entity_key,
-                owner_address=ChecksumAddress(event_args["ownerAddress"]),
-                old_expiration_block=event_args["oldExpirationBlock"],
-                new_expiration_block=event_args["newExpirationBlock"],
-                cost=int(event_args["cost"]),
+                owner_address=ChecksumAddress(event_args[OWNER_ADDRESS]),
+                old_expiration_block=event_args[OLD_EXPIRATION_BLOCK],
+                new_expiration_block=event_args[NEW_EXPIRATION_BLOCK],
+                cost=int(event_args[COST]),
             )
         case contract.OWNER_CHANGED_EVENT:
             return ChangeOwnerEvent(
                 entity_key=entity_key,
-                old_owner_address=event_args["oldOwnerAddress"],
-                new_owner_address=event_args["newOwnerAddress"],
+                old_owner_address=event_args[OLD_OWNER_ADDRESS],
+                new_owner_address=event_args[NEW_OWNER_ADDRESS],
             )
         # Legacy events - skip with info log
         case contract.CREATED_EVENT_LEGACY:
@@ -471,6 +540,12 @@ def to_receipt(
     """Convert a tx hash and a raw transaction receipt to a typed receipt."""
     logger.debug(f"Transaction receipt: {tx_receipt}")
 
+    # Extract block number
+    block_number_raw = tx_receipt.get("blockNumber")
+    if block_number_raw is None:
+        raise ValueError("Transaction receipt missing blockNumber")
+    block_number: BlockNumber = BlockNumber(block_number_raw)
+
     # normalize tx_hash to TxHash if needed
     tx_hash: TxHash = (
         tx_hash_
@@ -486,6 +561,7 @@ def to_receipt(
     change_owners: list[ChangeOwnerEvent] = []
 
     receipt = TransactionReceipt(
+        block_number=block_number,
         tx_hash=tx_hash,
         creates=creates,
         updates=updates,

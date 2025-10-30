@@ -27,7 +27,7 @@ class TestAsyncWatchEntityCreated:
 
         try:
             # Create an entity
-            entity_key, tx_hash = await async_arkiv_client_http.arkiv.create_entity(
+            entity_key, receipt = await async_arkiv_client_http.arkiv.create_entity(
                 payload=b"async test", annotations={"test": "async_created"}
             )
 
@@ -37,7 +37,7 @@ class TestAsyncWatchEntityCreated:
             # Verify callback was invoked
             assert len(events_received) == 1
             assert events_received[0][0].entity_key == entity_key
-            assert events_received[0][1] == tx_hash
+            assert events_received[0][1] == receipt.tx_hash
 
         finally:
             await filter.uninstall()
@@ -97,7 +97,7 @@ class TestAsyncWatchEntityUpdated:
                 payload=b"original"
             )
 
-            update_tx = await async_arkiv_client_http.arkiv.update_entity(
+            receipt = await async_arkiv_client_http.arkiv.update_entity(
                 entity_key, payload=b"updated", annotations={"status": "updated"}
             )
 
@@ -106,7 +106,7 @@ class TestAsyncWatchEntityUpdated:
 
             assert len(events_received) == 1
             assert events_received[0][0].entity_key == entity_key
-            assert events_received[0][1] == update_tx
+            assert events_received[0][1] == receipt.tx_hash
 
         finally:
             await filter.uninstall()
@@ -132,7 +132,7 @@ class TestAsyncWatchEntityExtended:
                 payload=b"test extend"
             )
 
-            extend_tx = await async_arkiv_client_http.arkiv.extend_entity(
+            receipt = await async_arkiv_client_http.arkiv.extend_entity(
                 entity_key, number_of_blocks=100
             )
 
@@ -141,7 +141,7 @@ class TestAsyncWatchEntityExtended:
 
             assert len(events_received) == 1
             assert events_received[0][0].entity_key == entity_key
-            assert events_received[0][1] == extend_tx
+            assert events_received[0][1] == receipt.tx_hash
 
         finally:
             await filter.uninstall()
@@ -167,14 +167,14 @@ class TestAsyncWatchEntityDeleted:
                 payload=b"to delete"
             )
 
-            delete_tx = await async_arkiv_client_http.arkiv.delete_entity(entity_key)
+            receipt = await async_arkiv_client_http.arkiv.delete_entity(entity_key)
 
             # Wait for event
             await asyncio.sleep(2)
 
             assert len(events_received) == 1
             assert events_received[0][0].entity_key == entity_key
-            assert events_received[0][1] == delete_tx
+            assert events_received[0][1] == receipt.tx_hash
 
         finally:
             await filter.uninstall()

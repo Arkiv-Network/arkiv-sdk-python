@@ -37,9 +37,9 @@ class TestAsyncEntityDelete:
         )
 
         # Delete the entity
-        delete_tx_hash = await async_arkiv_client_http.arkiv.delete_entity(entity_key)
+        receipt = await async_arkiv_client_http.arkiv.delete_entity(entity_key)
 
-        check_tx_hash("test_async_delete_entity_basic_delete", delete_tx_hash)
+        check_tx_hash("test_async_delete_entity_basic_delete", receipt)
         logger.info(f"Deleted entity {entity_key}")
 
         # Verify the entity no longer exists
@@ -70,13 +70,9 @@ class TestAsyncEntityDelete:
 
         # Delete all entities sequentially
         for i, entity_key in enumerate(entity_keys):
-            delete_tx_hash = await async_arkiv_client_http.arkiv.delete_entity(
-                entity_key
-            )
+            receipt = await async_arkiv_client_http.arkiv.delete_entity(entity_key)
             check_entity_key(entity_key, f"test_async_delete_entities_sequentially_{i}")
-            check_tx_hash(
-                f"test_async_delete_entities_sequentially_{i}", delete_tx_hash
-            )
+            check_tx_hash(f"test_async_delete_entities_sequentially_{i}", receipt)
             logger.info(f"Deleted entity {i + 1}/3: {entity_key}")
 
         # Verify all entities are deleted

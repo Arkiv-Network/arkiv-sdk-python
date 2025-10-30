@@ -38,11 +38,11 @@ class TestAsyncEntityExtend:
 
         # Extend the entity by 50 blocks
         number_of_blocks = 50
-        extend_tx_hash = await async_arkiv_client_http.arkiv.extend_entity(
+        receipt = await async_arkiv_client_http.arkiv.extend_entity(
             entity_key, number_of_blocks
         )
 
-        check_tx_hash("test_async_extend_entity_basic_extend", extend_tx_hash)
+        check_tx_hash("test_async_extend_entity_basic_extend", receipt)
         logger.info(f"Extended entity {entity_key} by {number_of_blocks} blocks")
 
         # Verify expiration increased
@@ -78,13 +78,11 @@ class TestAsyncEntityExtend:
         # Extend all entities sequentially
         number_of_blocks = 50
         for i, entity_key in enumerate(entity_keys):
-            extend_tx_hash = await async_arkiv_client_http.arkiv.extend_entity(
+            receipt = await async_arkiv_client_http.arkiv.extend_entity(
                 entity_key, number_of_blocks
             )
             check_entity_key(entity_key, f"test_async_extend_entities_sequentially_{i}")
-            check_tx_hash(
-                f"test_async_extend_entities_sequentially_{i}", extend_tx_hash
-            )
+            check_tx_hash(f"test_async_extend_entities_sequentially_{i}", receipt)
             logger.info(f"Extended entity {i + 1}/3: {entity_key}")
 
         # Verify all extensions

@@ -14,6 +14,7 @@ from arkiv.types import (
     EntityKey,
     ExtendOp,
     Operations,
+    TransactionReceipt,
     TxHash,
     UpdateOp,
 )
@@ -35,17 +36,21 @@ def get_custom_annotations(entity: Entity) -> Annotations:
     return Annotations(custom_annotations)
 
 
-def check_tx_hash(label: str, tx_hash: TxHash) -> None:
+def check_tx_hash(label: str, tx_receipt: TransactionReceipt) -> None:
     """Check transaction hash validity."""
-    logger.info(f"{label}: Checking transaction hash {tx_hash}")
-    assert tx_hash is not None, f"{label}: Transaction hash should not be None"
-    assert isinstance(tx_hash, str), (
+    logger.info(f"{label}: Checking transaction hash {tx_receipt.tx_hash}")
+    assert tx_receipt.tx_hash is not None, (
+        f"{label}: Transaction hash should not be None"
+    )
+    assert isinstance(tx_receipt.tx_hash, str), (
         f"{label}: Transaction hash should be a string (TxHash)"
     )
-    assert len(tx_hash) == 66, (
+    assert len(tx_receipt.tx_hash) == 66, (
         f"{label}: Transaction hash should be 66 characters long (0x + 64 hex)"
     )
-    assert tx_hash.startswith("0x"), f"{label}: Transaction hash should start with 0x"
+    assert tx_receipt.tx_hash.startswith("0x"), (
+        f"{label}: Transaction hash should start with 0x"
+    )
 
 
 def check_entity_key(label: str, entity_key: EntityKey) -> None:
@@ -170,7 +175,7 @@ def bulk_create_entities(
     create_receipt = client.arkiv.execute(create_operations)
 
     # Check transaction hash of bulk create
-    check_tx_hash(label, create_receipt.tx_hash)
+    check_tx_hash(label, create_receipt)
 
     # Verify all creates succeeded
     if len(create_receipt.creates) != len(create_ops):
@@ -206,7 +211,7 @@ def bulk_update_entities(
     update_receipt = client.arkiv.execute(update_operations)
 
     # Check transaction hash of bulk update
-    check_tx_hash(label, update_receipt.tx_hash)
+    check_tx_hash(label, update_receipt)
 
     # Verify all updates succeeded
     if len(update_receipt.updates) != len(update_ops):
@@ -221,7 +226,7 @@ def bulk_update_entities(
 
 def bulk_extend_entities(
     client: "Arkiv", extend_ops: list[ExtendOp], label: str = "bulk_extend"
-) -> TxHash:
+) -> TransactionReceipt:
     """Extend multiple entities in a single bulk transaction.
 
     Args:
@@ -250,12 +255,12 @@ def bulk_extend_entities(
 
     logger.info(f"{label}: Extended {len(extend_ops)} entities in bulk transaction")
 
-    return extend_receipt.tx_hash
+    return extend_receipt
 
 
 def bulk_delete_entities(
     client: "Arkiv", delete_ops: list[DeleteOp], label: str = "bulk_delete"
-) -> TxHash:
+) -> TransactionReceipt:
     """Delete multiple entities in a single bulk transaction.
 
     Args:
@@ -274,7 +279,7 @@ def bulk_delete_entities(
     delete_receipt = client.arkiv.execute(delete_operations)
 
     # Check transaction hash of bulk delete
-    check_tx_hash(label, delete_receipt.tx_hash)
+    check_tx_hash(label, delete_receipt)
 
     # Verify all deletes succeeded
     if len(delete_receipt.deletes) != len(delete_ops):
@@ -284,7 +289,7 @@ def bulk_delete_entities(
 
     logger.info(f"{label}: Deleted {len(delete_ops)} entities in bulk transaction")
 
-    return delete_receipt.tx_hash
+    return delete_receipt
 
 
 def create_account(index: int, name: str) -> NamedAccount:

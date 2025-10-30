@@ -40,9 +40,7 @@ class TestWatchEntityDeleted:
 
         try:
             # Delete the entity - this should trigger the callback
-            delete_tx_hash = arkiv_client_http.arkiv.delete_entity(
-                entity_key=entity_key
-            )
+            receipt = arkiv_client_http.arkiv.delete_entity(entity_key=entity_key)
 
             # Wait for callback (with timeout)
             assert callback_triggered.wait(timeout=10.0), (
@@ -65,7 +63,7 @@ class TestWatchEntityDeleted:
 
             # Verify event data
             assert event.entity_key == entity_key
-            assert event_tx_hash == delete_tx_hash
+            assert event_tx_hash == receipt.tx_hash
 
         finally:
             # Cleanup: stop and uninstall the filter
@@ -216,7 +214,7 @@ class TestWatchEntityDeleted:
                 DeleteOp(entity_key=entity_keys[1]),
                 DeleteOp(entity_key=entity_keys[2]),
             ]
-            tx_hash = bulk_delete_entities(
+            receipt = bulk_delete_entities(
                 arkiv_client_http, delete_ops, label="test_bulk_delete"
             )
 
@@ -238,7 +236,7 @@ class TestWatchEntityDeleted:
             assert len(tx_hashes) == 1, (
                 "All events should share the same transaction hash"
             )
-            assert tx_hashes.pop() == tx_hash
+            assert tx_hashes.pop() == receipt.tx_hash
 
         finally:
             event_filter.uninstall()
@@ -283,18 +281,16 @@ class TestWatchEntityDeleted:
             assert len(received_events) == 0
 
             # Delete the entity - SHOULD trigger callback
-            delete_tx_hash = arkiv_client_http.arkiv.delete_entity(
-                entity_key=entity_key
-            )
+            receipt = arkiv_client_http.arkiv.delete_entity(entity_key=entity_key)
             time.sleep(3)  # Wait for callback
             assert len(received_events) == 1
             assert received_events[0][0].entity_key == entity_key
-            assert received_events[0][1] == delete_tx_hash
+            assert received_events[0][1] == receipt.tx_hash
 
             # Verify the single event is the delete event
             event, tx_hash = received_events[0]
             assert event.entity_key == entity_key
-            assert tx_hash == delete_tx_hash
+            assert tx_hash == receipt.tx_hash
 
         finally:
             event_filter.uninstall()
@@ -389,9 +385,7 @@ class TestWatchEntityDeleted:
 
         try:
             # Delete the entity
-            delete_tx_hash = arkiv_client_http.arkiv.delete_entity(
-                entity_key=entity_key
-            )
+            receipt = arkiv_client_http.arkiv.delete_entity(entity_key=entity_key)
 
             # Wait for both callbacks
             assert callback_1_triggered.wait(timeout=5.0), (
@@ -408,8 +402,8 @@ class TestWatchEntityDeleted:
             # Verify both events have the same data
             assert received_events_1[0][0].entity_key == entity_key
             assert received_events_2[0][0].entity_key == entity_key
-            assert received_events_1[0][1] == delete_tx_hash
-            assert received_events_2[0][1] == delete_tx_hash
+            assert received_events_1[0][1] == receipt.tx_hash
+            assert received_events_2[0][1] == receipt.tx_hash
 
         finally:
             filter_1.uninstall()

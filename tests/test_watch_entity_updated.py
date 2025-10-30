@@ -42,7 +42,7 @@ class TestWatchEntityUpdated:
 
         try:
             # Update the entity - this should trigger the callback
-            update_tx_hash = arkiv_client_http.arkiv.update_entity(
+            receipt = arkiv_client_http.arkiv.update_entity(
                 entity_key=entity_key,
                 payload=b"updated data",
                 annotations=Annotations({"version": "2"}),
@@ -63,7 +63,7 @@ class TestWatchEntityUpdated:
             assert event.entity_key == entity_key
             assert event.new_expiration_block > 0
             assert event.new_expiration_block >= event.old_expiration_block
-            assert event_tx_hash == update_tx_hash
+            assert event_tx_hash == receipt.tx_hash
 
         finally:
             # Cleanup: stop and uninstall the filter
@@ -321,13 +321,13 @@ class TestWatchEntityUpdated:
             assert len(received_events) == 0
 
             # Update the entity - SHOULD trigger callback
-            update_tx_hash = arkiv_client_http.arkiv.update_entity(
+            receipt = arkiv_client_http.arkiv.update_entity(
                 entity_key=entity_key, payload=b"updated data", btl=100
             )
             time.sleep(3)  # Wait for callback
             assert len(received_events) == 1
             assert received_events[0][0].entity_key == entity_key
-            assert received_events[0][1] == update_tx_hash
+            assert received_events[0][1] == receipt.tx_hash
 
             # Extend the entity - should NOT trigger callback
             arkiv_client_http.arkiv.extend_entity(
@@ -344,7 +344,7 @@ class TestWatchEntityUpdated:
             # Verify the single event is the update event
             event, tx_hash = received_events[0]
             assert event.entity_key == entity_key
-            assert tx_hash == update_tx_hash
+            assert tx_hash == receipt.tx_hash
 
         finally:
             event_filter.uninstall()

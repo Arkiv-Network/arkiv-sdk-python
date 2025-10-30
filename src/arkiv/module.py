@@ -21,7 +21,6 @@ from .types import (
     QUERY_OPTIONS_DEFAULT,
     Annotations,
     CreateCallback,
-    CreateOp,
     DeleteOp,
     Entity,
     EntityKey,
@@ -34,9 +33,14 @@ from .types import (
     TransactionReceipt,
     TxHash,
     UpdateCallback,
-    UpdateOp,
 )
-from .utils import to_query_result, to_rpc_query_options, to_tx_params
+from .utils import (
+    to_create_op,
+    to_query_result,
+    to_rpc_query_options,
+    to_tx_params,
+    to_update_op,
+)
 
 # Deal with potential circular imports between client.py and module.py
 if TYPE_CHECKING:
@@ -53,16 +57,7 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
     def execute(
         self, operations: Operations, tx_params: TxParams | None = None
     ) -> TransactionReceipt:
-        """
-        Execute operations on the Arkiv storage contract.
-
-        Args:
-            operations: Operations to execute (creates, updates, deletes, extensions)
-            tx_params: Optional additional transaction parameters
-
-        Returns:
-            TransactionReceipt with details of all operations executed
-        """
+        # Docstring inherited from ArkivModuleBase.execute
         # Convert to transaction parameters and send
         tx_params = to_tx_params(operations, tx_params)
 
@@ -81,42 +76,22 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
         annotations: Annotations | None = None,
         btl: int | None = None,
         tx_params: TxParams | None = None,
-    ) -> tuple[EntityKey, TxHash]:
-        """
-        Create a new entity on the Arkiv storage contract.
-
-        Args:
-            payload: Optional data payload for the entity
-            content_type: Optional content type for the entity
-            annotations: Optional key-value annotations
-            btl: Blocks to live (default: self.btl_default, ~30 minutes with 2s blocks)
-            tx_params: Optional additional transaction parameters
-
-        Returns:
-            The entity key and transaction hash of the create operation
-        """
-        # Create the operation
-        payload, content_type, annotations, btl = self._check_and_set_argument_defaults(
-            payload, content_type, annotations, btl
-        )
-        create_op = CreateOp(
+    ) -> tuple[EntityKey, TransactionReceipt]:
+        # Docstring inherited from ArkivModuleBase.create_entity
+        # Create operation and execute TX
+        create_op = to_create_op(
             payload=payload, content_type=content_type, annotations=annotations, btl=btl
         )
-
-        # Wrap in Operations container and execute
         operations = Operations(creates=[create_op])
         receipt = self.execute(operations, tx_params)
 
-        # Verify we got at least one create
+        # Verify receipt
         creates = receipt.creates
-        if len(creates) != 1:
-            raise RuntimeError(
-                f"Receipt should have exactly one entry in 'creates' but got {len(creates)}"
-            )
+        self._check_operations(receipt.creates, "create", 1)
 
-        create = creates[0]
-        entity_key = create.entity_key
-        return entity_key, receipt.tx_hash
+        # Return entity key and receipt
+        entity_key = creates[0].entity_key
+        return entity_key, receipt
 
     def update_entity(
         self,
@@ -126,106 +101,53 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
         annotations: Annotations | None = None,
         btl: int | None = None,
         tx_params: TxParams | None = None,
-    ) -> TxHash:
-        """
-        Update an existing entity on the Arkiv storage contract.
-
-        Args:
-            entity_key: The entity key of the entity to update
-            payload: Optional new data payload for the entity, existing payload will be replaced
-            content_type: Optional new content type for the entity, existing content type will be replaced
-            annotations: Optional new key-value annotations, existing annotations will be replaced
-            btl: Blocks to live (default: self.btl_default, ~30 minutes with 2s blocks)
-            tx_params: Optional additional transaction parameters
-
-        Returns:
-            Transaction hash of the update operation
-        """
-        # Create the update operation
-        payload, content_type, annotations, btl = self._check_and_set_argument_defaults(
-            payload, content_type, annotations, btl
-        )
-        update_op = UpdateOp(
+    ) -> TransactionReceipt:
+        # Docstring inherited from ArkivModuleBase.update_entity
+        # Create the update operation and execute TX
+        update_op = to_update_op(
             entity_key=entity_key,
             payload=payload,
             content_type=content_type,
             annotations=annotations,
             btl=btl,
         )
-
-        # Wrap in Operations container and execute
         operations = Operations(updates=[update_op])
         receipt = self.execute(operations, tx_params)
 
-        # Verify the update succeeded
-        if len(receipt.updates) != 1:
-            raise RuntimeError(
-                f"Expected 1 update in receipt, got {len(receipt.updates)}"
-            )
-
-        return receipt.tx_hash
+        # Verify and return receipt
+        self._check_operations(receipt.updates, "update", 1)
+        return receipt
 
     def extend_entity(
         self,
         entity_key: EntityKey,
         number_of_blocks: int,
         tx_params: TxParams | None = None,
-    ) -> TxHash:
-        """
-        Extend the lifetime of an entity by a specified number of blocks.
-
-        Args:
-            entity_key: The entity key to extend
-            number_of_blocks: Number of blocks to extend the entity's lifetime
-            tx_params: Optional additional transaction parameters
-
-        Returns:
-            Transaction hash of the extend operation
-        """
-        # Create the extend operation
+    ) -> TransactionReceipt:
+        # Docstring inherited from ArkivModuleBase.extend_entity
+        # Create the extend operation and execute TX
         extend_op = ExtendOp(entity_key=entity_key, number_of_blocks=number_of_blocks)
-
-        # Wrap in Operations container and execute
         operations = Operations(extensions=[extend_op])
         receipt = self.execute(operations, tx_params)
 
-        # Verify the extend succeeded
-        if len(receipt.extensions) != 1:
-            raise RuntimeError(
-                f"Expected 1 extension in receipt, got {len(receipt.extensions)}"
-            )
-
-        return receipt.tx_hash
+        # Verify and return receipt
+        self._check_operations(receipt.extensions, "extend", 1)
+        return receipt
 
     def delete_entity(
         self,
         entity_key: EntityKey,
         tx_params: TxParams | None = None,
-    ) -> TxHash:
-        """
-        Delete an entity from the Arkiv storage contract.
-
-        Args:
-            entity_key: The entity key to delete
-            tx_params: Optional additional transaction parameters
-
-        Returns:
-            Transaction hash of the delete operation
-        """
-        # Create the delete operation
+    ) -> TransactionReceipt:
+        # Docstring inherited from ArkivModuleBase.delete_entity
+        # Create the delete operation and execute TX
         delete_op = DeleteOp(entity_key=entity_key)
-
-        # Wrap in Operations container and execute
         operations = Operations(deletes=[delete_op])
         receipt = self.execute(operations, tx_params)
 
-        # Verify the delete succeeded
-        if len(receipt.deletes) != 1:
-            raise RuntimeError(
-                f"Expected 1 delete in receipt, got {len(receipt.deletes)}"
-            )
-
-        return receipt.tx_hash
+        # Verify and return receipt
+        self._check_operations(receipt.deletes, "delete", 1)
+        return receipt
 
     def transfer_eth(
         self,
@@ -268,16 +190,7 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
         return tx_hash
 
     def entity_exists(self, entity_key: EntityKey, at_block: int | None = None) -> bool:
-        """
-        Check if an entity exists storage.
-
-        Args:
-            entity_key: The entity key to check
-            at_block: Block number to pin query to specific block, or None to use latest block available
-
-        Returns:
-            True if the entity exists, False otherwise
-        """
+        # Docstring inherited from ArkivModuleBase.entity_exists
         try:
             options = QueryOptions(fields=NONE, at_block=at_block)
             query_result: QueryResult = self.query_entities(
@@ -290,18 +203,7 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
     def get_entity(
         self, entity_key: EntityKey, fields: int = ALL, at_block: int | None = None
     ) -> Entity:
-        """
-        Get an entity by its entity key.
-
-        Args:
-            entity_key: The entity key to retrieve
-            fields: Bitfield indicating which fields to retrieve. See file types.py
-            at_block: Block number to pin query to specific block, or None to use latest block available
-
-        Returns:
-            Entity object with the requested fields
-        """
-
+        # Docstring inherited from ArkivModuleBase.get_entity
         options = QueryOptions(fields=fields, at_block=at_block)
         query_result: QueryResult = self.query_entities(
             f"$key = {entity_key}", options=options
@@ -319,20 +221,7 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
     def query_entities(
         self, query: str | None = None, options: QueryOptions = QUERY_OPTIONS_DEFAULT
     ) -> QueryResult:
-        """
-        Execute a query against entity storage (with paging).
-
-        Args:
-            query: SQL-like where clause
-            options: QueryOptions for the query execution
-
-        Raises:
-            ValueError: if invalid query options are provided.
-
-        Returns:
-            QueryResult with entities, block number, and an optional cursor to fetch the next page
-        """
-
+        # Docstring inherited from ArkivModuleBase.query_entities
         options.validate(query)
         rpc_options = to_rpc_query_options(options)
         raw_results = self.client.eth.query(query, rpc_options)

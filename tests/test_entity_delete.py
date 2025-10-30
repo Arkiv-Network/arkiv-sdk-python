@@ -120,7 +120,7 @@ class TestEntityDelete:
         receipt = arkiv_client_http.arkiv.execute(operations)
 
         # Check transaction hash of bulk delete
-        check_tx_hash("delete_bulk_entity", receipt.tx_hash)
+        check_tx_hash("delete_bulk_entity", receipt)
 
         # Verify all deletes succeeded
         if len(receipt.deletes) != len(delete_ops):

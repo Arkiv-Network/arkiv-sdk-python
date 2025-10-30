@@ -44,13 +44,13 @@ class TestEntityUpdate:
 
         # Update the entity with new payload
         new_payload = b"Updated payload"
-        update_tx_hash = arkiv_client_http.arkiv.update_entity(
+        tx_receipt = arkiv_client_http.arkiv.update_entity(
             entity_key, payload=new_payload, annotations=annotations, btl=btl
         )
 
         label = "update_entity_payload"
-        check_tx_hash(label, update_tx_hash)
-        logger.info(f"{label}: Updated entity {entity_key}, tx_hash: {update_tx_hash}")
+        check_tx_hash(label, tx_receipt)
+        logger.info(f"{label}: Updated entity {entity_key}, tx_hash: {tx_receipt}")
 
         # Verify the entity has the new payload
         expected = replace(entity_before, payload=new_payload)
@@ -79,12 +79,12 @@ class TestEntityUpdate:
 
         # Update with new annotations
         new_annotations = Annotations({"status": "published", "version": 2})
-        update_tx_hash = arkiv_client_http.arkiv.update_entity(
+        tx_receipt = arkiv_client_http.arkiv.update_entity(
             entity_key, payload=payload, annotations=new_annotations, btl=btl
         )
 
         label = "update_annotations"
-        check_tx_hash(label, update_tx_hash)
+        check_tx_hash(label, tx_receipt)
 
         # Verify annotations were updated
         expected = replace(entity_before, annotations=new_annotations)
@@ -107,11 +107,11 @@ class TestEntityUpdate:
         # Update multiple times
         versions = [b"Version 1", b"Version 2", b"Version 3"]
         for i, version_payload in enumerate(versions):
-            update_tx_hash = arkiv_client_http.arkiv.update_entity(
+            tx_receipt = arkiv_client_http.arkiv.update_entity(
                 entity_key, payload=version_payload, btl=100
             )
             label = f"update_{i}"
-            check_tx_hash(label, update_tx_hash)
+            check_tx_hash(label, tx_receipt)
             logger.info(f"Update {i + 1}: set payload to {version_payload!r}")
 
             # Verify the update
@@ -169,7 +169,7 @@ class TestEntityUpdate:
         receipt = arkiv_client_http.arkiv.execute(Operations(updates=update_ops))
 
         # Check transaction hash of bulk update
-        check_tx_hash("update_bulk_entity", receipt.tx_hash)
+        check_tx_hash("update_bulk_entity", receipt)
 
         # Verify all updates succeeded
         if len(receipt.updates) != len(update_ops):

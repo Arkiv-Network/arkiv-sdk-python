@@ -7,7 +7,7 @@ from web3.types import TxReceipt
 
 from arkiv.client import Arkiv
 from arkiv.contract import STORAGE_ADDRESS
-from arkiv.types import Annotations, CreateOp, Operations
+from arkiv.types import Annotations, CreateOp, Operations, QueryOptions
 from arkiv.utils import (
     check_entity_key,
     to_receipt,
@@ -146,15 +146,18 @@ class TestEntityCreate:
         ann: Annotations = Annotations({"type": "Greeting", "version": 1})
         btl: int = 60
 
-        entity_key, tx_hash = arkiv_client_http.arkiv.create_entity(
+        entity_key, tx_receipt = arkiv_client_http.arkiv.create_entity(
             payload=pl, content_type=content_type, annotations=ann, btl=btl
         )
 
         label = "create_entity (a)"
         check_entity_key(entity_key, label)
-        check_tx_hash(label, tx_hash)
+        check_tx_hash(label, tx_receipt)
+        assert tx_receipt.block_number > 0, f"{label}: Block number should be positive"
 
-        query_result = arkiv_client_http.arkiv.query_entities(f"$key = {entity_key}")
+        query_result = arkiv_client_http.arkiv.query_entities(
+            f"$key = {entity_key}", QueryOptions(at_block=tx_receipt.block_number)
+        )
         assert len(query_result.entities) == 1, (
             f"{label}: Should return exactly one entity"
         )

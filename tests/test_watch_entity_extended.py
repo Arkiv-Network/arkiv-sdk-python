@@ -42,7 +42,7 @@ class TestWatchEntityExtended:
 
         try:
             # Extend the entity - this should trigger the callback
-            extend_tx_hash = arkiv_client_http.arkiv.extend_entity(
+            receipt = arkiv_client_http.arkiv.extend_entity(
                 entity_key=entity_key,
                 number_of_blocks=50,
             )
@@ -61,7 +61,7 @@ class TestWatchEntityExtended:
             assert event.old_expiration_block == initial_expiration
             assert event.new_expiration_block > event.old_expiration_block
             assert event.new_expiration_block == initial_expiration + 50
-            assert event_tx_hash == extend_tx_hash
+            assert event_tx_hash == receipt.tx_hash
 
         finally:
             # Cleanup: stop and uninstall the filter
@@ -253,7 +253,7 @@ class TestWatchEntityExtended:
                 ExtendOp(entity_key=entity_keys[1], number_of_blocks=70),
                 ExtendOp(entity_key=entity_keys[2], number_of_blocks=80),
             ]
-            tx_hash = bulk_extend_entities(
+            receipt = bulk_extend_entities(
                 arkiv_client_http, extend_ops, label="test_bulk_extend"
             )
 
@@ -275,7 +275,7 @@ class TestWatchEntityExtended:
             assert len(tx_hashes) == 1, (
                 "All events should share the same transaction hash"
             )
-            assert tx_hashes.pop() == tx_hash
+            assert tx_hashes.pop() == receipt.tx_hash
 
             # Verify each entity has the correct extension
             for event, _ in received_events:
@@ -320,13 +320,13 @@ class TestWatchEntityExtended:
             assert len(received_events) == 0
 
             # Extend the entity - SHOULD trigger callback
-            extend_tx_hash = arkiv_client_http.arkiv.extend_entity(
+            receipt = arkiv_client_http.arkiv.extend_entity(
                 entity_key=entity_key, number_of_blocks=50
             )
             time.sleep(3)  # Wait for callback
             assert len(received_events) == 1
             assert received_events[0][0].entity_key == entity_key
-            assert received_events[0][1] == extend_tx_hash
+            assert received_events[0][1] == receipt.tx_hash
 
             # Delete the entity - should NOT trigger callback
             _ = arkiv_client_http.arkiv.delete_entity(entity_key=entity_key)
@@ -336,7 +336,7 @@ class TestWatchEntityExtended:
             # Verify the single event is the extend event
             event, tx_hash = received_events[0]
             assert event.entity_key == entity_key
-            assert tx_hash == extend_tx_hash
+            assert tx_hash == receipt.tx_hash
 
         finally:
             event_filter.uninstall()

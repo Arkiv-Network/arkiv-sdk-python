@@ -32,7 +32,7 @@ class TestWatchEntityCreated:
 
         try:
             # Create an entity - this should trigger the callback
-            entity_key, tx_hash = arkiv_client_http.arkiv.create_entity(
+            entity_key, receipt = arkiv_client_http.arkiv.create_entity(
                 payload=b"test data",
                 annotations=Annotations({"test": "value"}),
                 btl=100,
@@ -50,7 +50,7 @@ class TestWatchEntityCreated:
             # Verify event data
             assert event.entity_key == entity_key
             assert event.expiration_block > 0
-            assert event_tx_hash == tx_hash
+            assert event_tx_hash == receipt.tx_hash
 
         finally:
             # Cleanup: stop and uninstall the filter
@@ -261,7 +261,7 @@ class TestWatchEntityCreated:
 
         try:
             # Create an entity - SHOULD trigger callback
-            entity_key, create_tx_hash = arkiv_client_http.arkiv.create_entity(
+            entity_key, receipt = arkiv_client_http.arkiv.create_entity(
                 payload=b"initial data", btl=100
             )
             time.sleep(3)  # Wait for callback
@@ -290,7 +290,7 @@ class TestWatchEntityCreated:
             # Verify the single event is the creation event
             event, tx_hash = received_events[0]
             assert event.entity_key == entity_key
-            assert tx_hash == create_tx_hash
+            assert tx_hash == receipt.tx_hash
 
         finally:
             event_filter.uninstall()
