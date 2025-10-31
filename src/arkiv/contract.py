@@ -117,6 +117,9 @@ EVENTS_ABI: Final[Sequence[dict[str, Any]]] = [
         "inputs": [
             {"indexed": True, "name": "entityKey", "type": TYPE_UINT},
             {"indexed": True, "name": "ownerAddress", "type": TYPE_ADDRESS},
+            {"indexed": False, "name": "oldExpirationBlock", "type": TYPE_UINT},
+            {"indexed": False, "name": "newExpirationBlock", "type": TYPE_UINT},
+            {"indexed": False, "name": "cost", "type": TYPE_UINT},
         ],
         "name": EXTENDED_EVENT,
         "type": TYPE_EVENT,
