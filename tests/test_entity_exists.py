@@ -64,12 +64,20 @@ class TestEntityExists:
     def test_entity_exists_is_idempotent(self, arkiv_client_http: Arkiv) -> None:
         """Test that calling entity_exists multiple times gives same result."""
         payload = b"test idempotency"
-        entity_key, _ = arkiv_client_http.arkiv.create_entity(payload=payload, btl=1000)
+        entity_key, receipt = arkiv_client_http.arkiv.create_entity(
+            payload=payload, btl=1000
+        )
 
         # Call multiple times
-        result1 = arkiv_client_http.arkiv.entity_exists(entity_key)
-        result2 = arkiv_client_http.arkiv.entity_exists(entity_key)
-        result3 = arkiv_client_http.arkiv.entity_exists(entity_key)
+        result1 = arkiv_client_http.arkiv.entity_exists(
+            entity_key, at_block=receipt.block_number
+        )
+        result2 = arkiv_client_http.arkiv.entity_exists(
+            entity_key, at_block=receipt.block_number
+        )
+        result3 = arkiv_client_http.arkiv.entity_exists(
+            entity_key, at_block=receipt.block_number
+        )
 
         assert result1 is True
         assert result2 is True

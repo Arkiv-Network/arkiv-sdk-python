@@ -11,6 +11,6 @@ echo "🔬 Running type checks with mypy..."
 uv run --group lint mypy --strict src/
 
 echo "🧪 Running tests..."
-uv run --group test pytest tests/ -n auto -v
+uv run --group test pytest -n auto
 
 echo "✅ All quality checks passed!"

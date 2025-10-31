@@ -69,14 +69,17 @@ class TestAsyncEntityDelete:
             )
 
         # Delete all entities sequentially
+        last_block = 0
         for i, entity_key in enumerate(entity_keys):
             receipt = await async_arkiv_client_http.arkiv.delete_entity(entity_key)
             check_entity_key(entity_key, f"test_async_delete_entities_sequentially_{i}")
             check_tx_hash(f"test_async_delete_entities_sequentially_{i}", receipt)
-            logger.info(f"Deleted entity {i + 1}/3: {entity_key}")
+            last_block = receipt.block_number
+
+            logger.info(f"Deleted entity {i + 1}/3: {entity_key} in block ")
 
         # Verify all entities are deleted
         for entity_key in entity_keys:
-            assert not await async_arkiv_client_http.arkiv.entity_exists(entity_key), (
-                f"Entity {entity_key} should not exist after deletion"
-            )
+            assert not await async_arkiv_client_http.arkiv.entity_exists(
+                entity_key, at_block=last_block
+            ), f"Entity {entity_key} should not exist after deletion"

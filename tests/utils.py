@@ -38,7 +38,7 @@ def get_custom_annotations(entity: Entity) -> Annotations:
 
 def check_tx_hash(label: str, tx_receipt: TransactionReceipt) -> None:
     """Check transaction hash validity."""
-    logger.info(f"{label}: Checking transaction hash {tx_receipt.tx_hash}")
+    logger.debug(f"{label}: Checking transaction hash {tx_receipt.tx_hash}")
     assert tx_receipt.tx_hash is not None, (
         f"{label}: Transaction hash should not be None"
     )
@@ -245,7 +245,7 @@ def bulk_extend_entities(
     extend_receipt = client.arkiv.execute(extend_operations)
 
     # Check transaction hash of bulk extend
-    check_tx_hash(label, extend_receipt.tx_hash)
+    check_tx_hash(label, extend_receipt)
 
     # Verify all extensions succeeded
     if len(extend_receipt.extensions) != len(extend_ops):

@@ -71,14 +71,14 @@ class TestEntityDelete:
 
         # Delete entities one by one
         for i, entity_key in enumerate(entity_keys):
-            delete_tx_hash = arkiv_client_http.arkiv.delete_entity(entity_key)
-            check_tx_hash(f"delete_entity_{i}", delete_tx_hash)
+            receipt = arkiv_client_http.arkiv.delete_entity(entity_key)
+            check_tx_hash(f"delete_entity_{i}", receipt)
             logger.info(f"Deleted entity {i + 1}/{len(entity_keys)}: {entity_key}")
 
             # Verify this entity is deleted
-            assert not arkiv_client_http.arkiv.entity_exists(entity_key), (
-                f"Entity {entity_key} should not exist after deletion"
-            )
+            assert not arkiv_client_http.arkiv.entity_exists(
+                entity_key, at_block=receipt.block_number
+            ), f"Entity {entity_key} should not exist after deletion"
 
         # Verify all entities are gone
         for entity_key in entity_keys:

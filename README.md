@@ -45,15 +45,16 @@ print(f"Account: {client.eth.default_account}")
 print(f"Balance: {client.from_wei(client.eth.get_balance(client.eth.default_account), 'ether')} ETH")
 
 # Create entity with data and annotations
-entity_key, tx_hash = client.arkiv.create_entity(
+entity_key, receipt = client.arkiv.create_entity(
     payload=b"Hello World!",
+    content_type="text/plain",
     annotations={"type": "greeting", "version": 1},
     btl=1000
 )
 
 # Check and print entity key
 exists = client.arkiv.entity_exists(entity_key)
-print(f"Created entity: {entity_key} (exists={exists}), creation TX: {tx_hash}")
+print(f"Created entity: {entity_key} (exists={exists}), creation TX: {receipt.tx_hash}")
 
 # Get individual entity and print its details
 entity = client.arkiv.get_entity(entity_key)

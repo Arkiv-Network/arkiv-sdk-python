@@ -61,12 +61,27 @@ echo "📌 Current version: $CURRENT_VERSION"
 echo ""
 
 # Run quality checks
-echo "🔍 Running quality checks..."
-./scripts/check-all.sh
+echo "🔍 Running pre-commit checks..."
+uv run --group lint pre-commit run --all-files
 if [ $? -ne 0 ]; then
-    echo "❌ Quality checks failed. Fix issues before publishing."
+    echo "❌ Linting checks failed. Fix issues before publishing."
     exit 1
 fi
+
+echo "🔬 Running type checks with mypy..."
+uv run --group lint mypy --strict src/
+if [ $? -ne 0 ]; then
+    echo "❌ Mypy checks failed. Fix issues before publishing."
+    exit 1
+fi
+
+echo "🧪 Running tests..."
+uv run --group test pytest -n auto
+if [ $? -ne 0 ]; then
+    echo "❌ Unit tests checks failed. Fix issues before publishing."
+    exit 1
+fi
+
 echo "✅ Quality checks passed!"
 echo ""
 
@@ -108,12 +123,12 @@ case $choice in
         echo "✅ Published to TestPyPI!"
         echo ""
         echo "📥 Test installation:"
-        echo "   uv pip install testcontainers
+        echo "   uv pip install testcontainers"
         echo "   uv pip install -i https://test.pypi.org/simple/ arkiv-sdk"
         ;;
     2)
         echo ""
-        read -p "⚠️  This will publish to PRODUCTION PyPI. Continue? (yes/no): " confirm
+        read -p "⚠️  This will publish to PRODUCTION PyPI. Continue? Answer with yes or no: " confirm
         if [ "$confirm" != "yes" ]; then
             echo "❌ Cancelled"
             exit 0
@@ -124,8 +139,8 @@ case $choice in
         echo ""
         echo "✅ Published to PyPI!"
         echo ""
-        echo "🏷️  Don't forget to tag the release:"
-        echo "   git tag -a v$CURRENT_VERSION -m 'Release version $CURRENT_VERSION'"
+        echo "🏷️  Do not forget to tag the release:"
+        echo "   git tag -a v$CURRENT_VERSION"
         echo "   git push origin v$CURRENT_VERSION"
         echo ""
         echo "📥 Users can now install:"

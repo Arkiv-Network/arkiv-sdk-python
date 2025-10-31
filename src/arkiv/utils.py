@@ -312,14 +312,14 @@ def to_rpc_query_options(
         "cursor": options.cursor,
     }
 
-    logger.info(f"RPC query options: {rpc_query_options}")
+    logger.debug(f"RPC query options: {rpc_query_options}")
     return rpc_query_options
 
 
 def to_entity(fields: int, response_item: dict[str, Any]) -> Entity:
     """Convert a low-level RPC query response to a high-level Entity."""
 
-    logger.info(f"Item: {response_item}")
+    logger.debug(f"Item: {response_item}")
 
     # Set defaults
     entity_key: EntityKey | None = None
@@ -392,14 +392,13 @@ def to_entity(fields: int, response_item: dict[str, Any]) -> Entity:
         annotations=annotations,
     )
 
-    logger.info(f"Entity: {entity}")
     return entity
 
 
 def to_query_result(fields: int, rpc_query_response: dict[str, Any]) -> QueryResult:
     """Convert a low-level RPC query response to a high-level QueryResult."""
 
-    logger.info(f"Raw query result(s): {rpc_query_response}")
+    logger.debug(f"Raw query result(s): {rpc_query_response}")
     if not rpc_query_response:
         raise ValueError("RPC query response is empty")
 
@@ -431,7 +430,7 @@ def to_query_result(fields: int, rpc_query_response: dict[str, Any]) -> QueryRes
         entities=entities, block_number=block_number, cursor=cursor
     )
 
-    logger.info(f"Query result: {query_result}")
+    logger.debug(f"Query result: {query_result}")
     return query_result
 
 
@@ -464,14 +463,14 @@ def to_event(
     | None
 ):
     """Convert a log receipt to event object."""
-    logger.info(f"Log: {log}")
+    logger.debug(f"Log: {log}")
 
     event_data: EventData = get_event_data(contract_, log)
     event_args: dict[str, Any] = event_data["args"]
     event_name = event_data["event"]
 
     entity_key: EntityKey = to_entity_key(event_args[ENTITY_KEY])
-    logger.info(
+    logger.debug(
         f"Processing event: {event_name}, entity_key: {entity_key}, owner_address: {event_args.get('ownerAddress')}"
     )
 

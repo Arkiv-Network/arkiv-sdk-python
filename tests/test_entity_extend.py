@@ -14,6 +14,9 @@ from .utils import bulk_create_entities, check_tx_hash
 logger = logging.getLogger(__name__)
 
 
+# @pytest.mark.skip(
+#     reason="Temporarily skipping until Arkiv node entity extensions work again"
+# )
 class TestEntityExtend:
     """Test cases for extend_entity function."""
 

@@ -13,6 +13,9 @@ from .utils import check_tx_hash
 logger = logging.getLogger(__name__)
 
 
+# @pytest.mark.skip(
+#    reason="Temporarily skipping until Arkiv node entity extensions work again"
+# )
 class TestAsyncEntityExtend:
     """Test cases for async extend_entity function."""
 
