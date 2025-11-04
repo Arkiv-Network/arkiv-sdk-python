@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from eth_typing import HexStr
+from eth_typing import ChecksumAddress, HexStr
 from web3.types import TxParams, TxReceipt
 
 from .events_async import AsyncEventFilter
@@ -19,6 +19,7 @@ from .types import (
     AsyncExtendCallback,
     AsyncUpdateCallback,
     Attributes,
+    ChangeOwnerOp,
     DeleteOp,
     Entity,
     EntityKey,
@@ -128,6 +129,22 @@ class AsyncArkivModule(ArkivModuleBase["AsyncArkiv"]):
 
         # Verify and return receipt
         self._check_operations(receipt.extensions, "extend", 1)
+        return receipt
+
+    async def change_owner(  # type: ignore[override]
+        self,
+        entity_key: EntityKey,
+        new_owner: ChecksumAddress,
+        tx_params: TxParams | None = None,
+    ) -> TransactionReceipt:
+        # Docstring inherited from ArkivModuleBase.change_owner
+        # Create the change owner operation and execute TX
+        change_owner_op = ChangeOwnerOp(entity_key=entity_key, new_owner=new_owner)
+        operations = Operations(change_owners=[change_owner_op])
+        receipt = await self.execute(operations, tx_params)
+
+        # Verify and return receipt
+        self._check_operations(receipt.change_owners, "change_owner", 1)
         return receipt
 
     async def delete_entity(  # type: ignore[override]
