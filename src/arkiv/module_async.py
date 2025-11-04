@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-import base64
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from eth_typing import HexStr
 from web3.types import TxParams, TxReceipt
@@ -408,18 +407,3 @@ class AsyncArkivModule(ArkivModuleBase["AsyncArkiv"]):
         self._active_filters.append(event_filter)
 
         return event_filter
-
-    async def _get_storage_value(self, entity_key: EntityKey) -> bytes:
-        """Get the storage value stored in the given entity (async)."""
-        # EntityKey is automatically converted by arkiv_munger
-        storage_value = base64.b64decode(
-            await self.client.eth.get_storage_value(entity_key)
-        )
-        logger.debug(f"Storage value (decoded): {storage_value!r}")
-        return storage_value
-
-    async def _get_entity_metadata(self, entity_key: EntityKey) -> dict[str, Any]:
-        """Get the metadata of the given entity (async)."""
-        # EntityKey is automatically converted by arkiv_munger
-        metadata: dict[str, Any] = await self.client.eth.get_entity_metadata(entity_key)
-        return self._check_entity_metadata(entity_key, metadata)

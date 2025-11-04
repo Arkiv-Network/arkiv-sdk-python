@@ -34,14 +34,12 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 from eth_typing import ChecksumAddress
-from web3 import Web3
 from web3.types import TxParams, TxReceipt
 
 from arkiv.types import (
     ALL,
     QUERY_OPTIONS_DEFAULT,
     Attributes,
-    Cursor,
     Entity,
     EntityKey,
     Operations,
@@ -72,8 +70,6 @@ class ArkivModuleBase(Generic[ClientT]):
     - Initialization (__init__)
     - Public API methods (execute, create_entity, update_entity, etc.)
     - Utility methods (_check_operations, _check_tx_and_get_receipt, etc.)
-    - Validation methods (_validate_query_entities_params, etc.)
-    - Helper methods (_build_query_result, etc.)
     """
 
     BTL_DEFAULT = (
@@ -480,74 +476,3 @@ class ArkivModuleBase(Generic[ClientT]):
 
         logger.debug(f"Arkiv receipt: {receipt}")
         return receipt
-
-    def _check_entity_metadata(
-        self, entity_key: str, metadata: dict[str, Any]
-    ) -> dict[str, Any]:
-        """Check and validate entity metadata structure."""
-        logger.info(f"Raw metadata: {metadata}")
-
-        # Basic validation of metadata content
-        if not metadata:
-            raise ValueError(f"Entity metadata is empty for entity key {entity_key}")
-
-        if "owner" not in metadata or "expiresAtBlock" not in metadata:
-            raise ValueError(
-                f"Entity metadata missing required fields for entity key {entity_key}: {metadata}"
-            )
-
-        return metadata
-
-    def _get_owner(self, metadata: dict[str, Any]) -> ChecksumAddress:
-        """Get the owner address of the given entity."""
-        owner_metadata = metadata.get("owner")
-        if not owner_metadata:
-            raise ValueError("Entity metadata missing required 'owner' field")
-        return Web3.to_checksum_address(owner_metadata)
-
-    def _get_expires_at_block(self, metadata: dict[str, Any]) -> int:
-        """Get the expiration block of the given entity."""
-        expires_at_block_metadata = metadata.get("expiresAtBlock")
-        if expires_at_block_metadata is None:
-            raise ValueError("Entity metadata missing required 'expiresAtBlock' field")
-        return int(expires_at_block_metadata)
-
-    def _get_metadata_numeric_field(
-        self, metadata: dict[str, Any], field_name: str
-    ) -> int:
-        """Get a numeric field from the entity metadata."""
-        field_value = metadata.get(field_name)
-        if field_value is None:
-            raise ValueError(f"Entity metadata missing required '{field_name}' field")
-        return int(field_value)
-
-    def _validate_query_entities_params(
-        self,
-        query: str | None,
-        limit: int | None,
-        at_block: int | str,
-        cursor: Cursor | None,
-    ) -> None:
-        """
-        Validate query_entities parameters.
-
-        Args:
-            query: SQL-like query string
-            cursor: Cursor from previous query result
-
-        Raises:
-            ValueError: If both query and cursor are provided, or if neither is provided.
-        """
-        logger.info(
-            f"query: '{query}', limit={limit}, at_block={at_block}, cursor={cursor}"
-        )
-
-        # Validate mutual exclusivity of query and cursor
-        if cursor is not None and query is not None:
-            raise ValueError("Cannot provide both query and cursor")
-
-        if cursor is None and query is None:
-            raise ValueError("Must provide either query or cursor")
-
-        if query is not None and len(query.strip()) == 0:
-            raise ValueError("Query string cannot be empty")
