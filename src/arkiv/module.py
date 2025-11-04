@@ -20,6 +20,7 @@ from .types import (
     NONE,
     QUERY_OPTIONS_DEFAULT,
     Attributes,
+    ChangeOwnerOp,
     CreateCallback,
     DeleteOp,
     Entity,
@@ -132,6 +133,22 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
 
         # Verify and return receipt
         self._check_operations(receipt.extensions, "extend", 1)
+        return receipt
+
+    def change_owner(
+        self,
+        entity_key: EntityKey,
+        new_owner: ChecksumAddress,
+        tx_params: TxParams | None = None,
+    ) -> TransactionReceipt:
+        # Docstring inherited from ArkivModuleBase.extend_entity
+        # Create the change owner operation and execute TX
+        change_owner_op = ChangeOwnerOp(entity_key=entity_key, new_owner=new_owner)
+        operations = Operations(change_owners=[change_owner_op])
+        receipt = self.execute(operations, tx_params)
+
+        # Verify and return receipt
+        self._check_operations(receipt.change_owners, "change_owner", 1)
         return receipt
 
     def delete_entity(

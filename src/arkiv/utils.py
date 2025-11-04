@@ -6,7 +6,7 @@ import logging
 from typing import Any
 
 import rlp  # type: ignore[import-untyped]
-import zstd
+import zstd  # type: ignore[import-untyped]
 from eth_typing import BlockNumber, ChecksumAddress, HexStr
 from hexbytes import HexBytes
 from web3 import Web3
@@ -49,7 +49,6 @@ from .types import (
     NumericAttributes,
     NumericAttributesRlp,
     Operations,
-    QueryEntitiesResult,
     QueryOptions,
     QueryResult,
     StringAttributes,
@@ -130,39 +129,6 @@ def check_and_set_entity_op_defaults(
         attributes = Attributes({})
 
     return payload, content_type, attributes, btl
-
-
-# TODO remove once transition to new arkiv api is complete
-def to_entity_legacy(query_result: QueryEntitiesResult) -> Entity:
-    """
-    Convert a QueryEntitiesResult to an Entity.
-
-    The query result only contains the entity key and payload (storage value).
-    Other fields (owner, expires_at_block, attributes) are not populated.
-
-    Args:
-        query_result: Low-level query result from the Arkiv node
-
-    Returns:
-        Entity with only the PAYLOAD field populated
-
-    Example:
-        >>> query_result = QueryEntitiesResult(
-        ...     entity_key=EntityKey("0x1234..."),
-        ...     storage_value=b"some data"
-        ... )
-        >>> entity = to_entity(query_result)
-        >>> assert entity.payload == b"some data"
-        >>> assert entity.owner is None  # Not populated by query
-    """
-    return Entity(
-        entity_key=query_result.entity_key,
-        fields=PAYLOAD,  # Only payload is populated from query results
-        owner=None,
-        expires_at_block=None,
-        payload=query_result.storage_value,
-        attributes=None,
-    )
 
 
 def check_entity_key(entity_key: Any | None, label: str | None = None) -> None:
@@ -677,7 +643,7 @@ def rlp_encode_transaction(tx: Operations) -> bytes:
         [
             [
                 entity_key_to_bytes(element.entity_key),
-                element.new_owner,
+                bytes.fromhex(element.new_owner[2:]),  # Convert address to bytes
             ]
             for element in tx.change_owners
         ],

@@ -29,7 +29,6 @@ This approach:
 
 from __future__ import annotations
 
-import base64
 import logging
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
@@ -46,13 +45,12 @@ from arkiv.types import (
     Entity,
     EntityKey,
     Operations,
-    QueryEntitiesResult,
     QueryOptions,
     QueryResult,
     TransactionReceipt,
     TxHash,
 )
-from arkiv.utils import to_entity_legacy, to_receipt
+from arkiv.utils import to_receipt
 
 from .contract import EVENTS_ABI, FUNCTIONS_ABI, STORAGE_ADDRESS
 
@@ -251,6 +249,40 @@ class ArkivModuleBase(Generic[ClientT]):
             - Owner cannot be changed via update (use transfer_owner for that)
         """
         raise NotImplementedError("Subclasses must implement update_entity()")
+
+    def change_owner(
+        self,
+        entity_key: EntityKey,
+        new_owner: ChecksumAddress,
+        tx_params: TxParams | None = None,
+    ) -> TransactionReceipt:
+        """
+        Change the owner of an entity.
+
+        Args:
+            entity_key: The entity key whose ownership to transfer
+            new_owner: The address of the new owner
+            tx_params: Optional transaction parameters
+
+        Returns:
+            TransactionReceipt with transaction details and ownership change events
+
+        Raises:
+            RuntimeError: If the transaction fails or entity doesn't exist
+            ValueError: If entity_key or new_owner is invalid
+
+        Example:
+            >>> receipt = client.arkiv.change_owner(
+            ...     entity_key=my_entity_key,
+            ...     new_owner="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
+            ... )
+
+        Note:
+            - When using AsyncArkiv, use 'await' before calling this method
+            - Only the current owner can transfer ownership
+            - New owner must be a valid Ethereum address
+        """
+        raise NotImplementedError("Subclasses must implement change_owner()")
 
     def extend_entity(
         self,
@@ -519,32 +551,3 @@ class ArkivModuleBase(Generic[ClientT]):
 
         if query is not None and len(query.strip()) == 0:
             raise ValueError("Query string cannot be empty")
-
-    def _build_query_result(self, raw_results: Any, block_number: int) -> QueryResult:
-        """
-        Build a QueryResult from raw RPC query results.
-
-        Args:
-            raw_results: Raw results from the RPC query_entities call
-            block_number: Block number at which the query was executed
-
-        Returns:
-            QueryResult with transformed entities and metadata
-        """
-        # Transform and log each result
-        entities: list[Entity] = []
-        for result in raw_results:
-            entity_result = QueryEntitiesResult(
-                entity_key=result.key, storage_value=base64.b64decode(result.value)
-            )
-            logger.info(f"Query result item: {entity_result}")
-            entities.append(to_entity_legacy(entity_result))
-
-        logger.info(f"Query returned {len(entities)} result(s)")
-
-        # Return query result (cursor-based pagination not yet implemented)
-        return QueryResult(
-            entities=entities,
-            block_number=block_number,
-            cursor=None,
-        )
