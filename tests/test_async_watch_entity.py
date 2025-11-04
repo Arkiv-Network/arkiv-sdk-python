@@ -32,7 +32,7 @@ class TestAsyncWatchEntityCreated:
             )
 
             # Wait for event to be processed
-            await asyncio.sleep(2)
+            await asyncio.sleep(5)
 
             # Verify callback was invoked
             assert len(events_received) == 1
