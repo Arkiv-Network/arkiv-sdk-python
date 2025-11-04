@@ -5,7 +5,7 @@ import logging
 import pytest
 
 from arkiv.client import Arkiv
-from arkiv.types import Annotations, CreateOp, DeleteOp, Operations
+from arkiv.types import Attributes, CreateOp, DeleteOp, Operations
 
 from .utils import bulk_create_entities, check_tx_hash
 
@@ -19,11 +19,11 @@ class TestEntityDelete:
         """Test deleting a single entity."""
         # First, create an entity to delete
         payload = b"Test entity for deletion"
-        annotations: Annotations = Annotations({"type": "test", "purpose": "deletion"})
+        attributes: Attributes = Attributes({"type": "test", "purpose": "deletion"})
         btl = 100
 
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
-            payload=payload, annotations=annotations, btl=btl
+            payload=payload, attributes=attributes, btl=btl
         )
 
         logger.info(f"Created entity {entity_key} for deletion test")
@@ -55,9 +55,9 @@ class TestEntityDelete:
         entity_keys = []
         for i in range(3):
             payload = f"Entity {i} for sequential deletion".encode()
-            annotations: Annotations = Annotations({"index": i, "batch": "sequential"})
+            attributes: Attributes = Attributes({"index": i, "batch": "sequential"})
             entity_key, _ = arkiv_client_http.arkiv.create_entity(
-                payload=payload, annotations=annotations, btl=150
+                payload=payload, attributes=attributes, btl=150
             )
             entity_keys.append(entity_key)
 
@@ -95,7 +95,7 @@ class TestEntityDelete:
             CreateOp(
                 payload=f"Bulk entity {i}".encode(),
                 content_type="text/plain",
-                annotations=Annotations({"batch": "bulk", "index": i}),
+                attributes=Attributes({"batch": "bulk", "index": i}),
                 btl=100,
             )
             for i in range(3)

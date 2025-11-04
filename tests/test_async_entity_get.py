@@ -9,7 +9,7 @@ from arkiv.types import (
     ALL,
     CONTENT_TYPE,
     PAYLOAD,
-    Annotations,
+    Attributes,
     EntityKey,
 )
 
@@ -26,7 +26,7 @@ class TestAsyncEntityGet:
         """Test retrieving an entity with async client."""
 
         # Create entity
-        entity_key, payload, content_type, annotations = await create_entity(
+        entity_key, payload, content_type, attributes = await create_entity(
             async_arkiv_client_http
         )
 
@@ -37,7 +37,7 @@ class TestAsyncEntityGet:
         assert entity.entity_key == entity_key, "Entity key should match"
         assert entity.payload == payload, "Payload should match"
         assert entity.content_type == content_type, "Content type should match"
-        assert entity.annotations == annotations, "Annotations should match"
+        assert entity.attributes == attributes, "Attributes should match"
         assert entity.owner is not None, "Owner should be populated"
         assert entity.owner == async_arkiv_client_http.eth.default_account, (
             "Owner should match default account"
@@ -54,7 +54,7 @@ class TestAsyncEntityGet:
         """Test retrieving entity with different field flags."""
 
         # Create entity
-        entity_key, payload, content_type, annotations = await create_entity(
+        entity_key, payload, content_type, attributes = await create_entity(
             async_arkiv_client_http
         )
 
@@ -65,7 +65,7 @@ class TestAsyncEntityGet:
         assert entity.payload == payload, "Payload should be retrieved"
         assert entity.content_type is None, "Content type should not be retrieved"
         assert entity.owner is None, "Owner should not be retrieved"
-        assert entity.annotations is None, "Annotations should not be retrieved"
+        assert entity.attributes is None, "Attributes should not be retrieved"
 
         # Test CONTENT_TYPE only
         entity = await async_arkiv_client_http.arkiv.get_entity(
@@ -75,18 +75,18 @@ class TestAsyncEntityGet:
         assert entity.content_type == content_type, "Content type should be retrieved"
         assert entity.owner is None, "Owner should not be retrieved"
         assert entity.expires_at_block is None, "Expiration should not be retrieved"
-        assert entity.annotations is None, "Annotations should not be retrieved"
+        assert entity.attributes is None, "Attributes should not be retrieved"
 
         # TODO investigate error: web3.exceptions.Web3RPCError: {'code': -32603, 'message': 'method handler crashed'}
-        # Test ANNOTATIONS only
+        # Test ATTRIBUTES only
         # entity = await async_arkiv_client_http.arkiv.get_entity(
-        #    entity_key, fields=ANNOTATIONS
+        #    entity_key, fields=ATTRIBUTES
         # )
         # assert entity.payload is None, "Payload should not be retrieved"
         # assert entity.content_type is None, "Content type should not be retrieved"
         # assert entity.owner is None, "Owner should not be retrieved"
         # assert entity.expires_at_block is None, "Expiration should not be retrieved"
-        # assert entity.annotations == annotations, "Annotations should be retrieved"
+        # assert entity.attributes == attributes, "Attributes should be retrieved"
 
         # Test ALL fields
         entity = await async_arkiv_client_http.arkiv.get_entity(entity_key, fields=ALL)
@@ -96,7 +96,7 @@ class TestAsyncEntityGet:
             "All: Content type should be retrieved"
         )
         assert entity.owner is not None, "All: Owner should be retrieved"
-        assert entity.annotations == annotations, "All: Annotations should be retrieved"
+        assert entity.attributes == attributes, "All: Attributes should be retrieved"
         assert entity.expires_at_block is not None, (
             "All: Expiration should be retrieved"
         )
@@ -114,9 +114,9 @@ class TestAsyncEntityGet:
         entity_keys = []
         for i in range(5):
             payload = f"Concurrent read test entity {i}".encode()
-            annotations = Annotations({"index": i, "batch": "concurrent_read"})
+            attributes = Attributes({"index": i, "batch": "concurrent_read"})
             entity_key, _tx_hash = await async_arkiv_client_http.arkiv.create_entity(
-                payload=payload, annotations=annotations, btl=100
+                payload=payload, attributes=attributes, btl=100
             )
             entity_keys.append(entity_key)
             logger.info(f"Created entity {i + 1}/5: {entity_key}")
@@ -132,9 +132,9 @@ class TestAsyncEntityGet:
             assert entity.payload == f"Concurrent read test entity {i}".encode(), (
                 f"Entity {i} payload should match"
             )
-            assert entity.annotations == Annotations(
+            assert entity.attributes == Attributes(
                 {"index": i, "batch": "concurrent_read"}
-            ), f"Entity {i} annotations should match"
+            ), f"Entity {i} attributes should match"
 
         logger.info("Successfully retrieved 5 entities concurrently")
 
@@ -163,18 +163,18 @@ class TestAsyncEntityGet:
 
 async def create_entity(
     arkiv_client_http: AsyncArkiv,
-) -> tuple[EntityKey, bytes, str, Annotations]:
+) -> tuple[EntityKey, bytes, str, Attributes]:
     # Create an entity with all data
     payload = b"Test entity data"
     content_type = "text/plain"
-    annotations = Annotations({"type": "test", "version": 1})
+    attributes = Attributes({"type": "test", "version": 1})
     btl = 100
 
     entity_key, _ = await arkiv_client_http.arkiv.create_entity(
         payload=payload,
         content_type=content_type,
-        annotations=annotations,
+        attributes=attributes,
         btl=btl,
     )
 
-    return entity_key, payload, content_type, annotations
+    return entity_key, payload, content_type, attributes

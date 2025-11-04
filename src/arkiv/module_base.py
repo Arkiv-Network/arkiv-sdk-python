@@ -41,7 +41,7 @@ from web3.types import TxParams, TxReceipt
 from arkiv.types import (
     ALL,
     QUERY_OPTIONS_DEFAULT,
-    Annotations,
+    Attributes,
     Cursor,
     Entity,
     EntityKey,
@@ -170,7 +170,7 @@ class ArkivModuleBase(Generic[ClientT]):
         self,
         payload: bytes | None = None,
         content_type: str | None = None,
-        annotations: Annotations | None = None,
+        attributes: Attributes | None = None,
         btl: int | None = None,
         tx_params: TxParams | None = None,
     ) -> tuple[EntityKey, TransactionReceipt]:
@@ -180,7 +180,7 @@ class ArkivModuleBase(Generic[ClientT]):
         Args:
             payload: Optional data payload for the entity (default: empty bytes)
             content_type: Optional content type for the payload (default: "application/octet-stream")
-            annotations: Optional key-value annotations as metadata
+            attributes: Optional key-value attributes as metadata
             btl: Blocks to live - entity lifetime in blocks (default: self.btl_default)
             tx_params: Optional transaction parameters (gas, gasPrice, etc.)
 
@@ -196,7 +196,7 @@ class ArkivModuleBase(Generic[ClientT]):
         Example:
             >>> entity_key, receipt = client.arkiv.create_entity(
             ...     payload=b"Hello, Arkiv!",
-            ...     annotations=Annotations({"type": "greeting", "version": 1}),
+            ...     attributes=Attributes({"type": "greeting", "version": 1}),
             ...     btl=1000
             ... )
             >>> print(f"Created entity: {entity_key}")
@@ -204,7 +204,7 @@ class ArkivModuleBase(Generic[ClientT]):
         Note:
             - When using AsyncArkiv, use 'await' before calling this method
             - Entity will expire after btl blocks from current block
-            - All annotations values must be strings or non-negative integers
+            - All attributes values must be strings or non-negative integers
         """
         raise NotImplementedError("Subclasses must implement create_entity()")
 
@@ -213,7 +213,7 @@ class ArkivModuleBase(Generic[ClientT]):
         entity_key: EntityKey,
         payload: bytes | None = None,
         content_type: str | None = None,
-        annotations: Annotations | None = None,
+        attributes: Attributes | None = None,
         btl: int | None = None,
         tx_params: TxParams | None = None,
     ) -> TransactionReceipt:
@@ -221,13 +221,13 @@ class ArkivModuleBase(Generic[ClientT]):
         Update an existing entity on the Arkiv storage contract.
 
         All provided fields will replace the existing values. If a field is not provided,
-        default values will be used (empty bytes for payload, empty dict for annotations).
+        default values will be used (empty bytes for payload, empty dict for attributes).
 
         Args:
             entity_key: The entity key of the entity to update
             payload: Optional new data payload (default: empty bytes)
             content_type: Optional new content type (default: "application/octet-stream")
-            annotations: Optional new annotations (default: empty dict)
+            attributes: Optional new attributes (default: empty dict)
             btl: New blocks to live from current block (default: self.btl_default)
             tx_params: Optional transaction parameters
 
@@ -242,7 +242,7 @@ class ArkivModuleBase(Generic[ClientT]):
             >>> receipt = client.arkiv.update_entity(
             ...     entity_key=my_entity_key,
             ...     payload=b"Updated content",
-            ...     annotations=Annotations({"status": "updated", "version": 2})
+            ...     attributes=Attributes({"status": "updated", "version": 2})
             ... )
 
         Note:
@@ -346,7 +346,7 @@ class ArkivModuleBase(Generic[ClientT]):
         Args:
             entity_key: The entity key to retrieve
             fields: Bitfield indicating which fields to retrieve (default: ALL)
-                   Use constants from types: KEY, ANNOTATIONS, PAYLOAD, CONTENT_TYPE,
+                   Use constants from types: KEY, ATTRIBUTES, PAYLOAD, CONTENT_TYPE,
                    EXPIRATION, OWNER, or combine with | operator
             at_block: Optional block number to query at (default: latest)
 
@@ -362,10 +362,10 @@ class ArkivModuleBase(Generic[ClientT]):
             >>> print(f"Owner: {entity.owner}")
 
             Get only specific fields:
-            >>> from arkiv.types import PAYLOAD, ANNOTATIONS
+            >>> from arkiv.types import PAYLOAD, ATTRIBUTES
             >>> entity = client.arkiv.get_entity(
             ...     entity_key,
-            ...     fields=PAYLOAD | ANNOTATIONS
+            ...     fields=PAYLOAD | ATTRIBUTES
             ... )
 
         Note:
@@ -383,7 +383,7 @@ class ArkivModuleBase(Generic[ClientT]):
 
         Args:
             query: SQL-like WHERE clause to filter entities
-                  Examples: "$key = 123", "$annotations.type = 'user'"
+                  Examples: "$key = 123", "$attributes.type = 'user'"
             options: QueryOptions for fields, pagination, and block number
                     - fields: Which entity fields to retrieve
                     - at_block: Block number to query at
@@ -400,17 +400,17 @@ class ArkivModuleBase(Generic[ClientT]):
             ValueError: If both query and cursor provided, or neither provided
 
         Example:
-            Query by annotation:
+            Query by attribute:
             >>> result = client.arkiv.query_entities(
-            ...     "$annotations.type = 'user'",
-            ...     options=QueryOptions(fields=PAYLOAD | ANNOTATIONS)
+            ...     "$attributes.type = 'user'",
+            ...     options=QueryOptions(fields=PAYLOAD | ATTRIBUTES)
             ... )
             >>> for entity in result.entities:
             ...     print(entity.payload)
 
             Query with pagination:
             >>> result = client.arkiv.query_entities(
-            ...     "$annotations.status = 'active'",
+            ...     "$attributes.status = 'active'",
             ...     options=QueryOptions(max_results_per_page=10)
             ... )
 

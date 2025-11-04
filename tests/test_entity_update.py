@@ -9,7 +9,7 @@ from web3.exceptions import Web3RPCError
 
 from arkiv.client import Arkiv
 from arkiv.types import (
-    Annotations,
+    Attributes,
     CreateOp,
     Operations,
     UpdateOp,
@@ -27,11 +27,11 @@ class TestEntityUpdate:
         """Test updating an entity's payload."""
         # Create an entity to update
         original_payload = b"Original payload"
-        annotations: Annotations = Annotations({"type": "test", "purpose": "update"})
+        attributes: Attributes = Attributes({"type": "test", "purpose": "update"})
         btl = 100
 
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
-            payload=original_payload, annotations=annotations, btl=btl
+            payload=original_payload, attributes=attributes, btl=btl
         )
 
         logger.info(f"Created entity {entity_key} for update test")
@@ -45,7 +45,7 @@ class TestEntityUpdate:
         # Update the entity with new payload
         new_payload = b"Updated payload"
         tx_receipt = arkiv_client_http.arkiv.update_entity(
-            entity_key, payload=new_payload, annotations=annotations, btl=btl
+            entity_key, payload=new_payload, attributes=attributes, btl=btl
         )
 
         label = "update_entity_payload"
@@ -58,39 +58,39 @@ class TestEntityUpdate:
 
         logger.info(f"{label}: Entity payload update successful")
 
-    def test_update_entity_annotations(self, arkiv_client_http: Arkiv) -> None:
-        """Test updating an entity's annotations."""
+    def test_update_entity_attributes(self, arkiv_client_http: Arkiv) -> None:
+        """Test updating an entity's attributes."""
         # Create an entity
         payload = b"Test payload"
-        original_annotations = Annotations({"status": "draft", "version": 1})
+        original_attributes = Attributes({"status": "draft", "version": 1})
         btl = 100
 
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
-            payload=payload, annotations=original_annotations, btl=btl
+            payload=payload, attributes=original_attributes, btl=btl
         )
 
-        logger.info(f"Created entity {entity_key} with original annotations")
+        logger.info(f"Created entity {entity_key} with original attributes")
 
-        # Verify original annotations
+        # Verify original attributes
         entity_before = arkiv_client_http.arkiv.get_entity(entity_key)
-        assert entity_before.annotations == original_annotations, (
-            "Original annotations should match"
+        assert entity_before.attributes == original_attributes, (
+            "Original attributes should match"
         )
 
-        # Update with new annotations
-        new_annotations = Annotations({"status": "published", "version": 2})
+        # Update with new attributes
+        new_attributes = Attributes({"status": "published", "version": 2})
         tx_receipt = arkiv_client_http.arkiv.update_entity(
-            entity_key, payload=payload, annotations=new_annotations, btl=btl
+            entity_key, payload=payload, attributes=new_attributes, btl=btl
         )
 
-        label = "update_annotations"
+        label = "update_attributes"
         check_tx_hash(label, tx_receipt)
 
-        # Verify annotations were updated
-        expected = replace(entity_before, annotations=new_annotations)
+        # Verify attributes were updated
+        expected = replace(entity_before, attributes=new_attributes)
         check_entity(label, arkiv_client_http, expected)
 
-        logger.info("Entity annotations update successful")
+        logger.info("Entity attributes update successful")
 
     def test_update_entity_multiple_times(self, arkiv_client_http: Arkiv) -> None:
         """Test updating the same entity multiple times."""
@@ -102,7 +102,7 @@ class TestEntityUpdate:
         # Verify original entity
         entity_before = arkiv_client_http.arkiv.get_entity(entity_key)
         assert entity_before.payload == b"Version 0", "Original payload should match"
-        assert entity_before.annotations == {}, "Original annotations should be {}"
+        assert entity_before.attributes == {}, "Original attributes should be {}"
 
         # Update multiple times
         versions = [b"Version 1", b"Version 2", b"Version 3"]
@@ -127,7 +127,7 @@ class TestEntityUpdate:
             CreateOp(
                 payload=f"Original entity {i}".encode(),
                 content_type="text/plain",
-                annotations=Annotations({"batch": "bulk", "index": i}),
+                attributes=Attributes({"batch": "bulk", "index": i}),
                 btl=100,
             )
             for i in range(3)
@@ -157,7 +157,7 @@ class TestEntityUpdate:
                 entity_key=key,
                 payload=f"Updated entity {i}".encode(),
                 content_type="text/plain",
-                annotations=Annotations({"batch": "bulk", "index": i, "updated": True}),
+                attributes=Attributes({"batch": "bulk", "index": i, "updated": True}),
                 btl=150,
             )
             for i, key in enumerate(entity_keys)
@@ -177,17 +177,19 @@ class TestEntityUpdate:
                 f"Expected {len(update_ops)} updates in receipt, got {len(receipt.updates)}"
             )
 
-        # Verify all payloads and annotations were updated
+        # Verify all payloads and attributes were updated
         for i in range(len(entity_keys)):
             expected = replace(
                 entities_before[i],
                 payload=f"Updated entity {i}".encode(),
-                annotations=Annotations({"batch": "bulk", "index": i, "updated": True}),
+                attributes=Attributes({"batch": "bulk", "index": i, "updated": True}),
             )
             check_entity(f"bulk_update_{i}", arkiv_client_http, expected)
 
         logger.info("Bulk update of entities successful")
 
+    # TODO re-enable test once arkiv node supports empty payloads
+    @pytest.mark.skip("setting/updating payload to b'' does not currently work")
     def test_update_entity_to_empty_payload(self, arkiv_client_http: Arkiv) -> None:
         """Test updating an entity with an empty payload."""
         # Create an entity with some payload
@@ -207,6 +209,8 @@ class TestEntityUpdate:
         expected = replace(entity_before, payload=b"")
         check_entity(label, arkiv_client_http, expected)
 
+    # TODO re-enable test once arkiv node supports empty payloads
+    @pytest.mark.skip("setting/updating payload to b'' does not currently work")
     def test_update_entity_from_empty_payload(self, arkiv_client_http: Arkiv) -> None:
         """Test updating an entity with an empty payload."""
         # Create an entity with some payload
@@ -267,13 +271,13 @@ class TestEntityUpdate:
         )
 
         # Delete the entity
-        delete_tx_hash = arkiv_client_http.arkiv.delete_entity(entity_key)
-        check_tx_hash("delete_before_update", delete_tx_hash)
+        receipt = arkiv_client_http.arkiv.delete_entity(entity_key)
+        check_tx_hash("delete_before_update", receipt)
 
         # Verify it's deleted
-        assert not arkiv_client_http.arkiv.entity_exists(entity_key), (
-            "Entity should be deleted"
-        )
+        assert not arkiv_client_http.arkiv.entity_exists(
+            entity_key, at_block=receipt.block_number
+        ), "Entity should be deleted"
 
         # Attempt to update should raise a Web3RPCError
         with pytest.raises(Web3RPCError) as exc_info:
@@ -334,33 +338,33 @@ class TestEntityUpdate:
             f"BTL extension successful: {initial_expiration} -> {expected.expires_at_block}"
         )
 
-    def test_update_entity_both_payload_and_annotations(
+    def test_update_entity_both_payload_and_attributes(
         self, arkiv_client_http: Arkiv
     ) -> None:
-        """Test updating both payload and annotations simultaneously."""
+        """Test updating both payload and attributes simultaneously."""
         # Create an entity
         original_payload = b"Original data"
-        original_annotations = Annotations({"version": 1, "status": "initial"})
+        original_attributes = Attributes({"version": 1, "status": "initial"})
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
-            payload=original_payload, annotations=original_annotations, btl=100
+            payload=original_payload, attributes=original_attributes, btl=100
         )
 
         # Get original entity
         entity_before = arkiv_client_http.arkiv.get_entity(entity_key)
 
-        # Update both payload and annotations
+        # Update both payload and attributes
         new_payload = b"New data"
-        new_annotations = Annotations({"version": 2, "status": "updated"})
+        new_attributes = Attributes({"version": 2, "status": "updated"})
         update_tx_hash = arkiv_client_http.arkiv.update_entity(
-            entity_key, payload=new_payload, annotations=new_annotations, btl=100
+            entity_key, payload=new_payload, attributes=new_attributes, btl=100
         )
         label = "update_both"
         check_tx_hash(label, update_tx_hash)
 
         # Verify both were updated
         expected = replace(
-            entity_before, payload=new_payload, annotations=new_annotations
+            entity_before, payload=new_payload, attributes=new_attributes
         )
         check_entity(label, arkiv_client_http, expected)
 
-        logger.info("Simultaneous payload and annotations update successful")
+        logger.info("Simultaneous payload and attributes update successful")

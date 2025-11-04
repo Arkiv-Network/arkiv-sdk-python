@@ -28,7 +28,7 @@ class TestAsyncWatchEntityCreated:
         try:
             # Create an entity
             entity_key, receipt = await async_arkiv_client_http.arkiv.create_entity(
-                payload=b"async test", annotations={"test": "async_created"}
+                payload=b"async test", attributes={"test": "async_created"}
             )
 
             # Wait for event to be processed
@@ -98,7 +98,7 @@ class TestAsyncWatchEntityUpdated:
             )
 
             receipt = await async_arkiv_client_http.arkiv.update_entity(
-                entity_key, payload=b"updated", annotations={"status": "updated"}
+                entity_key, payload=b"updated", attributes={"status": "updated"}
             )
 
             # Wait for event

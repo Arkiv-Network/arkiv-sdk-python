@@ -7,16 +7,13 @@ from eth_typing import HexStr
 from web3.exceptions import Web3RPCError
 
 from arkiv.client import Arkiv
-from arkiv.types import Annotations, CreateOp, ExtendOp, Operations
+from arkiv.types import Attributes, CreateOp, ExtendOp, Operations
 
 from .utils import bulk_create_entities, check_tx_hash
 
 logger = logging.getLogger(__name__)
 
 
-# @pytest.mark.skip(
-#     reason="Temporarily skipping until Arkiv node entity extensions work again"
-# )
 class TestEntityExtend:
     """Test cases for extend_entity function."""
 
@@ -25,11 +22,11 @@ class TestEntityExtend:
         # Create an entity to extend
         payload = b"Test entity for extension"
         content_type = "text/plain"
-        annotations: Annotations = Annotations({"type": "test", "purpose": "extension"})
+        attributes: Attributes = Attributes({"type": "test", "purpose": "extension"})
         btl = 100
 
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
-            payload=payload, content_type=content_type, annotations=annotations, btl=btl
+            payload=payload, content_type=content_type, attributes=attributes, btl=btl
         )
 
         logger.info(f"Created entity {entity_key} for extension test")
@@ -101,7 +98,7 @@ class TestEntityExtend:
             CreateOp(
                 payload=f"Bulk entity {i}".encode(),
                 content_type="text/plain",
-                annotations=Annotations({"batch": "bulk", "index": i}),
+                attributes=Attributes({"batch": "bulk", "index": i}),
                 btl=100,
             )
             for i in range(3)

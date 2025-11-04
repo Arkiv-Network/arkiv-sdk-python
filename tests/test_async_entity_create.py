@@ -5,7 +5,7 @@ import logging
 import pytest
 
 from arkiv import AsyncArkiv
-from arkiv.types import Annotations
+from arkiv.types import Attributes
 
 from .utils import check_entity_key, check_tx_hash
 
@@ -42,7 +42,7 @@ class TestAsyncEntityCreate:
         for i in range(3):
             entity_key, receipt = await async_arkiv_client_http.arkiv.create_entity(
                 payload=f"Async entity {i}".encode(),
-                annotations=Annotations({"index": i}),
+                attributes=Attributes({"index": i}),
             )
 
             # Verify individual entity_key and tx_hash formats

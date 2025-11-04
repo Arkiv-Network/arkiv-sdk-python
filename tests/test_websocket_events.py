@@ -71,7 +71,7 @@ def test_websocket_event_subscription_integration():
 
         # Create an entity
         entity_key, tx_hash = arkiv.arkiv.create_entity(
-            payload=b"test data", annotations={"test": "websocket"}
+            payload=b"test data", attributes={"test": "websocket"}
         )
 
         # Wait a moment for event to be received

@@ -6,6 +6,7 @@ import logging
 from typing import Any
 
 import rlp  # type: ignore[import-untyped]
+import zstd
 from eth_typing import BlockNumber, ChecksumAddress, HexStr
 from hexbytes import HexBytes
 from web3 import Web3
@@ -25,17 +26,17 @@ from .contract import (
     OWNER_ADDRESS,
     STORAGE_ADDRESS,
 )
-from .exceptions import AnnotationException, EntityKeyException
+from .exceptions import AttributeException, EntityKeyException
 from .types import (
     ALL,
-    ANNOTATIONS,
+    ATTRIBUTES,
     CONTENT_TYPE,
     EXPIRATION,
     KEY,
     MAX_RESULTS_PER_PAGE_DEFAULT,
     OWNER,
     PAYLOAD,
-    Annotations,
+    Attributes,
     ChangeOwnerEvent,
     CreateEvent,
     CreateOp,
@@ -45,14 +46,14 @@ from .types import (
     EntityKey,
     ExpiryEvent,
     ExtendEvent,
-    NumericAnnotations,
-    NumericAnnotationsRlp,
+    NumericAttributes,
+    NumericAttributesRlp,
     Operations,
     QueryEntitiesResult,
     QueryOptions,
     QueryResult,
-    StringAnnotations,
-    StringAnnotationsRlp,
+    StringAttributes,
+    StringAttributesRlp,
     TransactionReceipt,
     TxHash,
     UpdateEvent,
@@ -82,14 +83,14 @@ def entity_key_to_bytes(entity_key: EntityKey) -> bytes:
 def to_create_op(
     payload: bytes | None = None,
     content_type: str | None = None,
-    annotations: Annotations | None = None,
+    attributes: Attributes | None = None,
     btl: int | None = None,
 ) -> CreateOp:
-    payload, content_type, annotations, btl = check_and_set_entity_op_defaults(
-        payload, content_type, annotations, btl
+    payload, content_type, attributes, btl = check_and_set_entity_op_defaults(
+        payload, content_type, attributes, btl
     )
     return CreateOp(
-        payload=payload, content_type=content_type, annotations=annotations, btl=btl
+        payload=payload, content_type=content_type, attributes=attributes, btl=btl
     )
 
 
@@ -97,27 +98,27 @@ def to_update_op(
     entity_key: EntityKey,
     payload: bytes | None = None,
     content_type: str | None = None,
-    annotations: Annotations | None = None,
+    attributes: Attributes | None = None,
     btl: int | None = None,
 ) -> UpdateOp:
-    payload, content_type, annotations, btl = check_and_set_entity_op_defaults(
-        payload, content_type, annotations, btl
+    payload, content_type, attributes, btl = check_and_set_entity_op_defaults(
+        payload, content_type, attributes, btl
     )
     return UpdateOp(
         entity_key=entity_key,
-        payload=payload,
         content_type=content_type,
-        annotations=annotations,
         btl=btl,
+        payload=payload,
+        attributes=attributes,
     )
 
 
 def check_and_set_entity_op_defaults(
     payload: bytes | None,
     content_type: str | None,
-    annotations: Annotations | None,
+    attributes: Attributes | None,
     btl: int | None,
-) -> tuple[bytes, str, Annotations, int]:
+) -> tuple[bytes, str, Attributes, int]:
     """Check and set defaults for entity management arguments."""
     if btl is None:
         btl = BTL_DEFAULT
@@ -125,10 +126,10 @@ def check_and_set_entity_op_defaults(
         payload = b""
     if not content_type:
         content_type = CONTENT_TYPE_DEFAULT
-    if not annotations:
-        annotations = Annotations({})
+    if not attributes:
+        attributes = Attributes({})
 
-    return payload, content_type, annotations, btl
+    return payload, content_type, attributes, btl
 
 
 # TODO remove once transition to new arkiv api is complete
@@ -137,7 +138,7 @@ def to_entity_legacy(query_result: QueryEntitiesResult) -> Entity:
     Convert a QueryEntitiesResult to an Entity.
 
     The query result only contains the entity key and payload (storage value).
-    Other fields (owner, expires_at_block, annotations) are not populated.
+    Other fields (owner, expires_at_block, attributes) are not populated.
 
     Args:
         query_result: Low-level query result from the Arkiv node
@@ -160,7 +161,7 @@ def to_entity_legacy(query_result: QueryEntitiesResult) -> Entity:
         owner=None,
         expires_at_block=None,
         payload=query_result.storage_value,
-        annotations=None,
+        attributes=None,
     )
 
 
@@ -227,10 +228,13 @@ def to_tx_params(
         tx_params = {}
 
     # Merge provided tx_params with encoded transaction data
+    data = rlp_encode_transaction(operations)
+    data_compressed = zstd.compress(data)
+
     tx_params |= {
         "to": STORAGE_ADDRESS,
         "value": Web3.to_wei(0, "ether"),
-        "data": rlp_encode_transaction(operations),
+        "data": data_compressed,
     }
 
     return tx_params
@@ -302,7 +306,7 @@ def to_rpc_query_options(
         "atBlock": options.at_block,
         "includeData": {
             "key": options.fields & KEY != 0,
-            "annotations": options.fields & ANNOTATIONS != 0,
+            "attributes": options.fields & ATTRIBUTES != 0,
             "payload": options.fields & PAYLOAD != 0,
             "contentType": options.fields & CONTENT_TYPE != 0,
             "expiration": options.fields & EXPIRATION != 0,
@@ -319,7 +323,7 @@ def to_rpc_query_options(
 def to_entity(fields: int, response_item: dict[str, Any]) -> Entity:
     """Convert a low-level RPC query response to a high-level Entity."""
 
-    logger.debug(f"Item: {response_item}")
+    logger.info(f"Item: {response_item}")
 
     # Set defaults
     entity_key: EntityKey | None = None
@@ -327,7 +331,7 @@ def to_entity(fields: int, response_item: dict[str, Any]) -> Entity:
     expires_at_block: int | None = None
     payload: bytes | None = None
     content_type: str | None = None
-    annotations: Annotations | None = None
+    attributes: Attributes | None = None
 
     # Extract entity key if present
     if fields & KEY != 0:
@@ -364,19 +368,19 @@ def to_entity(fields: int, response_item: dict[str, Any]) -> Entity:
             raise ValueError("RPC query response item missing 'contentType' field")
         content_type = response_item.contentType
 
-    # Extract and merge annotations if present
-    if fields & ANNOTATIONS != 0:
-        string_annotations = (
-            response_item.stringAnnotations
-            if hasattr(response_item, "stringAnnotations")
+    # Extract and merge attributes if present
+    if fields & ATTRIBUTES != 0:
+        string_attributes = (
+            response_item.stringAttributes
+            if hasattr(response_item, "stringAttributes")
             else None
         )
-        numeric_annotations = (
-            response_item.numericAnnotations
-            if hasattr(response_item, "numericAnnotations")
+        numeric_attributes = (
+            response_item.numericAttributes
+            if hasattr(response_item, "numericAttributes")
             else None
         )
-        annotations = merge_annotations(string_annotations, numeric_annotations)
+        attributes = merge_attributes(string_attributes, numeric_attributes)
 
     entity = Entity(
         entity_key=entity_key,
@@ -389,7 +393,7 @@ def to_entity(fields: int, response_item: dict[str, Any]) -> Entity:
         operation_index=None,  # Not provided in query response
         payload=payload,
         content_type=content_type,
-        annotations=annotations,
+        attributes=attributes,
     )
 
     return entity
@@ -398,7 +402,7 @@ def to_entity(fields: int, response_item: dict[str, Any]) -> Entity:
 def to_query_result(fields: int, rpc_query_response: dict[str, Any]) -> QueryResult:
     """Convert a low-level RPC query response to a high-level QueryResult."""
 
-    logger.debug(f"Raw query result(s): {rpc_query_response}")
+    logger.info(f"Raw query result(s): {rpc_query_response}")
     if not rpc_query_response:
         raise ValueError("RPC query response is empty")
 
@@ -644,7 +648,7 @@ def rlp_encode_transaction(tx: Operations) -> bytes:
                 element.btl,
                 element.content_type,
                 element.payload,
-                *split_annotations(element.annotations),
+                *split_attributes(element.attributes),
             ]
             for element in tx.creates
         ],
@@ -655,7 +659,7 @@ def rlp_encode_transaction(tx: Operations) -> bytes:
                 element.content_type,
                 element.btl,
                 element.payload,
-                *split_annotations(element.annotations),
+                *split_attributes(element.attributes),
             ]
             for element in tx.updates
         ],
@@ -684,66 +688,64 @@ def rlp_encode_transaction(tx: Operations) -> bytes:
     return encoded
 
 
-def split_annotations(
-    annotations: Annotations | None = None,
-) -> tuple[StringAnnotationsRlp, NumericAnnotationsRlp]:
-    """Helper to split mixed annotations into string and numeric lists."""
-    string_annotations: StringAnnotationsRlp = StringAnnotationsRlp([])
-    numeric_annotations: NumericAnnotationsRlp = NumericAnnotationsRlp([])
+def split_attributes(
+    attributes: Attributes | None = None,
+) -> tuple[StringAttributesRlp, NumericAttributesRlp]:
+    """Helper to split mixed attributes into string and numeric lists."""
+    string_attributes: StringAttributesRlp = StringAttributesRlp([])
+    numeric_attributes: NumericAttributesRlp = NumericAttributesRlp([])
 
-    if annotations:
-        for key, value in annotations.items():
+    if attributes:
+        for key, value in attributes.items():
             if isinstance(value, int):
                 if value < 0:
-                    raise AnnotationException(
-                        f"Numeric annotations must be non-negative but found '{value}' for key '{key}'"
+                    raise AttributeException(
+                        f"Numeric attributes must be non-negative but found '{value}' for key '{key}'"
                     )
 
-                numeric_annotations.append((key, value))
+                numeric_attributes.append((key, value))
             else:
-                string_annotations.append((key, value))
+                string_attributes.append((key, value))
 
-    logger.debug(
-        f"Split annotations into {string_annotations} and {numeric_annotations}"
-    )
-    return string_annotations, numeric_annotations
+    logger.debug(f"Split attributes into {string_attributes} and {numeric_attributes}")
+    return string_attributes, numeric_attributes
 
 
-def merge_annotations(
-    string_annotations: StringAnnotations | None = None,
-    numeric_annotations: NumericAnnotations | None = None,
-) -> Annotations:
-    """Helper to merge string and numeric annotations into mixed annotations."""
-    annotations: Annotations = Annotations({})
+def merge_attributes(
+    string_attributes: StringAttributes | None = None,
+    numeric_attributes: NumericAttributes | None = None,
+) -> Attributes:
+    """Helper to merge string and numeric attributes into mixed attributes."""
+    attributes: Attributes = Attributes({})
 
-    if string_annotations:
+    if string_attributes:
         # example: [AttributeDict({'key': 'type', 'value': 'Greeting'})]
-        for element in string_annotations:
-            logger.debug(f"String annotation element: {element}")
+        for element in string_attributes:
+            logger.debug(f"String attribute element: {element}")
             # Filter out system attributes
             if element.key.startswith("$"):
                 continue
 
             if isinstance(element.value, str):
-                annotations[element.key] = element.value
+                attributes[element.key] = element.value
             else:
                 logger.warning(
-                    f"Unexpected string annotation, expected (str, str) but found: {element}, skipping ..."
+                    f"Unexpected string attribute, expected (str, str) but found: {element}, skipping ..."
                 )
 
-    if numeric_annotations:
+    if numeric_attributes:
         # example: [AttributeDict({'key': 'version', 'value': 1})]
-        for element in numeric_annotations:
-            logger.debug(f"Numeric annotation element: {element}")
+        for element in numeric_attributes:
+            logger.debug(f"Numeric attribute element: {element}")
             # Filter out system attributes
             if element.key.startswith("$"):
                 continue
 
             if isinstance(element.value, int):
-                annotations[element.key] = element.value
+                attributes[element.key] = element.value
             else:
                 logger.warning(
-                    f"Unexpected numeric annotation, expected (str, int) but found: {element}, skipping ..."
+                    f"Unexpected numeric attribute, expected (str, int) but found: {element}, skipping ..."
                 )
 
-    return annotations
+    return attributes

@@ -1,6 +1,6 @@
 # Arkiv SDK
 
-Arkiv is a permissioned storage system for decentralized apps, supporting flexible entities with binary data, annotations, and metadata.
+Arkiv is a permissioned storage system for decentralized apps, supporting flexible entities with binary data, attributes, and metadata.
 
 The Arkiv SDK is the official Python library for interacting with Arkiv networks. It offers a type-safe, developer-friendly API for managing entities, querying data, subscribing to events, and offchain verification—ideal for both rapid prototyping and production use.
 
@@ -44,11 +44,11 @@ print(f"Client: {client}, connected: {client.is_connected()}")
 print(f"Account: {client.eth.default_account}")
 print(f"Balance: {client.from_wei(client.eth.get_balance(client.eth.default_account), 'ether')} ETH")
 
-# Create entity with data and annotations
+# Create entity with data and attributes
 entity_key, receipt = client.arkiv.create_entity(
     payload=b"Hello World!",
     content_type="text/plain",
-    annotations={"type": "greeting", "version": 1},
+    attributes={"type": "greeting", "version": 1},
     btl=1000
 )
 
@@ -75,10 +75,10 @@ from arkiv import AsyncArkiv
 async def main():
     # Create async client with default settings
     async with AsyncArkiv() as client:
-        # Create entity with data and annotations
+        # Create entity with data and attributes
         entity_key, tx_hash = await client.arkiv.create_entity(
             payload=b"Hello Async World!",
-            annotations={"type": "greeting", "version": 1},
+            attributes={"type": "greeting", "version": 1},
             btl=1000
         )
 
@@ -117,7 +117,7 @@ client = Arkiv(provider, account=account)
 
 entity_key, tx_hash = client.arkiv.create_entity(
     payload=b"Hello World!",
-    annotations={"type": "greeting", "version": 1},
+    attributes={"type": "greeting", "version": 1},
     btl = 1000
 )
 
@@ -204,7 +204,7 @@ To make querying entities as simple and natural as possible, rely on a suitable 
 ```python
 # Query entities using SQL-like syntax
 results = client.arkiv.query_entities(
-    "SELECT entity_key, payload WHERE annotations.type = 'user' AND annotations.age > 18 ORDER BY annotations.name"
+    "SELECT entity_key, payload WHERE attributes.type = 'user' AND attributes.age > 18 ORDER BY attributes.name"
 )
 ```
 
@@ -231,7 +231,7 @@ next_page = client.arkiv.query("SELECT * FROM entities", cursor=page.next, max_p
 Querying entities should support sorting results by one or more fields.
 
 **Requirements:**
-- Sort by annotations (string and numeric)
+- Sort by attributes (string and numeric)
 - Sort by metadata (owner, expires_at_block)
 - Support ascending and descending order
 - Multi-field sorting with priority
@@ -240,7 +240,7 @@ Querying entities should support sorting results by one or more fields.
 ```python
 # SQL-style sorting
 results = client.arkiv.query(
-    "SELECT * FROM entities ORDER BY annotations.priority DESC, annotations.name ASC"
+    "SELECT * FROM entities ORDER BY attributes.priority DESC, attributes.name ASC"
 )
 ```
 
@@ -250,18 +250,18 @@ The transfer of large entities or many entities consumes considerable bandwidth.
 
 **Let users decide which parts of an entity to return:**
 - **Payload** - Binary data (can be large)
-- **Annotations** - Key-value metadata
+- **Attributes** - Key-value metadata
 - **Metadata** - Owner, expiration, timestamps
 
 **Current implementation:**
 The SDK already supports projections via the `fields` parameter using bitmask flags:
 ```python
-from arkiv.types import PAYLOAD, ANNOTATIONS, METADATA
+from arkiv.types import PAYLOAD, ATTRIBUTES, METADATA
 
-# Fetch only annotations (minimal bandwidth)
-entity = client.arkiv.get_entity(entity_key, fields=ANNOTATIONS)
+# Fetch only attributes (minimal bandwidth)
+entity = client.arkiv.get_entity(entity_key, fields=ATTRIBUTES)
 
-# Fetch payload and metadata (skip annotations)
+# Fetch payload and metadata (skip attributes)
 entity = client.arkiv.get_entity(entity_key, fields=PAYLOAD | METADATA)
 
 # Fetch everything (fields = ALL is default)
@@ -292,7 +292,7 @@ existence_map = client.arkiv.entities_exist([key1, key2, key3])
 ### Other Features
 
 - **Ownership Transfer**: The creating account is the owner of the entity.
-Only the owner can update the entity (payload, annotations, expires_at_block).
+Only the owner can update the entity (payload, attributes, expires_at_block).
 A mechanism to transfer entity ownership should be provided.
   ```python
   # Proposed API
@@ -307,7 +307,7 @@ Flags can only be set at creation and define entity behavior:
   # Proposed API
   client.arkiv.create_entity(
       payload=b"data",
-      annotations={"type": "public"},
+      attributes={"type": "public"},
       expires_at_block=future_block,
       flags=EntityFlags.READ_ONLY | EntityFlags.PUBLIC_EXTENSION
   )

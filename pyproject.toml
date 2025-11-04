@@ -21,7 +21,9 @@ classifiers = [
     "Topic :: System :: Distributed Computing",
 ]
 dependencies = [
+    "brotli>=1.1.0",
     "web3>=7.13.0,<7.14.0",
+    "zstd>=1.5.7.2",
 ]
 
 [project.urls]

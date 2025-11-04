@@ -3,7 +3,7 @@
 import logging
 
 from arkiv import Arkiv
-from arkiv.types import Annotations, EntityKey
+from arkiv.types import Attributes, EntityKey
 from arkiv.utils import is_entity_key
 
 from .utils import bulk_create_entities
@@ -107,9 +107,9 @@ class TestEntityExists:
         """Test that entity_exists and get_entity are consistent."""
         # Create entity
         payload = b"consistency test"
-        annotations = Annotations({"test": "consistency"})
+        attributes = Attributes({"test": "consistency"})
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
-            payload=payload, annotations=annotations, btl=1000
+            payload=payload, attributes=attributes, btl=1000
         )
 
         # Both methods should agree it exists
@@ -119,7 +119,7 @@ class TestEntityExists:
         assert exists is True
         assert entity.entity_key == entity_key
         assert entity.payload == payload
-        assert entity.annotations == annotations
+        assert entity.attributes == attributes
 
     def test_entity_exists_with_bulk_created_entities(
         self, arkiv_client_http: Arkiv
@@ -132,7 +132,7 @@ class TestEntityExists:
             CreateOp(
                 payload=f"bulk entity {i}".encode(),
                 content_type="text/plain",
-                annotations=Annotations({}),
+                attributes=Attributes({}),
                 btl=1000,
             )
             for i in range(5)

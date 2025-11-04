@@ -6,7 +6,7 @@ from threading import Event as ThreadEvent
 
 import pytest
 
-from arkiv.types import Annotations, TxHash, UpdateEvent, UpdateOp
+from arkiv.types import Attributes, TxHash, UpdateEvent, UpdateOp
 
 from .utils import bulk_update_entities
 
@@ -22,7 +22,7 @@ class TestWatchEntityUpdated:
         # Setup: Create an entity first
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
             payload=b"initial data",
-            annotations=Annotations({"version": "1"}),
+            attributes=Attributes({"version": "1"}),
             btl=100,
         )
 
@@ -45,7 +45,7 @@ class TestWatchEntityUpdated:
             receipt = arkiv_client_http.arkiv.update_entity(
                 entity_key=entity_key,
                 payload=b"updated data",
-                annotations=Annotations({"version": "2"}),
+                attributes=Attributes({"version": "2"}),
                 btl=100,
             )
 
@@ -252,21 +252,21 @@ class TestWatchEntityUpdated:
                     entity_key=entity_keys[0],
                     payload=b"bulk update 1",
                     content_type="text/plain",
-                    annotations=Annotations({}),
+                    attributes=Attributes({}),
                     btl=100,
                 ),
                 UpdateOp(
                     entity_key=entity_keys[1],
                     payload=b"bulk update 2",
                     content_type="text/plain",
-                    annotations=Annotations({}),
+                    attributes=Attributes({}),
                     btl=100,
                 ),
                 UpdateOp(
                     entity_key=entity_keys[2],
                     payload=b"bulk update 3",
                     content_type="text/plain",
-                    annotations=Annotations({}),
+                    attributes=Attributes({}),
                     btl=100,
                 ),
             ]
@@ -354,7 +354,7 @@ class TestWatchEntityUpdated:
         # Create entity
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
             payload=b"initial payload",
-            annotations=Annotations({"key": "value"}),
+            attributes=Attributes({"key": "value"}),
             btl=100,
         )
 
@@ -372,11 +372,11 @@ class TestWatchEntityUpdated:
         )
 
         try:
-            # Update only payload (keep same annotations and btl)
+            # Update only payload (keep same attributes and btl)
             arkiv_client_http.arkiv.update_entity(
                 entity_key=entity_key,
                 payload=b"new payload only",
-                annotations=Annotations({"key": "value"}),  # Same annotations
+                attributes=Attributes({"key": "value"}),  # Same attributes
                 btl=100,  # Same BTL
             )
 
@@ -391,12 +391,12 @@ class TestWatchEntityUpdated:
         finally:
             event_filter.uninstall()
 
-    def test_watch_entity_updated_only_annotations(self, arkiv_client_http):
-        """Test update event when only annotations change."""
+    def test_watch_entity_updated_only_attributes(self, arkiv_client_http):
+        """Test update event when only attributes change."""
         # Create entity
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
             payload=b"same payload",
-            annotations=Annotations({"version": "1"}),
+            attributes=Attributes({"version": "1"}),
             btl=100,
         )
 
@@ -414,17 +414,17 @@ class TestWatchEntityUpdated:
         )
 
         try:
-            # Update only annotations (keep same payload and btl)
+            # Update only attributes (keep same payload and btl)
             arkiv_client_http.arkiv.update_entity(
                 entity_key=entity_key,
                 payload=b"same payload",  # Same payload
-                annotations=Annotations({"version": "2"}),  # Different annotations
+                attributes=Attributes({"version": "2"}),  # Different attributes
                 btl=100,  # Same BTL
             )
 
             # Should trigger callback
             assert callback_triggered.wait(timeout=10.0), (
-                "Callback was not triggered for annotations-only update"
+                "Callback was not triggered for attributes-only update"
             )
 
             assert len(received_events) == 1

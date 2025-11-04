@@ -3,9 +3,9 @@ Test parallel entity creation with multiple Arkiv clients and accounts.
 
 - Threaded pseudo-parallelism: each thread runs a client and creates entities
 - Local: auto-create/fund accounts; External: use .env accounts
-- Random payload and annotations
+- Random payload and attributes
 - Pytest parameterization for number of clients/entities
-- Entity verification (payload + annotations)
+- Entity verification (payload + attributes)
 - No cleanup
 """
 
@@ -24,7 +24,7 @@ from web3 import Web3
 from web3.exceptions import Web3RPCError
 
 from arkiv import Arkiv
-from arkiv.types import Annotations, CreateOp, EntityKey
+from arkiv.types import Attributes, CreateOp, EntityKey
 from tests.conftest import arkiv_client_http
 
 from .utils import create_account, create_entities
@@ -60,8 +60,8 @@ def random_payload(size: int = 128) -> bytes:
     return os.urandom(size)
 
 
-def random_annotations(client: int, entity_no: int) -> Annotations:
-    return Annotations(
+def random_attributes(client: int, entity_no: int) -> Attributes:
+    return Attributes(
         {
             "client": client,
             "entity": entity_no,
@@ -81,16 +81,16 @@ def client_creation_task(
     client_idx: int,
     num_tx: int,
     batch_size: int,
-) -> list[tuple[EntityKey, bytes, Annotations]]:
+) -> list[tuple[EntityKey, bytes, Attributes]]:
     """
     Create entities and return them with their expected data for later verification.
 
     Returns:
-        List of tuples (entity_key, expected_payload, expected_annotations)
+        List of tuples (entity_key, expected_payload, expected_attributes)
     """
     global tx_counter
 
-    created_entities: list[tuple[EntityKey, bytes, Annotations]] = []
+    created_entities: list[tuple[EntityKey, bytes, Attributes]] = []
 
     for tx_no in range(num_tx):
         # Prepare entities for this transaction
@@ -98,30 +98,30 @@ def client_creation_task(
         for entity_no in range(batch_size):
             entity_index = tx_no * batch_size + entity_no
             payload = random_payload()
-            annotations = random_annotations(client_idx, entity_index)
+            attributes = random_attributes(client_idx, entity_index)
             btl = random_btl()
-            entities_in_batch.append((payload, annotations, btl))
+            entities_in_batch.append((payload, attributes, btl))
 
         # Create entity/entities based on batch_size
         try:
             if batch_size == 1:
                 # Single entity creation
-                payload, annotations, btl = entities_in_batch[0]
+                payload, attributes, btl = entities_in_batch[0]
                 try:
                     entity_key, tx_hash = client.arkiv.create_entity(
-                        payload=payload, annotations=annotations, btl=btl
+                        payload=payload, attributes=attributes, btl=btl
                     )
                     logger.info(
                         f"Entity creation TX[{client_idx}][{tx_no}]: {tx_hash} (1 entity)"
                     )
-                    created_entities.append((entity_key, payload, annotations))
+                    created_entities.append((entity_key, payload, attributes))
                 except HTTPError as e:
                     logger.error(f"Error creating entity[{client_idx}][{tx_no}]: {e}")
                     continue
             else:
                 # Bulk entity creation
                 create_ops = [
-                    CreateOp(payload=p, annotations=a, btl=b)
+                    CreateOp(payload=p, attributes=a, btl=b)
                     for p, a, b in entities_in_batch
                 ]
                 try:
@@ -133,8 +133,8 @@ def client_creation_task(
                     )
                     # Store all created entities with their expected data
                     for i, entity_key in enumerate(entity_keys):
-                        payload, annotations, btl = entities_in_batch[i]
-                        created_entities.append((entity_key, payload, annotations))
+                        payload, attributes, btl = entities_in_batch[i]
+                        created_entities.append((entity_key, payload, attributes))
                 except HTTPError as e:
                     logger.error(f"Error creating entities[{client_idx}][{tx_no}]: {e}")
                     continue
@@ -153,7 +153,7 @@ def client_creation_task(
 def verify_entities_task(
     client: Arkiv,
     client_idx: int,
-    entities_to_verify: list[tuple[EntityKey, bytes, Annotations]],
+    entities_to_verify: list[tuple[EntityKey, bytes, Attributes]],
     verify_sample_size: int,
 ) -> int:
     """
@@ -162,7 +162,7 @@ def verify_entities_task(
     Args:
         client: Arkiv client to use for verification
         client_idx: Client index for logging
-        entities_to_verify: List of (entity_key, expected_payload, expected_annotations)
+        entities_to_verify: List of (entity_key, expected_payload, expected_attributes)
         verify_sample_size: Number of entities to verify (0=none, -1=all, N=random sample)
 
     Returns:
@@ -190,7 +190,7 @@ def verify_entities_task(
     )
 
     local_verified = 0
-    for idx, (entity_key, expected_payload, expected_annotations) in enumerate(
+    for idx, (entity_key, expected_payload, expected_attributes) in enumerate(
         sample_to_verify
     ):
         try:
@@ -205,11 +205,11 @@ def verify_entities_task(
                 )
                 continue
 
-            # Verify annotations
-            if entity.annotations != expected_annotations:
+            # Verify attributes
+            if entity.attributes != expected_attributes:
                 logger.warning(
-                    f"Entity annotations mismatch[{client_idx}][{idx}]: "
-                    f"{entity.annotations} != {expected_annotations}"
+                    f"Entity attributes mismatch[{client_idx}][{idx}]: "
+                    f"{entity.attributes} != {expected_attributes}"
                 )
                 continue
 
@@ -262,7 +262,7 @@ def setup_clients(rpc_url: str, num_clients: int) -> list[Arkiv]:
 
 def run_creation_phase(
     clients: list[Arkiv], num_tx: int, batch_size: int
-) -> tuple[list[list[tuple[EntityKey, bytes, Annotations]]], float, int]:
+) -> tuple[list[list[tuple[EntityKey, bytes, Attributes]]], float, int]:
     """
     Execute Phase 1: Create entities in parallel across all clients.
 
@@ -285,7 +285,7 @@ def run_creation_phase(
     creation_start_time = time.time()
 
     # Store results from each thread
-    creation_results: list[list[tuple[EntityKey, bytes, Annotations]]] = [
+    creation_results: list[list[tuple[EntityKey, bytes, Attributes]]] = [
         [] for _ in range(len(clients))
     ]
 
@@ -330,7 +330,7 @@ def run_creation_phase(
 
 def run_verification_phase(
     clients: list[Arkiv],
-    creation_results: list[list[tuple[EntityKey, bytes, Annotations]]],
+    creation_results: list[list[tuple[EntityKey, bytes, Attributes]]],
     verify_sample_size: int,
     sync_delay: float = 2.0,
 ) -> tuple[int, float]:

@@ -7,7 +7,7 @@ from web3.types import TxParams
 
 from arkiv.account import NamedAccount
 from arkiv.types import (
-    Annotations,
+    Attributes,
     CreateOp,
     DeleteOp,
     Entity,
@@ -28,17 +28,17 @@ WALLET_PASSWORD_ENV_PREFIX = "WALLET_PASSWORD"
 logger = logging.getLogger(__name__)
 
 
-def get_custom_annotations(entity: Entity) -> Annotations:
-    """Extract custom annotations from an entity, excluding standard fields."""
-    custom_annotations = {
-        key: value for key, value in entity.annotations.items() if key[0] != "$"
+def get_custom_attributes(entity: Entity) -> Attributes:
+    """Extract custom attributes from an entity, excluding standard fields."""
+    custom_attributes = {
+        key: value for key, value in entity.attributes.items() if key[0] != "$"
     }
-    return Annotations(custom_annotations)
+    return Attributes(custom_attributes)
 
 
 def check_tx_hash(label: str, tx_receipt: TransactionReceipt) -> None:
     """Check transaction hash validity."""
-    logger.debug(f"{label}: Checking transaction hash {tx_receipt.tx_hash}")
+    logger.debug(f"{label}: Checking tx hash in tx receipt: {tx_receipt}")
     assert tx_receipt.tx_hash is not None, (
         f"{label}: Transaction hash should not be None"
     )
@@ -76,7 +76,7 @@ def check_entity(label: str, client: "Arkiv", expected: Entity) -> None:
         - entity_key must be equal
         - owner must be equal
         - payload must be equal
-        - annotations must be equal
+        - attributes must be equal
         - actual expires_at_block must be >= expected expires_at_block
     """
     logger.info(f"{label}: Fetching and comparing entity {expected.entity_key}")
@@ -102,10 +102,10 @@ def check_entity(label: str, client: "Arkiv", expected: Entity) -> None:
         f"actual: {actual.payload!r}, expected: {expected.payload!r}"
     )
 
-    # Check annotations
-    assert actual.annotations == expected.annotations, (
-        f"{label}: Annotations do not match - "
-        f"actual: {actual.annotations}, expected: {expected.annotations}"
+    # Check attributes
+    assert actual.attributes == expected.attributes, (
+        f"{label}: Attributes do not match - "
+        f"actual: {actual.attributes}, expected: {expected.attributes}"
     )
 
     # Check expires_at_block (actual must be >= expected)

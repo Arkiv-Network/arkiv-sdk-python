@@ -8,9 +8,9 @@ from web3 import Web3
 from web3.types import Nonce, TxParams, Wei
 
 from arkiv.contract import STORAGE_ADDRESS
-from arkiv.exceptions import AnnotationException, EntityKeyException
+from arkiv.exceptions import AttributeException, EntityKeyException
 from arkiv.types import (
-    Annotations,
+    Attributes,
     CreateOp,
     DeleteOp,
     EntityKey,
@@ -22,7 +22,7 @@ from arkiv.utils import (
     check_entity_key,
     entity_key_to_bytes,
     rlp_encode_transaction,
-    split_annotations,
+    split_attributes,
     to_entity_key,
     to_tx_params,
 )
@@ -30,66 +30,66 @@ from arkiv.utils import (
 logger = logging.getLogger(__name__)
 
 
-class TestSplitAnnotations:
-    """Test cases for split_annotations function."""
+class TestSplitAttributes:
+    """Test cases for split_attributes function."""
 
-    def test_split_annotations_empty(self) -> None:
-        """Test split_annotations with None input."""
-        string_annotations, numeric_annotations = split_annotations(None)
+    def test_split_attributes_empty(self) -> None:
+        """Test split_attributes with None input."""
+        string_attributes, numeric_attributes = split_attributes(None)
 
-        assert string_annotations == []
-        assert numeric_annotations == []
+        assert string_attributes == []
+        assert numeric_attributes == []
 
-    def test_split_annotations_empty_dict(self) -> None:
-        """Test split_annotations with empty dict."""
-        string_annotations, numeric_annotations = split_annotations(None)
+    def test_split_attributes_empty_dict(self) -> None:
+        """Test split_attributes with empty dict."""
+        string_attributes, numeric_attributes = split_attributes(None)
 
-        assert string_annotations == []
-        assert numeric_annotations == []
+        assert string_attributes == []
+        assert numeric_attributes == []
 
-    def test_split_annotations_only_strings(self) -> None:
-        """Test split_annotations with only string values."""
-        annotations: Annotations = Annotations(
+    def test_split_attributes_only_strings(self) -> None:
+        """Test split_attributes with only string values."""
+        attributes: Attributes = Attributes(
             {
                 "name": "test",
                 "greeting": "hello world",
             }
         )
-        string_annotations, numeric_annotations = split_annotations(annotations)
+        string_attributes, numeric_attributes = split_attributes(attributes)
 
-        assert len(string_annotations) == 2
-        assert len(numeric_annotations) == 0
+        assert len(string_attributes) == 2
+        assert len(numeric_attributes) == 0
 
-        # Check string annotations
-        logging.info(f"String Annotations: {string_annotations}")
-        assert string_annotations[0][0] == "name"  # key of first annotation
-        assert string_annotations[0][1] == "test"  # value of first annotation
-        assert string_annotations[1][0] == "greeting"  # key of second annotation
-        assert string_annotations[1][1] == "hello world"  # value of second annotation
+        # Check string attributes
+        logging.info(f"String Attributes: {string_attributes}")
+        assert string_attributes[0][0] == "name"  # key of first attribute
+        assert string_attributes[0][1] == "test"  # value of first attribute
+        assert string_attributes[1][0] == "greeting"  # key of second attribute
+        assert string_attributes[1][1] == "hello world"  # value of second attribute
 
-    def test_split_annotations_only_integers(self) -> None:
-        """Test split_annotations with only integer values."""
-        annotations: Annotations = Annotations(
+    def test_split_attributes_only_integers(self) -> None:
+        """Test split_attributes with only integer values."""
+        attributes: Attributes = Attributes(
             {
                 "priority": 1,
                 "version": 42,
             }
         )
-        string_annotations, numeric_annotations = split_annotations(annotations)
+        string_attributes, numeric_attributes = split_attributes(attributes)
 
-        assert len(string_annotations) == 0
-        assert len(numeric_annotations) == 2
+        assert len(string_attributes) == 0
+        assert len(numeric_attributes) == 2
 
-        # Check numeric annotations
-        logging.info(f"Numeric Annotations: {numeric_annotations}")
-        assert numeric_annotations[0][0] == "priority"  # key of first annotation
-        assert numeric_annotations[0][1] == 1  # value of first annotation
-        assert numeric_annotations[1][0] == "version"  # key of second annotation
-        assert numeric_annotations[1][1] == 42  # value of second annotation
+        # Check numeric attributes
+        logging.info(f"Numeric Attributes: {numeric_attributes}")
+        assert numeric_attributes[0][0] == "priority"  # key of first attribute
+        assert numeric_attributes[0][1] == 1  # value of first attribute
+        assert numeric_attributes[1][0] == "version"  # key of second attribute
+        assert numeric_attributes[1][1] == 42  # value of second attribute
 
-    def test_split_annotations_mixed(self) -> None:
-        """Test split_annotations with mixed string and integer values."""
-        annotations: Annotations = Annotations(
+    def test_split_attributes_mixed(self) -> None:
+        """Test split_attributes with mixed string and integer values."""
+        attributes: Attributes = Attributes(
             {
                 "name": "test entity",
                 "priority": 5,
@@ -97,37 +97,37 @@ class TestSplitAnnotations:
                 "count": 100,
             }
         )
-        string_annotations, numeric_annotations = split_annotations(annotations)
+        string_attributes, numeric_attributes = split_attributes(attributes)
 
-        assert len(string_annotations) == 2
-        assert len(numeric_annotations) == 2
+        assert len(string_attributes) == 2
+        assert len(numeric_attributes) == 2
 
-        # Check all annotations are present (order may vary due to dict)
-        string_keys = {a[0] for a in string_annotations}
-        numeric_keys = {a[0] for a in numeric_annotations}
+        # Check all attributes are present (order may vary due to dict)
+        string_keys = {a[0] for a in string_attributes}
+        numeric_keys = {a[0] for a in numeric_attributes}
 
         assert string_keys == {"name", "category"}
         assert numeric_keys == {"priority", "count"}
 
-    def test_split_annotations_validates_zero(self) -> None:
-        """Test that split_annotations validates zero integers."""
-        annotations: Annotations = Annotations({"zeroIsValid": 0})
+    def test_split_attributes_validates_zero(self) -> None:
+        """Test that split_attributes validates zero integers."""
+        attributes: Attributes = Attributes({"zeroIsValid": 0})
 
-        string_annotations, numeric_annotations = split_annotations(annotations)
-        assert string_annotations == []
-        assert len(numeric_annotations) == 1
-        assert numeric_annotations[0][0] == "zeroIsValid"
-        assert numeric_annotations[0][1] == 0
+        string_attributes, numeric_attributes = split_attributes(attributes)
+        assert string_attributes == []
+        assert len(numeric_attributes) == 1
+        assert numeric_attributes[0][0] == "zeroIsValid"
+        assert numeric_attributes[0][1] == 0
 
-    def test_split_annotations_validates_non_negative_integers(self) -> None:
-        """Test that split_annotations validates non-negative integers."""
-        annotations: Annotations = Annotations({"invalid": -1})
+    def test_split_attributes_validates_non_negative_integers(self) -> None:
+        """Test that split_attributes validates non-negative integers."""
+        attributes: Attributes = Attributes({"invalid": -1})
 
         with pytest.raises(
-            AnnotationException,
-            match="Numeric annotations must be non-negative but found '-1' for key 'invalid'",
+            AttributeException,
+            match="Numeric attributes must be non-negative but found '-1' for key 'invalid'",
         ):
-            split_annotations(annotations)
+            split_attributes(attributes)
 
 
 class TestToCreateOperation:
@@ -139,17 +139,17 @@ class TestToCreateOperation:
             payload=b"",
             content_type="",
             btl=0,
-            annotations=Annotations({}),
+            attributes=Attributes({}),
         )
         assert op.payload == b""
         assert op.btl == 0
-        assert op.annotations == Annotations({})
+        assert op.attributes == Attributes({})
 
-    def test_create_op_with_annotations(self) -> None:
-        """Test CreateOp with annotations."""
+    def test_create_op_with_attributes(self) -> None:
+        """Test CreateOp with attributes."""
         payload = b"sample data"
         btl = 100
-        annotations: Annotations = Annotations(
+        attributes: Attributes = Attributes(
             {
                 "name": "example",
                 "version": 2,
@@ -160,12 +160,12 @@ class TestToCreateOperation:
             payload=payload,
             content_type="",
             btl=btl,
-            annotations=annotations,
+            attributes=attributes,
         )
 
         assert op.payload == payload
         assert op.btl == btl
-        assert op.annotations == annotations
+        assert op.attributes == attributes
 
 
 class TestToTxParams:
@@ -174,7 +174,7 @@ class TestToTxParams:
     def test_to_tx_params_minimal(self) -> None:
         """Test to_tx_params with minimal operations."""
         create_op = CreateOp(
-            payload=b"minimal", content_type="", btl=0, annotations=Annotations({})
+            payload=b"minimal", content_type="", btl=0, attributes=Attributes({})
         )
         operations = Operations(creates=[create_op])
 
@@ -191,7 +191,7 @@ class TestToTxParams:
             payload=b"test data",
             content_type="text/plain",
             btl=100,
-            annotations=Annotations(
+            attributes=Attributes(
                 {
                     "name": "test",
                     "priority": 1,
@@ -213,7 +213,7 @@ class TestToTxParams:
             payload=b"test",
             content_type="text/plain",
             btl=0,
-            annotations=Annotations({}),
+            attributes=Attributes({}),
         )
         operations = Operations(creates=[create_op])
         additional_params: TxParams = {
@@ -240,7 +240,7 @@ class TestToTxParams:
             payload=b"test",
             content_type="text/plain",
             btl=0,
-            annotations=Annotations({}),
+            attributes=Attributes({}),
         )
         operations = Operations(creates=[create_op])
         conflicting_params: TxParams = {
@@ -266,7 +266,7 @@ class TestToTxParams:
             payload=b"test",
             content_type="text/plain",
             btl=0,
-            annotations=Annotations({}),
+            attributes=Attributes({}),
         )
         operations = Operations(creates=[create_op])
 
@@ -286,7 +286,7 @@ class TestRlpEncodeTransaction:
             payload=b"",
             content_type="",
             btl=0,
-            annotations=Annotations({}),
+            attributes=Attributes({}),
         )
         operations = Operations(creates=[create_op])
 
@@ -301,7 +301,7 @@ class TestRlpEncodeTransaction:
             payload=b"test data",
             content_type="text/plain",
             btl=1000,
-            annotations=Annotations({"name": "test", "priority": 5}),
+            attributes=Attributes({"name": "test", "priority": 5}),
         )
         operations = Operations(creates=[create_op])
 
@@ -320,7 +320,7 @@ class TestRlpEncodeTransaction:
             payload=b"updated data",
             content_type="text/plain",
             btl=2000,
-            annotations=Annotations({"status": "updated", "version": 2}),
+            attributes=Attributes({"status": "updated", "version": 2}),
         )
         operations = Operations(updates=[update_op])
 
@@ -361,7 +361,7 @@ class TestRlpEncodeTransaction:
             payload=b"create data",
             content_type="text/plain",
             btl=1000,
-            annotations=Annotations({"type": "mixed_test", "batch": 1}),
+            attributes=Attributes({"type": "mixed_test", "batch": 1}),
         )
 
         entity_key_obj = EntityKey(
@@ -372,7 +372,7 @@ class TestRlpEncodeTransaction:
             payload=b"update data",
             content_type="text/plain",
             btl=1500,
-            annotations=Annotations({"status": "modified", "revision": 3}),
+            attributes=Attributes({"status": "modified", "revision": 3}),
         )
 
         delete_op = DeleteOp(entity_key=entity_key_obj)
@@ -396,14 +396,14 @@ class TestRlpEncodeTransaction:
             payload=b"first entity",
             content_type="text/plain",
             btl=1000,
-            annotations=Annotations({"name": "first", "id": 1}),
+            attributes=Attributes({"name": "first", "id": 1}),
         )
 
         create_op2 = CreateOp(
             payload=b"second entity",
             content_type="text/plain",
             btl=2000,
-            annotations=Annotations({"name": "second", "id": 2}),
+            attributes=Attributes({"name": "second", "id": 2}),
         )
 
         operations = Operations(creates=[create_op1, create_op2])
@@ -413,13 +413,13 @@ class TestRlpEncodeTransaction:
         assert isinstance(encoded, bytes)
         assert len(encoded) > 0
 
-    def test_rlp_encode_no_annotations(self) -> None:
-        """Test RLP encoding with operations that have no annotations."""
+    def test_rlp_encode_no_attributes(self) -> None:
+        """Test RLP encoding with operations that have no attributes."""
         create_op = CreateOp(
-            payload=b"no annotations",
+            payload=b"no attributes",
             content_type="text/plain",
             btl=500,
-            annotations=Annotations({}),
+            attributes=Attributes({}),
         )
         operations = Operations(creates=[create_op])
 

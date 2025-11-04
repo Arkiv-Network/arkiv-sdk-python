@@ -5,7 +5,7 @@ from threading import Event as ThreadEvent
 
 import pytest
 
-from arkiv.types import Annotations, CreateEvent, CreateOp, TxHash
+from arkiv.types import Attributes, CreateEvent, CreateOp, TxHash
 
 from .utils import create_entities
 
@@ -34,7 +34,7 @@ class TestWatchEntityCreated:
             # Create an entity - this should trigger the callback
             entity_key, receipt = arkiv_client_http.arkiv.create_entity(
                 payload=b"test data",
-                annotations=Annotations({"test": "value"}),
+                attributes=Attributes({"test": "value"}),
                 btl=100,
             )
 
@@ -205,19 +205,19 @@ class TestWatchEntityCreated:
                 CreateOp(
                     payload=b"bulk entity 1",
                     content_type="text/plain",
-                    annotations=Annotations({}),
+                    attributes=Attributes({}),
                     btl=100,
                 ),
                 CreateOp(
                     payload=b"bulk entity 2",
                     content_type="text/plain",
-                    annotations=Annotations({}),
+                    attributes=Attributes({}),
                     btl=100,
                 ),
                 CreateOp(
                     payload=b"bulk entity 3",
                     content_type="text/plain",
-                    annotations=Annotations({}),
+                    attributes=Attributes({}),
                     btl=100,
                 ),
             ]

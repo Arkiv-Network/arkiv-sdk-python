@@ -20,10 +20,10 @@ from pathlib import Path
 image_path = Path("punk_icon.png")
 image_data = image_path.read_bytes()
 
-# Store image directly on Arkiv with metadata as annotations
+# Store image directly on Arkiv with metadata as attributes
 entity_key, tx_hash = client.arkiv.create_entity(
     payload=image_data,  # Raw PNG bytes
-    annotations={
+    attributes={
         "name": "CryptoPunk#1234",
         "collection": "cryptopunks",
         "token_id": 1234,
@@ -61,7 +61,7 @@ punks_with_beanie = client.arkiv.query_all_entities(
 - Profile avatars
 - Small generative art
 
-**Note**: For larger images (>100KB), see "File Vault" use case below or combine with IPFS and put the IPFS hash in annotations.
+**Note**: For larger images (>100KB), see "File Vault" use case below or combine with IPFS and put the IPFS hash in attributes.
 
 ---
 
@@ -81,7 +81,7 @@ chunk_keys = []
 for i in range(0, len(file_data), CHUNK_SIZE):
     chunk_key, _ = client.arkiv.create_entity(
         payload=file_data[i:i + CHUNK_SIZE],
-        annotations={"file_hash": file_hash, "chunk_index": i // CHUNK_SIZE},
+        attributes={"file_hash": file_hash, "chunk_index": i // CHUNK_SIZE},
         btl=100_000_000
     )
     chunk_keys.append(chunk_key)
@@ -89,7 +89,7 @@ for i in range(0, len(file_data), CHUNK_SIZE):
 # Create manifest
 manifest_key, _ = client.arkiv.create_entity(
     payload=file_hash.encode(),
-    annotations={
+    attributes={
         "type": "file_manifest",
         "file_name": "video.mp4",
         "chunk_keys": ",".join(chunk_keys),
@@ -101,7 +101,7 @@ manifest_key, _ = client.arkiv.create_entity(
 manifest = client.arkiv.get_entity(manifest_key)
 reconstructed = b"".join(
     client.arkiv.get_entity(k).payload
-    for k in manifest.annotations["chunk_keys"].split(",")
+    for k in manifest.attributes["chunk_keys"].split(",")
 )
 ```
 
@@ -134,7 +134,7 @@ player_state = client.arkiv.create_entity(
         "position": {"x": 123, "y": 456},
         "quests": {"main_story": 5, "side_quests": 12}
     }),
-    annotations={
+    attributes={
         "player_id": player_address,
         "level": 15,
         "guild": "dragons",
@@ -146,16 +146,16 @@ player_state = client.arkiv.create_entity(
 
 # Update 1000x cheaper than L2
 entity = arkiv.get_entity(entity_key)
-client.arkiv.update_entity(payload=entity.payload, annotations=entity.annotations | {"level": 16})
+client.arkiv.update_entity(payload=entity.payload, attributes=entity.attributes | {"level": 16})
 
 # Query all online guild members
 players = client.arkiv.query_entities(
-    "SELECT * WHERE annotations.guild = 'dragons' AND annotations.online = 1"
+    "SELECT * WHERE attributes.guild = 'dragons' AND attributes.online = 1"
 )
 
 # Find players for PVP matchmaking
 opponents = client.arkiv.query_entities(
-    "SELECT * WHERE annotations.pvp_rating BETWEEN 1800 AND 1900"
+    "SELECT * WHERE attributes.pvp_rating BETWEEN 1800 AND 1900"
 )
 ```
 
@@ -185,7 +185,7 @@ opponents = client.arkiv.query_entities(
 # User posts
 post = client.arkiv.create_entity(
     payload=post_content.encode(),
-    annotations={
+    attributes={
         "author": user_address,
         "timestamp": block_number,
         "type": "post",
@@ -202,7 +202,7 @@ if likes > 1000:
 
 # Query feed
 feed = client.arkiv.query_entities(
-    "SELECT * WHERE annotations.author IN (following_list) ORDER BY timestamp DESC LIMIT 50"
+    "SELECT * WHERE attributes.author IN (following_list) ORDER BY timestamp DESC LIMIT 50"
 )
 ```
 
@@ -233,7 +233,7 @@ feed = client.arkiv.query_entities(
 # Create proposal
 proposal = client.arkiv.create_entity(
     payload=full_proposal_markdown.encode(),
-    annotations={
+    attributes={
         "dao": "uniswap",
         "type": "proposal",
         "proposal_id": some_unique_id,
@@ -250,18 +250,18 @@ proposal = client.arkiv.create_entity(
 arkiv.update_entity(
     proposal_key,
     payload=proposal.payload,  # Same text
-    annotations={"votes_for": 1234, "votes_against": 567, "status": "passed"},
+    attributes={"votes_for": 1234, "votes_against": 567, "status": "passed"},
     btl=100_000_000  # Keep for historical record
 )
 
 # Query all active proposals
 proposals = client.arkiv.query_entities(
-    "SELECT * WHERE annotations.dao = 'uniswap' AND annotations.status = 'active'"
+    "SELECT * WHERE attributes.dao = 'uniswap' AND attributes.status = 'active'"
 )
 
 # Historical analysis
 history = client.arkiv.query_entities(
-    "SELECT * WHERE annotations.dao = 'uniswap' AND annotations.status = 'passed' ORDER BY timestamp DESC"
+    "SELECT * WHERE attributes.dao = 'uniswap' AND attributes.status = 'passed' ORDER BY timestamp DESC"
 )
 ```
 
@@ -291,7 +291,7 @@ history = client.arkiv.query_entities(
 # Price oracle writes every block
 btc_price_data = client.arkiv.create_entity(
     payload=b'',
-    annotations={
+    attributes={
         "price": 3450230000, # price as int
         "block": block_number,
         "timestamp": timestamp,
@@ -335,7 +335,7 @@ historical = client.arkiv.query_entities(
 # Product shipment tracking
 shipment_key = client.arkiv.create_entity(
     payload=shipment_document_pdf,
-    annotations={
+    attributes={
         "type": "shipment",
         "tracking_id": "SHIP-12345",
         "company": "acme_corp",
@@ -347,7 +347,7 @@ shipment_key = client.arkiv.create_entity(
 
 status_key = client.arkiv.create_entity(
     payload=b''
-    annotations={
+    attributes={
         "type": "shipment_status",
         "shipment_key": shipment_key,
         "status": "in_transit",
@@ -359,7 +359,7 @@ status_key = client.arkiv.create_entity(
 
 delivery_key = client.arkiv.create_entity(
     payload=b''
-    annotations={
+    attributes={
         "type": "shipment_status",
         "shipment_key": shipment_key,
         "status": "delivered",
@@ -375,7 +375,7 @@ delivery_key = client.arkiv.create_entity(
 client.arkiv.update_entity(
     shipment_key,
     payload=updated_document_pdf,
-    annotations=annotations | {
+    attributes=attributes | {
         "status": "delivered",
         "delivery": delivery_key,
     }
@@ -423,7 +423,7 @@ report = client.arkiv.query_entities(
 # Store model weights hash + metadata
 model_entity_key = client.arkiv.create_entity(
     payload=model_metadata_json.encode(),
-    annotations={
+    attributes={
         "model_hash": ipfs_cid,
         "version": "v2.1.3",
         "training_data_hash": dataset_hash,
@@ -436,7 +436,7 @@ model_entity_key = client.arkiv.create_entity(
 # Track experiments
 experiment = client.arkiv.create_entity(
     payload=hyperparameters_json.encode(),
-    annotations={
+    attributes={
         "experiment_id": "exp-456",
         "model_key": model_entity_key,
         "validation_data_hash": ipfs_cid,
@@ -451,13 +451,13 @@ experiment = client.arkiv.create_entity(
 
 # Provable model lineage
 lineage = client.arkiv.query_entities(
-    "SELECT * WHERE annotations.training_data_hash = ? ORDER BY version",
+    "SELECT * WHERE attributes.training_data_hash = ? ORDER BY version",
     params=[dataset_hash]
 )
 
 # Find best models
 best = client.arkiv.query_entities(
-    "SELECT * WHERE annotations.accuracy > 95 ORDER BY accuracy DESC LIMIT 10"
+    "SELECT * WHERE attributes.accuracy > 95 ORDER BY accuracy DESC LIMIT 10"
 )
 ```
 
@@ -533,7 +533,7 @@ client = Arkiv()
 # Start building
 entity_key, tx_hash = client.arkiv.create_entity(
     payload=b"Your data here",
-    annotations={"type": "example", "version": 1},
+    attributes={"type": "example", "version": 1},
 )
 
 # Query your data

@@ -5,7 +5,7 @@ class EntityKeyException(Exception):
     pass
 
 
-class AnnotationException(Exception):
+class AttributeException(Exception):
     pass
 
 

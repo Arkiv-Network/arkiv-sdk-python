@@ -399,9 +399,6 @@ class TestWatchEntityExtended:
         finally:
             event_filter.uninstall()
 
-    @pytest.mark.skip(
-        reason="Temporarily skipping until Arkiv node entity extensions work again"
-    )
     def test_watch_entity_extended_expiration_tracking(self, arkiv_client_http):
         """Test that extend events correctly track old and new expiration blocks."""
         # Create entity with specific BTL

@@ -19,7 +19,7 @@ from .types import (
     ALL,
     NONE,
     QUERY_OPTIONS_DEFAULT,
-    Annotations,
+    Attributes,
     CreateCallback,
     DeleteOp,
     Entity,
@@ -73,14 +73,14 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
         self,
         payload: bytes | None = None,
         content_type: str | None = None,
-        annotations: Annotations | None = None,
+        attributes: Attributes | None = None,
         btl: int | None = None,
         tx_params: TxParams | None = None,
     ) -> tuple[EntityKey, TransactionReceipt]:
         # Docstring inherited from ArkivModuleBase.create_entity
         # Create operation and execute TX
         create_op = to_create_op(
-            payload=payload, content_type=content_type, annotations=annotations, btl=btl
+            payload=payload, content_type=content_type, attributes=attributes, btl=btl
         )
         operations = Operations(creates=[create_op])
         receipt = self.execute(operations, tx_params)
@@ -98,7 +98,7 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
         entity_key: EntityKey,
         payload: bytes | None = None,
         content_type: str | None = None,
-        annotations: Annotations | None = None,
+        attributes: Attributes | None = None,
         btl: int | None = None,
         tx_params: TxParams | None = None,
     ) -> TransactionReceipt:
@@ -108,7 +108,7 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
             entity_key=entity_key,
             payload=payload,
             content_type=content_type,
-            annotations=annotations,
+            attributes=attributes,
             btl=btl,
         )
         operations = Operations(updates=[update_op])

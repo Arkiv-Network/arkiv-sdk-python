@@ -15,11 +15,11 @@ from .types import (
     ALL,
     NONE,
     QUERY_OPTIONS_DEFAULT,
-    Annotations,
     AsyncCreateCallback,
     AsyncDeleteCallback,
     AsyncExtendCallback,
     AsyncUpdateCallback,
+    Attributes,
     DeleteOp,
     Entity,
     EntityKey,
@@ -70,14 +70,14 @@ class AsyncArkivModule(ArkivModuleBase["AsyncArkiv"]):
         self,
         payload: bytes | None = None,
         content_type: str | None = None,
-        annotations: Annotations | None = None,
+        attributes: Attributes | None = None,
         btl: int | None = None,
         tx_params: TxParams | None = None,
     ) -> tuple[EntityKey, TransactionReceipt]:
         # Docstring inherited from ArkivModuleBase.create_entity
         # Create the operation and execute TX
         create_op = to_create_op(
-            payload=payload, content_type=content_type, annotations=annotations, btl=btl
+            payload=payload, content_type=content_type, attributes=attributes, btl=btl
         )
         operations = Operations(creates=[create_op])
         receipt = await self.execute(operations, tx_params)
@@ -95,7 +95,7 @@ class AsyncArkivModule(ArkivModuleBase["AsyncArkiv"]):
         entity_key: EntityKey,
         payload: bytes | None = None,
         content_type: str | None = None,
-        annotations: Annotations | None = None,
+        attributes: Attributes | None = None,
         btl: int | None = None,
         tx_params: TxParams | None = None,
     ) -> TransactionReceipt:
@@ -105,7 +105,7 @@ class AsyncArkivModule(ArkivModuleBase["AsyncArkiv"]):
             entity_key=entity_key,
             payload=payload,
             content_type=content_type,
-            annotations=annotations,
+            attributes=attributes,
             btl=btl,
         )
         operations = Operations(updates=[update_op])

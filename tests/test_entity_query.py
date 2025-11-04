@@ -5,7 +5,7 @@ import uuid
 import pytest
 
 from arkiv import Arkiv
-from arkiv.types import ALL, Annotations, Cursor
+from arkiv.types import ALL, Attributes, Cursor
 from arkiv.utils import to_query_options
 
 
@@ -88,18 +88,18 @@ class TestQueryEntitiesParameterValidation:
 class TestQueryEntitiesBasic:
     """Test basic entity querying functionality."""
 
-    def test_query_entities_by_annotation(self, arkiv_client_http: Arkiv) -> None:
-        """Test querying entities by annotation value."""
+    def test_query_entities_by_attribute(self, arkiv_client_http: Arkiv) -> None:
+        """Test querying entities by attribute value."""
         # Generate a unique ID without special characters (UUID without hyphens)
         shared_id = str(uuid.uuid4()).replace("-", "")
 
-        # Create 3 entities with the same 'id' annotation
+        # Create 3 entities with the same 'id' attribute
         entity_keys = []
         for i in range(3):
             entity_key, _ = arkiv_client_http.arkiv.create_entity(
                 payload=f"Entity {i}".encode(),
                 content_type="text/plain",
-                annotations=Annotations({"id": shared_id}),
+                attributes=Attributes({"id": shared_id}),
                 btl=100,  # Set blocks to live (required by Arkiv node)
             )
             entity_keys.append(entity_key)

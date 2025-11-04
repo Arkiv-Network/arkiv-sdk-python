@@ -5,7 +5,7 @@ import logging
 import pytest
 
 from arkiv import AsyncArkiv
-from arkiv.types import Annotations
+from arkiv.types import Attributes
 from arkiv.utils import check_entity_key
 
 from .utils import check_tx_hash
@@ -23,18 +23,18 @@ class TestAsyncEntityUpdate:
         """Test updating an entity with async client."""
         # Create entity
         original_payload = b"Original payload"
-        original_annotations = Annotations({"status": "initial", "version": 1})
+        original_attributes = Attributes({"status": "initial", "version": 1})
         entity_key, _tx_hash = await async_arkiv_client_http.arkiv.create_entity(
-            payload=original_payload, annotations=original_annotations, btl=100
+            payload=original_payload, attributes=original_attributes, btl=100
         )
 
         # Update entity
         new_payload = b"Updated payload"
-        new_annotations = Annotations({"status": "updated", "version": 2})
+        new_attributes = Attributes({"status": "updated", "version": 2})
         update_tx_hash = await async_arkiv_client_http.arkiv.update_entity(
             entity_key=entity_key,
             payload=new_payload,
-            annotations=new_annotations,
+            attributes=new_attributes,
             btl=150,
         )
 
@@ -44,7 +44,7 @@ class TestAsyncEntityUpdate:
         # Verify entity was updated
         entity = await async_arkiv_client_http.arkiv.get_entity(entity_key)
         assert entity.payload == new_payload, "Payload should be updated"
-        assert entity.annotations == new_annotations, "Annotations should be updated"
+        assert entity.attributes == new_attributes, "Attributes should be updated"
 
         logger.info(f"Updated async entity: {entity_key} (tx: {update_tx_hash})")
 
@@ -58,7 +58,7 @@ class TestAsyncEntityUpdate:
         for i in range(3):
             entity_key, _tx_hash = await async_arkiv_client_http.arkiv.create_entity(
                 payload=f"Entity {i}".encode(),
-                annotations=Annotations({"index": i, "version": 1}),
+                attributes=Attributes({"index": i, "version": 1}),
             )
             entity_keys.append(entity_key)
 
@@ -67,7 +67,7 @@ class TestAsyncEntityUpdate:
             update_tx_hash = await async_arkiv_client_http.arkiv.update_entity(
                 entity_key=entity_key,
                 payload=f"Updated entity {i}".encode(),
-                annotations=Annotations({"index": i, "version": 2}),
+                attributes=Attributes({"index": i, "version": 2}),
             )
             # Verify individual entity_key and tx_hash formats
             check_entity_key(entity_key, f"test_async_update_entities_sequentially_{i}")
@@ -80,6 +80,6 @@ class TestAsyncEntityUpdate:
         for i, entity_key in enumerate(entity_keys):
             entity = await async_arkiv_client_http.arkiv.get_entity(entity_key)
             assert entity.payload == f"Updated entity {i}".encode()
-            assert entity.annotations == Annotations({"index": i, "version": 2})
+            assert entity.attributes == Attributes({"index": i, "version": 2})
 
         logger.info("Successfully updated 3 entities sequentially")

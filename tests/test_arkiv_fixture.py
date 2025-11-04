@@ -106,10 +106,6 @@ def test_arkiv_transfer_eth_account(
     logger.info("Arkiv ETH transfer between accounts succeeded (to: NamedAccount)")
 
 
-# TODO: Fix flaky test - timing issue with balance assertion after transfer
-# The test occasionally fails because the balance check happens before the
-# transaction is fully processed. Need to add proper wait/retry logic.
-# @pytest.mark.skip(reason="Flaky test due to timing issue with balance assertion")
 def test_arkiv_transfer_eth_address(
     arkiv_client_http: Arkiv, account_1: NamedAccount, account_2: NamedAccount
 ) -> None:

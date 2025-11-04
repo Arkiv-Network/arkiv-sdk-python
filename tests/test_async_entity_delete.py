@@ -5,7 +5,7 @@ import logging
 import pytest
 
 from arkiv import AsyncArkiv
-from arkiv.types import Annotations
+from arkiv.types import Attributes
 from arkiv.utils import check_entity_key
 
 from .utils import check_tx_hash
@@ -24,7 +24,7 @@ class TestAsyncEntityDelete:
         # Create an entity to delete
         entity_key, create_tx_hash = await async_arkiv_client_http.arkiv.create_entity(
             payload=b"Test entity for async deletion",
-            annotations=Annotations({"type": "test"}),
+            attributes=Attributes({"type": "test"}),
             btl=100,
         )
 
@@ -57,7 +57,7 @@ class TestAsyncEntityDelete:
         for i in range(3):
             entity_key, _tx_hash = await async_arkiv_client_http.arkiv.create_entity(
                 payload=f"Entity {i}".encode(),
-                annotations=Annotations({"index": i}),
+                attributes=Attributes({"index": i}),
                 btl=100,
             )
             entity_keys.append(entity_key)

@@ -483,9 +483,9 @@ class TestProviderBuilderAsyncMode:
             assert isinstance(provider_ws, WebSocketProvider)
             assert provider_ws.endpoint_uri == node.ws_url
 
-    def test_async_mode_return_type_annotation(self) -> None:
+    def test_async_mode_return_type_attribute(self) -> None:
         """Test that async providers are correctly typed."""
-        # This test mainly validates type annotations work correctly
+        # This test mainly validates type attributes work correctly
         sync_provider: BaseProvider = ProviderBuilder().localhost().build()
         async_provider: AsyncBaseProvider = (
             ProviderBuilder().localhost().async_mode().build()

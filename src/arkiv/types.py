@@ -11,14 +11,14 @@ from web3.datastructures import AttributeDict
 
 # Field bitmask values to specify which entity fields are populated
 KEY = 1
-ANNOTATIONS = 2
+ATTRIBUTES = 2
 PAYLOAD = 4
 CONTENT_TYPE = 8
 EXPIRATION = 16
 OWNER = 32
 
 NONE = 0
-ALL = KEY | ANNOTATIONS | PAYLOAD | CONTENT_TYPE | EXPIRATION | OWNER
+ALL = KEY | ATTRIBUTES | PAYLOAD | CONTENT_TYPE | EXPIRATION | OWNER
 
 MAX_RESULTS_PER_PAGE_DEFAULT = 20
 
@@ -67,8 +67,8 @@ TxHash = NewType("TxHash", HexStr)
 # Unique key for all entities
 EntityKey = NewType("EntityKey", HexStr)
 
-# Entity annotations
-Annotations = NewType("Annotations", dict[str, str | int])
+# Entity attributes
+Attributes = NewType("Attributes", dict[str, str | int])
 
 
 @dataclass(frozen=True)
@@ -87,15 +87,15 @@ class Entity:
         # Create a copy with modified payload
         new_entity = replace(entity, payload=b"new data")
 
-        # Create a copy with modified annotations (creates new dict)
+        # Create a copy with modified attributes (creates new dict)
         new_entity = replace(
             entity,
-            annotations=Annotations({**entity.annotations, "version": 2})
+            attributes=Attributes({**entity.attributes, "version": 2})
         )
 
     Note:
-        The annotations field is a dict. When using replace(), always
-        create a new dict if you want to modify annotations to avoid
+        The attributes field is a dict. When using replace(), always
+        create a new dict if you want to modify attributes to avoid
         sharing the same dict instance between entities.
 
         Use dict unpacking {**dict} to create a new dict while merging
@@ -115,8 +115,8 @@ class Entity:
     payload: bytes | None = None
     content_type: str | None = None
 
-    # Populated when fields | ANNOTATIONS returns true
-    annotations: Annotations | None = None
+    # Populated when fields | ATTRIBUTES returns true
+    attributes: Attributes | None = None
 
 
 @dataclass(frozen=True)
@@ -175,7 +175,7 @@ class CreateOp:
 
     payload: bytes
     content_type: str
-    annotations: Annotations
+    attributes: Attributes
     btl: int
 
 
@@ -186,7 +186,7 @@ class UpdateOp:
     entity_key: EntityKey
     payload: bytes
     content_type: str
-    annotations: Annotations
+    attributes: Attributes
     btl: int
 
 
@@ -358,13 +358,13 @@ AsyncChangeOwnerCallback = Callable[[ChangeOwnerEvent, TxHash], Awaitable[None]]
 # Event type literal
 EventType = Literal["created", "updated", "deleted", "extended", "ownerChanged"]
 
-# Low level annotations for RLP encoding
-StringAnnotationsRlp = NewType("StringAnnotationsRlp", list[tuple[str, str]])
-NumericAnnotationsRlp = NewType("NumericAnnotationsRlp", list[tuple[str, int]])
+# Low level attributes for RLP encoding
+StringAttributesRlp = NewType("StringAttributesRlp", list[tuple[str, str]])
+NumericAttributesRlp = NewType("NumericAttributesRlp", list[tuple[str, int]])
 
-# Low level annotations for entity decoding
-StringAnnotations = NewType("StringAnnotations", AttributeDict[str, str])
-NumericAnnotations = NewType("NumericAnnotations", AttributeDict[str, int])
+# Low level attributes for entity decoding
+StringAttributes = NewType("StringAttributes", AttributeDict[str, str])
+NumericAttributes = NewType("NumericAttributes", AttributeDict[str, int])
 
 
 # Low level query result for entity query

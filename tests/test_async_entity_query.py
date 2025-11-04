@@ -6,7 +6,7 @@ import uuid
 import pytest
 
 from arkiv import AsyncArkiv
-from arkiv.types import Annotations, Cursor, QueryOptions
+from arkiv.types import Attributes, Cursor, QueryOptions
 from arkiv.utils import to_query_options
 
 logger = logging.getLogger(__name__)
@@ -65,19 +65,19 @@ class TestAsyncQueryEntitiesBasic:
     """Test basic async entity querying functionality."""
 
     @pytest.mark.asyncio
-    async def test_async_query_entities_by_annotation(
+    async def test_async_query_entities_by_attribute(
         self, async_arkiv_client_http: AsyncArkiv
     ) -> None:
-        """Test querying entities by annotation value asynchronously."""
+        """Test querying entities by attribute value asynchronously."""
         # Generate a unique ID without special characters
         shared_id = str(uuid.uuid4()).replace("-", "")
 
-        # Create 3 entities with the same 'id' annotation
+        # Create 3 entities with the same 'id' attribute
         entity_keys = []
         for i in range(3):
             entity_key, _tx_hash = await async_arkiv_client_http.arkiv.create_entity(
                 payload=f"Entity {i}".encode(),
-                annotations=Annotations({"id": shared_id}),
+                attributes=Attributes({"id": shared_id}),
                 btl=100,
             )
             entity_keys.append(entity_key)
@@ -113,23 +113,23 @@ class TestAsyncQueryEntitiesBasic:
         nonexistent_id = str(uuid.uuid4()).replace("-", "")
 
         # Create 3 entities:
-        # - All 3 entities with shared "category" annotation
-        # - Only 1 entity with unique "special" annotation
+        # - All 3 entities with shared "category" attribute
+        # - Only 1 entity with unique "special" attribute
         entity_keys = []
         unique_entity_key = None
 
         for i in range(3):
             # All entities get the shared category
-            annotations = {"category": shared_id}
+            attributes = {"category": shared_id}
 
-            # Only the second entity (i==1) gets the special annotation
+            # Only the second entity (i==1) gets the special attribute
             if i == 1:
-                annotations["special"] = unique_id
+                attributes["special"] = unique_id
                 unique_entity_key = None  # Will be set below
 
             entity_key, _tx_hash = await async_arkiv_client_http.arkiv.create_entity(
                 payload=f"Entity {i}".encode(),
-                annotations=Annotations(annotations),
+                attributes=Attributes(attributes),
                 btl=100,
             )
             entity_keys.append(entity_key)
@@ -139,7 +139,7 @@ class TestAsyncQueryEntitiesBasic:
 
         # Run 3 queries concurrently:
         # 1. Query that returns all 3 entities (shared category)
-        # 2. Query that returns only 1 entity (the one with special annotation)
+        # 2. Query that returns only 1 entity (the one with special attribute)
         # 3. Query that returns 0 entities (nonexistent ID)
         import asyncio
 

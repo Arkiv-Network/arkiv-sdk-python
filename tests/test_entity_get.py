@@ -3,10 +3,10 @@
 import logging
 
 from arkiv.client import Arkiv
-from arkiv.types import ALL, KEY, NONE, Annotations, EntityKey
+from arkiv.types import ALL, KEY, NONE, Attributes, EntityKey
 from arkiv.utils import check_entity_key
 
-from .utils import get_custom_annotations
+from .utils import get_custom_attributes
 
 logger = logging.getLogger(__name__)
 
@@ -34,9 +34,7 @@ class TestEntityGetDefault:
 
     def test_get_entity_all_fields(self, arkiv_client_http: Arkiv) -> None:
         """Test retrieving all fields of a newly created entity."""
-        entity_key, payload, content_type, annotations = create_entity(
-            arkiv_client_http
-        )
+        entity_key, payload, content_type, attributes = create_entity(arkiv_client_http)
 
         # Verify entity was created
         check_entity_key(entity_key, "test_get_entity_all_fields")
@@ -55,11 +53,11 @@ class TestEntityGetDefault:
         assert entity.content_type == content_type, "Content type should match"
         assert entity.expires_at_block is not None, "Expiration should be populated"
         assert entity.expires_at_block > 0, "Expiration should be positive"
-        assert entity.annotations is not None, "Annotations should be populated"
+        assert entity.attributes is not None, "Attributes should be populated"
 
-        # Verify custom annotations (excluding system fields like $key, $owner, etc)
-        custom_annotations = get_custom_annotations(entity)
-        assert custom_annotations == annotations, "Custom annotations should match"
+        # Verify custom attributes (excluding system fields like $key, $owner, etc)
+        custom_attributes = get_custom_attributes(entity)
+        assert custom_attributes == attributes, "Custom attributes should match"
 
         logger.info("test_get_entity_all_fields: Successfully retrieved all fields")
 
@@ -86,7 +84,7 @@ class TestEntityGetProjections:
         assert entity.payload is None, "Payload should not be populated"
         assert entity.content_type is None, "Content type should not be populated"
         assert entity.expires_at_block is None, "Expiration should not be populated"
-        assert entity.annotations is None, "Annotations should not be populated"
+        assert entity.attributes is None, "Attributes should not be populated"
 
         logger.info("test_get_entity_key_only: Successfully retrieved key only")
 
@@ -109,7 +107,7 @@ class TestEntityGetProjections:
         assert entity.payload is None, "Payload should not be populated"
         assert entity.content_type is None, "Content type should not be populated"
         assert entity.expires_at_block is None, "Expiration should not be populated"
-        assert entity.annotations is None, "Annotations should not be populated"
+        assert entity.attributes is None, "Attributes should not be populated"
 
         logger.info(
             "test_get_entity_no_fields: Successfully retrieved entity with no fields"
@@ -118,18 +116,18 @@ class TestEntityGetProjections:
 
 def create_entity(
     arkiv_client_http: Arkiv,
-) -> tuple[EntityKey, bytes, str, Annotations]:
+) -> tuple[EntityKey, bytes, str, Attributes]:
     # Create an entity with all data
     payload = b"Test entity data"
     content_type = "text/plain"
-    annotations = Annotations({"type": "test", "version": 1})
+    attributes = Attributes({"type": "test", "version": 1})
     btl = 100
 
     entity_key, _ = arkiv_client_http.arkiv.create_entity(
         payload=payload,
         content_type=content_type,
-        annotations=annotations,
+        attributes=attributes,
         btl=btl,
     )
 
-    return entity_key, payload, content_type, annotations
+    return entity_key, payload, content_type, attributes
