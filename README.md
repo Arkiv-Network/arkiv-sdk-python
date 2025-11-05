@@ -200,24 +200,6 @@ results = client.arkiv.query_entities(
 )
 ```
 
-### Paging
-
-Paging of query results is currently in development.
-
-**Requirements:**
-- Support cursor-based pagination for consistent results
-- Configurable maximum page size (a page might contain fewer entities depending on actual data used for the representation per entity)
-- Return page metadata (total count, has_next_page, cursor)
-
-**Example:**
-```python
-# Fetch first page
-page = client.arkiv.query("SELECT * FROM entities", max_page_size=100)
-
-# Fetch next page using cursor
-next_page = client.arkiv.query("SELECT * FROM entities", cursor=page.next, max_page_size=100)
-```
-
 ### Sorting
 
 Querying entities should support sorting results by one or more fields.
@@ -236,60 +218,7 @@ results = client.arkiv.query(
 )
 ```
 
-### Projections
-
-The transfer of large entities or many entities consumes considerable bandwidth. Which information per entity is most valuable is use-case specific and should be specified by the application.
-
-**Let users decide which parts of an entity to return:**
-- **Payload** - Binary data (can be large)
-- **Attributes** - Key-value metadata
-- **Metadata** - Owner, expiration, timestamps
-
-**Current implementation:**
-The SDK already supports projections via the `fields` parameter using bitmask flags:
-```python
-from arkiv.types import PAYLOAD, ATTRIBUTES, METADATA
-
-# Fetch only attributes (minimal bandwidth)
-entity = client.arkiv.get_entity(entity_key, fields=ATTRIBUTES)
-
-# Fetch payload and metadata (skip attributes)
-entity = client.arkiv.get_entity(entity_key, fields=PAYLOAD | METADATA)
-
-# Fetch everything (fields = ALL is default)
-entity = client.arkiv.get_entity(entity_key)
-```
-
-### Entity Existence Check
-
-Make testing whether an entity exists for a specific entity key as efficient as possible.
-
-**Current implementation:**
-```python
-exists = client.arkiv.entity_exists(entity_key)  # Returns bool
-```
-
-**Options for optimization:**
-- Dedicated lightweight RPC endpoint (current approach)
-- Fold into unified query RPC with minimal projection
-- Support batch existence checks for multiple keys
-
-**Example batch API:**
-```python
-# Check multiple entities at once
-existence_map = client.arkiv.entities_exist([key1, key2, key3])
-# Returns: {key1: True, key2: False, key3: True}
-```
-
 ### Other Features
-
-- **Ownership Transfer**: The creating account is the owner of the entity.
-Only the owner can update the entity (payload, attributes, expires_at_block).
-A mechanism to transfer entity ownership should be provided.
-  ```python
-  # Proposed API
-  client.arkiv.transfer_entity(entity_key, new_owner_address)
-  ```
 
 - **Creation Flags**: Entities should support creation-time flags with meaningful defaults.
 Flags can only be set at creation and define entity behavior:
@@ -316,8 +245,8 @@ Flags can only be set at creation and define entity behavior:
   ```
 
 - **Offline Entity Verification**: Provide cryptographic verification of entity data without querying the chain.
-  - Signature verification for entity authenticity
-  - Minimal trust assumptions for light clients
+  - Currently not supported
+  - Proposal: Store entity keys (and block number) in smart contracts and work with an optimistic oracle approach (challenger may take entity key and checks claimed data against the data of an Arkiv archival node)
 
 ## Development Guide
 
