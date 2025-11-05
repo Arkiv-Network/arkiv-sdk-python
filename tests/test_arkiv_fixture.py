@@ -2,6 +2,8 @@
 
 import logging
 
+import pytest
+
 from arkiv import Arkiv
 from arkiv.account import NamedAccount
 from arkiv.module import ArkivModule
@@ -83,6 +85,7 @@ def test_arkiv_accounts_are_funded(
     logger.info("Arkiv fixture accounts are funded (balances > 0)")
 
 
+@pytest.mark.skip("Skipping ETH transfer not (yet) supported on db chains.")
 def test_arkiv_transfer_eth_account(
     arkiv_client_http: Arkiv, account_1: NamedAccount, account_2: NamedAccount
 ) -> None:
@@ -106,6 +109,7 @@ def test_arkiv_transfer_eth_account(
     logger.info("Arkiv ETH transfer between accounts succeeded (to: NamedAccount)")
 
 
+@pytest.mark.skip("Skipping ETH transfer not (yet) supported on db chains.")
 def test_arkiv_transfer_eth_address(
     arkiv_client_http: Arkiv, account_1: NamedAccount, account_2: NamedAccount
 ) -> None:

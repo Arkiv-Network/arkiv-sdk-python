@@ -65,7 +65,7 @@ class EventFilterBase(ABC, Generic[CallbackT]):
         self.callback: CallbackT = callback
         self.from_block: str | int = from_block
         self._running: bool = False
-        self._poll_interval: float = 2.0  # seconds
+        self._poll_interval: float = 1.0  # seconds
 
     @property
     def is_running(self) -> bool:

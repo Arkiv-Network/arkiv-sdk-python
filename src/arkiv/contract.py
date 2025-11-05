@@ -188,7 +188,7 @@ FUNCTIONS_ABI: dict[str, Method[Any]] = {
         mungers=[default_root_munger],
     ),
     "query": Method(
-        json_rpc_method=RPCEndpoint("golembase_query"),
+        json_rpc_method=RPCEndpoint("arkiv_query"),
         mungers=[default_root_munger],
     ),
 }

@@ -397,7 +397,7 @@ class ArkivNode:
         return (
             "--dev "
             "--http "
-            "--http.api 'eth,web3,net,debug,golembase' "
+            "--http.api 'eth,web3,net,debug,golembase,arkiv' "
             f"--http.port {self._http_port} "
             "--http.addr '0.0.0.0' "
             "--http.corsdomain '*' "
