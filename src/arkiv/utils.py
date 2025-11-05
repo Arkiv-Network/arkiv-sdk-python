@@ -421,6 +421,24 @@ def to_hex_bytes(tx_hash: TxHash) -> HexBytes:
     return HexBytes(tx_hash)
 
 
+def get_tx_hash(log: LogReceipt) -> TxHash:
+    """
+    Extract the TxHash from a log receipt.
+
+    Args:
+        log: Log receipt from which to extract the transaction hash
+
+    Returns:
+        Transaction hash as TxHash
+    """
+    tx_hash_raw = log["transactionHash"]
+
+    if isinstance(tx_hash_raw, bytes):
+        return TxHash(HexStr("0x" + tx_hash_raw.hex()))
+
+    return TxHash(HexStr(tx_hash_raw))
+
+
 def to_event(
     contract_: Contract, log: LogReceipt
 ) -> (
@@ -435,7 +453,16 @@ def to_event(
     """Convert a log receipt to event object."""
     logger.debug(f"Log: {log}")
 
-    event_data: EventData = get_event_data(contract_, log)
+    # Check if this is already processed EventData (has 'event' and 'args' keys)
+    # or a raw log that needs processing
+    if "event" in log and "args" in log:
+        # Already an EventData structure
+        event_data: EventData = log  # type: ignore[assignment]
+    else:
+        # Raw log - process it
+        logger.debug("Processing raw log for event conversion")
+        event_data = get_event_data(contract_, log)
+
     event_args: dict[str, Any] = event_data["args"]
     event_name = event_data["event"]
 
@@ -566,13 +593,13 @@ def to_receipt(
                     if isinstance(event, ChangeOwnerEvent):
                         change_owners.append(event)
                 case contract.CREATED_EVENT_LEGACY:
-                    logger.info(f"Skipping legacy event: {event_name}")
+                    logger.debug(f"Skipping legacy event: {event_name}")
                 case contract.UPDATED_EVENT_LEGACY:
-                    logger.info(f"Skipping legacy event: {event_name}")
+                    logger.debug(f"Skipping legacy event: {event_name}")
                 case contract.DELETED_EVENT_LEGACY:
-                    logger.info(f"Skipping legacy event: {event_name}")
+                    logger.debug(f"Skipping legacy event: {event_name}")
                 case contract.EXTENDED_EVENT_LEGACY:
-                    logger.info(f"Skipping legacy event: {event_name}")
+                    logger.debug(f"Skipping legacy event: {event_name}")
                 # Unknown events - skip with warning log
                 case _:
                     logger.warning(f"Unknown event type: {event_name}")
@@ -590,7 +617,12 @@ def get_event_data(contract: Contract, log: LogReceipt) -> EventData:
     # Get log topic if present
     topics = log.get("topics", [])
     if len(topics) > 0:
-        topic = topics[0].to_0x_hex()
+        # Handle both HexBytes and string topics
+        topic_value = topics[0]
+        if isinstance(topic_value, str):
+            topic = topic_value
+        else:
+            topic = topic_value.to_0x_hex()
 
         # Get event data for topic
         event: BaseContractEvent = contract.get_event_by_topic(topic)

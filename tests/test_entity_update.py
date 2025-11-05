@@ -193,14 +193,18 @@ class TestEntityUpdate:
     def test_update_entity_to_empty_payload(self, arkiv_client_http: Arkiv) -> None:
         """Test updating an entity with an empty payload."""
         # Create an entity with some payload
+        attributes = Attributes({"type": "test_empty_payload"})
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
-            payload=b"Non-empty payload", content_type="text/plain", btl=100
+            payload=b"Non-empty payload",
+            content_type="text/plain",
+            attributes=attributes,
+            btl=100,
         )
         entity_before = arkiv_client_http.arkiv.get_entity(entity_key)
 
         # Update with empty payload
         update_tx_hash = arkiv_client_http.arkiv.update_entity(
-            entity_key, payload=b"", btl=100
+            entity_key, payload=b"", attributes=attributes, btl=100
         )
         label = "update_to_empty_payload"
         check_tx_hash(label, update_tx_hash)
@@ -214,8 +218,9 @@ class TestEntityUpdate:
     def test_update_entity_from_empty_payload(self, arkiv_client_http: Arkiv) -> None:
         """Test updating an entity with an empty payload."""
         # Create an entity with some payload
+        attributes = Attributes({"type": "test_empty_payload"})
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
-            payload=b"", content_type="text/plain", btl=100
+            payload=b"", content_type="text/plain", attributes=attributes, btl=100
         )
         entity_before = arkiv_client_http.arkiv.get_entity(entity_key)
 
@@ -294,6 +299,58 @@ class TestEntityUpdate:
         logger.info(
             f"Update of deleted entity correctly raised {type(exc_info.value).__name__}"
         )
+
+    def test_update_entity_unauthorized(
+        self, arkiv_client_http: Arkiv, account_1, account_2
+    ) -> None:
+        """Test that non-owners cannot update entities."""
+        # Ensure we're using account_1 (alice) as the default account
+        arkiv_client_http.accounts[account_1.name] = account_1
+        arkiv_client_http.switch_to(account_1.name)
+
+        # Create an entity as alice (account_1, the default account)
+        payload = b"Entity owned by Alice"
+        attributes: Attributes = Attributes({"owner": "alice"})
+        entity_key, _ = arkiv_client_http.arkiv.create_entity(
+            payload=payload, attributes=attributes, btl=100
+        )
+
+        # Verify entity was created by account_1
+        entity = arkiv_client_http.arkiv.get_entity(entity_key)
+        assert entity.owner == account_1.address, "Entity should be owned by account_1"
+
+        # Switch to account_2 (Bob)
+        arkiv_client_http.accounts[account_2.name] = account_2
+        arkiv_client_http.switch_to(account_2.name)
+
+        assert arkiv_client_http.eth.default_account == account_2.address, (
+            "Current account should be account_2 after switch"
+        )
+
+        # Attempt to update the entity as Bob (should fail)
+        new_payload = b"Bob trying to update Alice's entity"
+        with pytest.raises(Web3RPCError) as exc_info:
+            arkiv_client_http.arkiv.update_entity(
+                entity_key, payload=new_payload, btl=100
+            )
+
+        # Verify the error is related to authorization
+        error_message = str(exc_info.value)
+        logger.info(
+            f"Unauthorized update correctly raised {type(exc_info.value).__name__}: {error_message}"
+        )
+
+        # Switch back to account_1 and verify entity is unchanged
+        arkiv_client_http.switch_to(account_1.name)
+        entity_after = arkiv_client_http.arkiv.get_entity(entity_key)
+        assert entity_after.payload == payload, (
+            "Entity payload should remain unchanged after failed update"
+        )
+        assert entity_after.owner == account_1.address, (
+            "Entity owner should remain unchanged"
+        )
+
+        logger.info("Unauthorized update test successful")
 
     # TODO figure out what the idea behind btl extension was
     def test_update_entity_btl_extension(self, arkiv_client_http: Arkiv) -> None:

@@ -109,17 +109,21 @@ class TestEntityChangeOwner:
             "Default account should be account 1's address"
         )
 
-        arkiv_client_http.accounts[account_2.name] = account_2
-        arkiv_client_http.switch_to(account_2.name)
+        try:
+            arkiv_client_http.accounts[account_2.name] = account_2
+            arkiv_client_http.switch_to(account_2.name)
 
-        assert arkiv_client_http.eth.default_account == account_2.address, (
-            "Current account (after switch_to) should be account 2's address"
-        )
+            assert arkiv_client_http.eth.default_account == account_2.address, (
+                "Current account (after switch_to) should be account 2's address"
+            )
 
-        # This should fail as account 1 is not the owner
-        # Expected: Web3RPCError or similar exception
-        with pytest.raises(Web3RPCError):
-            arkiv_client_http.arkiv.change_owner(_entity_key, account_2.address)
+            # This should fail as account 2 is not the owner
+            # Expected: Web3RPCError or similar exception
+            with pytest.raises(Web3RPCError):
+                arkiv_client_http.arkiv.change_owner(_entity_key, account_2.address)
+        finally:
+            # Reset to account_1
+            arkiv_client_http.switch_to(account_1.name)
 
     def test_change_owner_to_same_owner(self, arkiv_client_http: Arkiv) -> None:
         """Test changing ownership to the same owner (should succeed as no-op)."""

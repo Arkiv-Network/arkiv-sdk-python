@@ -6,22 +6,19 @@ import logging
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
-from eth_typing import HexStr
-from web3.types import EventData
-
 from .contract import EVENTS
 from .types import (
     CreateEvent,
     DeleteEvent,
     EventType,
     ExtendEvent,
-    TxHash,
     UpdateEvent,
 )
-from .utils import to_entity_key
 
 if TYPE_CHECKING:
+    from web3._utils.filters import AsyncLogFilter, LogFilter
     from web3.contract import Contract
+    from web3.contract.contract import ContractEvent
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +82,7 @@ class EventFilterBase(ABC, Generic[CallbackT]):
         Get the Web3 contract event name for this event type.
 
         Returns:
-            Contract event name (e.g., "GolemBaseStorageEntityCreated")
+            Contract event name (e.g., "ArkivEntityCreated")
 
         Raises:
             NotImplementedError: If event type is not supported
@@ -96,11 +93,15 @@ class EventFilterBase(ABC, Generic[CallbackT]):
             )
         return EVENTS[self.event_type]
 
-    def _create_filter(self) -> Any:
+    def _create_filter(self) -> LogFilter | AsyncLogFilter:
         """
         Create a Web3 contract event filter for HTTP polling.
 
         This method creates a LogFilter using the contract's create_filter method.
+        The filter is automatically configured to:
+        - Only receive events matching the specific event signature (topic[0])
+        - Only receive events from this contract's address
+
         Subclasses that use different subscription mechanisms (e.g., WebSocket)
         should override this method to return an appropriate subscription handle.
 
@@ -112,83 +113,21 @@ class EventFilterBase(ABC, Generic[CallbackT]):
             override to create subscription handles via provider-specific APIs.
         """
         event_name = self._get_contract_event_name()
-        contract_event = self.contract.events[event_name]
-        return contract_event.create_filter(from_block=self.from_block)
+        contract_event: ContractEvent = self.contract.events[event_name]
 
-    def _extract_tx_hash(self, event_data: EventData) -> TxHash:
-        """
-        Extract and normalize transaction hash from event data.
+        # Create filter with explicit address filtering
+        # The ContractEvent.create_filter automatically sets the event signature
+        # as topic[0], and we explicitly filter by contract address
+        filter: LogFilter | AsyncLogFilter = contract_event.create_filter(
+            from_block=self.from_block,
+            address=self.contract.address,
+        )
 
-        Args:
-            event_data: Event data from Web3 filter
-
-        Returns:
-            Transaction hash with 0x prefix
-        """
-        tx_hash_hex = event_data["transactionHash"].hex()
-        if not tx_hash_hex.startswith("0x"):
-            tx_hash_hex = f"0x{tx_hash_hex}"
-        return TxHash(HexStr(tx_hash_hex))
-
-    # TODO (1) check/match against utils.py::to_receipt
-    # TODO (2) update to new log/event definition in contract.py
-    def _parse_event_data(self, event_data: EventData) -> tuple[EventObject, TxHash]:
-        """
-        Parse event data and create appropriate event object.
-
-        This method contains the shared logic for parsing events from Web3.
-        It does NOT trigger the callback - that's done by subclasses to allow
-        for sync vs async callback invocation.
-
-        Args:
-            event_data: Event data from Web3 filter
-
-        Returns:
-            Tuple of (event_object, tx_hash)
-
-        Raises:
-            ValueError: If event_type is unknown
-        """
-        logger.info(f"Parsing event: {event_data}")
-
-        # Extract common data
-        entity_key = to_entity_key(event_data["args"]["entityKey"])
-        tx_hash = self._extract_tx_hash(event_data)
-
-        # Create event object based on type
-        event: EventObject
-        if self.event_type == "created":
-            event = CreateEvent(
-                entity_key=entity_key,
-                owner_address=event_data["args"]["ownerAddress"],
-                expiration_block=event_data["args"]["expirationBlock"],
-                cost=event_data["args"]["cost"],
-            )
-        elif self.event_type == "updated":
-            event = UpdateEvent(
-                entity_key=entity_key,
-                owner_address=event_data["args"]["ownerAddress"],
-                old_expiration_block=event_data["args"]["oldExpirationBlock"],
-                new_expiration_block=event_data["args"]["newExpirationBlock"],
-                cost=event_data["args"]["cost"],
-            )
-        elif self.event_type == "extended":
-            event = ExtendEvent(
-                entity_key=entity_key,
-                owner_address=event_data["args"]["ownerAddress"],
-                old_expiration_block=event_data["args"]["oldExpirationBlock"],
-                new_expiration_block=event_data["args"]["newExpirationBlock"],
-                cost=event_data["args"]["cost"],
-            )
-        elif self.event_type == "deleted":
-            event = DeleteEvent(
-                entity_key=entity_key,
-                owner_address=event_data["args"]["ownerAddress"],
-            )
-        else:
-            raise ValueError(f"Unknown event type: {self.event_type}")
-
-        return event, tx_hash
+        logger.info(
+            f"Created filter for event {event_name} from block {self.from_block} "
+            f"at address {self.contract.address}: {filter}"
+        )
+        return filter
 
     # Abstract methods that subclasses must implement
     @abstractmethod

@@ -356,7 +356,7 @@ AsyncExtendCallback = Callable[[ExtendEvent, TxHash], Awaitable[None]]
 AsyncChangeOwnerCallback = Callable[[ChangeOwnerEvent, TxHash], Awaitable[None]]
 
 # Event type literal
-EventType = Literal["created", "updated", "deleted", "extended", "ownerChanged"]
+EventType = Literal["created", "updated", "deleted", "extended", "owner_changed"]
 
 # Low level attributes for RLP encoding
 StringAttributesRlp = NewType("StringAttributesRlp", list[tuple[str, str]])

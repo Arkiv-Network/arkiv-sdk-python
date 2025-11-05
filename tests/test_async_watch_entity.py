@@ -5,7 +5,14 @@ import logging
 
 import pytest
 
-from arkiv.types import CreateEvent, DeleteEvent, ExtendEvent, TxHash, UpdateEvent
+from arkiv.types import (
+    ChangeOwnerEvent,
+    CreateEvent,
+    DeleteEvent,
+    ExtendEvent,
+    TxHash,
+    UpdateEvent,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -175,6 +182,56 @@ class TestAsyncWatchEntityDeleted:
             assert len(events_received) == 1
             assert events_received[0][0].entity_key == entity_key
             assert events_received[0][1] == receipt.tx_hash
+
+        finally:
+            await filter.uninstall()
+
+
+class TestAsyncWatchOwnerChanged:
+    """Test async watching of entity owner change events."""
+
+    @pytest.mark.asyncio
+    async def test_async_watch_owner_changed_basic(
+        self, async_arkiv_client_http, account_2
+    ):
+        """Smoke test: async watch owner changed works."""
+        events_received = []
+
+        async def on_owner_changed(event: ChangeOwnerEvent, tx_hash: TxHash) -> None:
+            logger.info(
+                f"Async callback: Owner changed for {event.entity_key} from {event.old_owner_address} to {event.new_owner_address}"
+            )
+            events_received.append((event, tx_hash))
+
+        filter = await async_arkiv_client_http.arkiv.watch_owner_changed(
+            on_owner_changed
+        )
+
+        try:
+            # Create an entity
+            entity_key, _ = await async_arkiv_client_http.arkiv.create_entity(
+                payload=b"test owner change"
+            )
+
+            # Get the entity to verify current owner
+            entity = await async_arkiv_client_http.arkiv.get_entity(entity_key)
+            original_owner = entity.owner
+
+            # Change the owner
+            receipt = await async_arkiv_client_http.arkiv.change_owner(
+                entity_key, new_owner=account_2.address
+            )
+
+            # Wait for event
+            await asyncio.sleep(2)
+
+            # Verify callback was invoked
+            assert len(events_received) == 1
+            event, event_tx_hash = events_received[0]
+            assert event.entity_key == entity_key
+            assert event.old_owner_address == original_owner
+            assert event.new_owner_address == account_2.address
+            assert event_tx_hash == receipt.tx_hash
 
         finally:
             await filter.uninstall()

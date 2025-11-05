@@ -75,7 +75,7 @@ class TestQueryEntitiesParameterValidation:
         # Query will execute (returns empty result since no matching entities exist)
         query = '$owner = "0x0000000000000000000000000000000000000000"'
 
-        # TODO at_block > latest block has the effect of runnint into a timeout
+        # at_block > latest: query_entity returns once that block is minded or the call runs into a timeout
         query_options = to_query_options(
             fields=ALL, max_results_per_page=50, at_block=None, cursor=None
         )

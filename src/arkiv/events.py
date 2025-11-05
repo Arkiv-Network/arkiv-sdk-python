@@ -5,14 +5,17 @@ from __future__ import annotations
 import logging
 import threading
 import time
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 from web3._utils.filters import LogFilter
 from web3.contract import Contract
-from web3.types import EventData, LogReceipt
+from web3.types import LogReceipt
+
+from arkiv.utils import get_tx_hash, to_event
 
 from .events_base import EventFilterBase
 from .types import (
+    ChangeOwnerCallback,
     CreateCallback,
     DeleteCallback,
     EventType,
@@ -26,7 +29,13 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # Union of all sync callback types
-SyncCallback = CreateCallback | UpdateCallback | ExtendCallback | DeleteCallback
+SyncCallback = (
+    CreateCallback
+    | UpdateCallback
+    | ExtendCallback
+    | DeleteCallback
+    | ChangeOwnerCallback
+)
 
 
 class EventFilter(EventFilterBase[SyncCallback]):
@@ -78,24 +87,29 @@ class EventFilter(EventFilterBase[SyncCallback]):
         logger.info(f"Starting event filter for {self.event_type}")
 
         # Create the Web3 filter using base class helper
-        self._filter = self._create_filter()
+        # Note: base class returns LogFilter | AsyncLogFilter, but for sync we only use LogFilter
+        filter_result = self._create_filter()
+        assert isinstance(filter_result, LogFilter), (
+            "Expected LogFilter for sync client"
+        )
+        self._filter = filter_result
 
         # Start polling thread
         self._running = True
         self._thread = threading.Thread(target=self._poll_loop, daemon=True)
         self._thread.start()
 
-        logger.info(f"Event filter for {self.event_type} started")
+        logger.info(f"Event filter for '{self.event_type}' started")
 
     def stop(self) -> None:
         """
         Stop polling for events.
         """
         if not self._running:
-            logger.warning(f"Filter for {self.event_type} is not running")
+            logger.warning(f"Filter for '{self.event_type}' is not running")
             return
 
-        logger.info(f"Stopping event filter for {self.event_type}")
+        logger.info(f"Stopping event filter for '{self.event_type}'")
         self._running = False
 
         # Wait for thread to finish
@@ -103,11 +117,11 @@ class EventFilter(EventFilterBase[SyncCallback]):
             self._thread.join(timeout=5.0)
             self._thread = None
 
-        logger.info(f"Event filter for {self.event_type} stopped")
+        logger.info(f"Event filter for '{self.event_type}' stopped")
 
     def uninstall(self) -> None:
         """Uninstall the filter and cleanup resources."""
-        logger.info(f"Uninstalling event filter for {self.event_type}")
+        logger.info(f"Uninstalling event filter for '{self.event_type}'")
 
         # Stop polling if running
         if self._running:
@@ -126,13 +140,10 @@ class EventFilter(EventFilterBase[SyncCallback]):
             try:
                 # Get new entries from filter
                 if self._filter:
-                    new_entries: list[LogReceipt] = self._filter.get_new_entries()
-
-                    for entry in new_entries:
+                    logs: list[LogReceipt] = self._filter.get_new_entries()
+                    for log in logs:
                         try:
-                            # LogFilter from contract event has log_entry_formatter that
-                            # converts LogReceipt to EventData, but type system shows LogReceipt
-                            self._process_event(cast(EventData, entry))
+                            self._process_log(log)
                         except Exception as e:
                             logger.error(f"Error processing event: {e}", exc_info=True)
 
@@ -145,18 +156,20 @@ class EventFilter(EventFilterBase[SyncCallback]):
 
         logger.debug(f"Poll loop ended for {self.event_type}")
 
-    def _process_event(self, event_data: EventData) -> None:
+    def _process_log(self, log: LogReceipt) -> None:
         """
-        Process a single event and trigger sync callback.
+        Process a single log receipt and trigger sync callback.
 
-        Args:
-            event_data: Event data from Web3 filter
+        Only processes logs from the contract address we're monitoring.
+        Logs from other contracts are silently skipped.
         """
-        # Use base class to parse event data
-        event, tx_hash = self._parse_event_data(event_data)
-
-        # Trigger sync callback with error handling
         try:
+            # to_event handles both raw logs and already-processed EventData
+            event = to_event(self.contract, log)
+            tx_hash = get_tx_hash(log)
+
+            logger.info(f"Starting callback for hash: {tx_hash} and event: {event}")
             self.callback(event, tx_hash)  # type: ignore[arg-type]
+
         except Exception as e:
             logger.error(f"Error in callback: {e}", exc_info=True)

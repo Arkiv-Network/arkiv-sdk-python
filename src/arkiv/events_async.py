@@ -4,14 +4,17 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 from web3._utils.filters import LogFilter
 from web3.contract import Contract
-from web3.types import EventData, LogReceipt
+from web3.types import LogReceipt
+
+from arkiv.utils import get_tx_hash, to_event
 
 from .events_base import EventFilterBase
 from .types import (
+    AsyncChangeOwnerCallback,
     AsyncCreateCallback,
     AsyncDeleteCallback,
     AsyncExtendCallback,
@@ -30,6 +33,7 @@ AsyncCallback = (
     | AsyncUpdateCallback
     | AsyncExtendCallback
     | AsyncDeleteCallback
+    | AsyncChangeOwnerCallback
 )
 
 
@@ -70,7 +74,7 @@ class AsyncEventFilter(EventFilterBase[AsyncCallback]):
         self._task: asyncio.Task[None] | None = None
         self._filter: LogFilter | None = None
 
-    async def _create_filter(self) -> Any:
+    async def _create_filter(self) -> Any:  # type: ignore[override]
         """
         Create a Web3 contract event filter for async HTTP polling.
 
@@ -83,7 +87,10 @@ class AsyncEventFilter(EventFilterBase[AsyncCallback]):
         """
         event_name = self._get_contract_event_name()
         contract_event = self.contract.events[event_name]
-        return await contract_event.create_filter(from_block=self.from_block)
+        return await contract_event.create_filter(
+            from_block=self.from_block,
+            address=self.contract.address,
+        )
 
     async def start(self) -> None:
         """
@@ -147,15 +154,10 @@ class AsyncEventFilter(EventFilterBase[AsyncCallback]):
             try:
                 # Get new entries from filter
                 if self._filter:
-                    # For async providers, get_new_entries() returns a coroutine
-                    # Type system doesn't reflect this, so we need to ignore the type error
-                    new_entries: list[LogReceipt] = await self._filter.get_new_entries()  # type: ignore[misc]
-
-                    for entry in new_entries:
+                    logs: list[LogReceipt] = await self._filter.get_new_entries()  # type: ignore[misc]
+                    for log in logs:
                         try:
-                            # LogFilter from contract event has log_entry_formatter that
-                            # converts LogReceipt to EventData, but type system shows LogReceipt
-                            await self._process_event(cast(EventData, entry))
+                            await self._process_log(log)
                         except Exception as e:
                             logger.error(f"Error processing event: {e}", exc_info=True)
 
@@ -171,18 +173,30 @@ class AsyncEventFilter(EventFilterBase[AsyncCallback]):
 
         logger.debug(f"Async poll loop ended for {self.event_type}")
 
-    async def _process_event(self, event_data: EventData) -> None:
+    async def _process_log(self, log: LogReceipt) -> None:
         """
         Process a single event and trigger async callback.
 
-        Args:
-            event_data: Event data from Web3 filter
+        Only processes logs from the contract address we're monitoring.
+        Logs from other contracts are silently skipped.
         """
-        # Use base class to parse event data
-        event, tx_hash = self._parse_event_data(event_data)
-
-        # Trigger async callback with error handling
         try:
+            # Defensive check: Only process logs from our contract
+            log_address = log.get("address")
+            if log_address and log_address.lower() != self.contract.address.lower():
+                logger.debug(
+                    f"Skipping log from different contract: {log_address} "
+                    f"(expected {self.contract.address})"
+                )
+                return
+
+            # to_event handles both raw logs and already-processed EventData
+            event = to_event(self.contract, log)
+            tx_hash = get_tx_hash(log)
+
+            logger.info(f"Starting callback for hash: {tx_hash} and event: {event}")
+
             await self.callback(event, tx_hash)  # type: ignore[arg-type]
+
         except Exception as e:
             logger.error(f"Error in async callback: {e}", exc_info=True)

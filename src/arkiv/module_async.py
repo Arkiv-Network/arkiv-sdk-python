@@ -14,6 +14,7 @@ from .types import (
     ALL,
     NONE,
     QUERY_OPTIONS_DEFAULT,
+    AsyncChangeOwnerCallback,
     AsyncCreateCallback,
     AsyncDeleteCallback,
     AsyncExtendCallback,
@@ -217,13 +218,6 @@ class AsyncArkivModule(ArkivModuleBase["AsyncArkiv"]):
 
         Creates an async event filter that monitors entity creation events. The callback
         receives (CreateEvent, TxHash) for each created entity.
-
-        See `_watch_entity_event` for detailed documentation on parameters, return
-        value, error handling, and usage examples.
-
-        Note:
-            If auto_start=True, you should await the filter's start() method
-            to ensure it has started before continuing.
         """
         return await self._watch_entity_event(
             "created", callback, from_block=from_block, auto_start=auto_start
@@ -241,13 +235,6 @@ class AsyncArkivModule(ArkivModuleBase["AsyncArkiv"]):
 
         Creates an async event filter that monitors entity update events. The callback
         receives (UpdateEvent, TxHash) for each updated entity.
-
-        See `_watch_entity_event` for detailed documentation on parameters, return
-        value, error handling, and usage examples.
-
-        Note:
-            If auto_start=True, you should await the filter's start() method
-            to ensure it has started before continuing.
         """
         return await self._watch_entity_event(
             "updated", callback, from_block=from_block, auto_start=auto_start
@@ -265,13 +252,6 @@ class AsyncArkivModule(ArkivModuleBase["AsyncArkiv"]):
 
         Creates an async event filter that monitors entity lifetime extension events. The
         callback receives (ExtendEvent, TxHash) for each extended entity.
-
-        See `_watch_entity_event` for detailed documentation on parameters, return
-        value, error handling, and usage examples.
-
-        Note:
-            If auto_start=True, you should await the filter's start() method
-            to ensure it has started before continuing.
         """
         return await self._watch_entity_event(
             "extended", callback, from_block=from_block, auto_start=auto_start
@@ -289,16 +269,26 @@ class AsyncArkivModule(ArkivModuleBase["AsyncArkiv"]):
 
         Creates an async event filter that monitors entity deletion events. The
         callback receives (DeleteEvent, TxHash) for each deleted entity.
-
-        See `_watch_entity_event` for detailed documentation on parameters, return
-        value, error handling, and usage examples.
-
-        Note:
-            If auto_start=True, you should await the filter's start() method
-            to ensure it has started before continuing.
         """
         return await self._watch_entity_event(
             "deleted", callback, from_block=from_block, auto_start=auto_start
+        )
+
+    async def watch_owner_changed(
+        self,
+        callback: AsyncChangeOwnerCallback,
+        *,
+        from_block: str | int = "latest",
+        auto_start: bool = True,
+    ) -> AsyncEventFilter:
+        """
+        Watch for entity owner change events (async).
+
+        Creates an async event filter that monitors entity ownership transfer events.
+        The callback receives (ChangeOwnerEvent, TxHash) for each ownership change.
+        """
+        return await self._watch_entity_event(
+            "owner_changed", callback, from_block=from_block, auto_start=auto_start
         )
 
     async def cleanup_filters(self) -> None:
@@ -338,6 +328,7 @@ class AsyncArkivModule(ArkivModuleBase["AsyncArkiv"]):
             | AsyncUpdateCallback
             | AsyncExtendCallback
             | AsyncDeleteCallback
+            | AsyncChangeOwnerCallback
         ),
         *,
         from_block: str | int = "latest",
@@ -351,10 +342,10 @@ class AsyncArkivModule(ArkivModuleBase["AsyncArkiv"]):
         occurs, receiving details about the event and the transaction hash.
 
         Args:
-            event_type: Type of event to watch for ("created", "updated", "extended", "deleted")
+            event_type: Type of event to watch for ("created", "updated", "extended", "deleted", "owner_changed")
             callback: Async function to call when an event is detected.
                      Receives (Event, TxHash) as arguments where Event is one of:
-                     CreateEvent, UpdateEvent, ExtendEvent, or DeleteEvent depending on event_type.
+                     CreateEvent, UpdateEvent, ExtendEvent, DeleteEvent, or ChangeOwnerEvent depending on event_type.
             from_block: Starting block for the filter. Can be:
                        - "latest": Only watch for new events (default)
                        - Block number (int): Watch from a specific historical block

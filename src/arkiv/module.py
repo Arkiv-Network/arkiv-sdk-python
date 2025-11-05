@@ -19,6 +19,7 @@ from .types import (
     NONE,
     QUERY_OPTIONS_DEFAULT,
     Attributes,
+    ChangeOwnerCallback,
     ChangeOwnerOp,
     CreateCallback,
     DeleteOp,
@@ -299,9 +300,6 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
 
         Creates an event filter that monitors entity creation events. The callback
         receives (CreateEvent, TxHash) for each created entity.
-
-        See `_watch_entity_event` for detailed documentation on parameters, return
-        value, error handling, and usage examples.
         """
         return self._watch_entity_event(
             "created", callback, from_block=from_block, auto_start=auto_start
@@ -319,9 +317,6 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
 
         Creates an event filter that monitors entity update events. The callback
         receives (UpdateEvent, TxHash) for each updated entity.
-
-        See `_watch_entity_event` for detailed documentation on parameters, return
-        value, error handling, and usage examples.
         """
         return self._watch_entity_event(
             "updated", callback, from_block=from_block, auto_start=auto_start
@@ -339,9 +334,6 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
 
         Creates an event filter that monitors entity lifetime extension events. The
         callback receives (ExtendEvent, TxHash) for each extended entity.
-
-        See `_watch_entity_event` for detailed documentation on parameters, return
-        value, error handling, and usage examples.
         """
         return self._watch_entity_event(
             "extended", callback, from_block=from_block, auto_start=auto_start
@@ -359,12 +351,26 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
 
         Creates an event filter that monitors entity deletion events. The
         callback receives (DeleteEvent, TxHash) for each deleted entity.
-
-        See `_watch_entity_event` for detailed documentation on parameters, return
-        value, error handling, and usage examples.
         """
         return self._watch_entity_event(
             "deleted", callback, from_block=from_block, auto_start=auto_start
+        )
+
+    def watch_owner_changed(
+        self,
+        callback: ChangeOwnerCallback,
+        *,
+        from_block: str | int = "latest",
+        auto_start: bool = True,
+    ) -> EventFilter:
+        """
+        Watch for entity owner change events.
+
+        Creates an event filter that monitors entity ownership transfer events. The
+        callback receives (ChangeOwnerEvent, TxHash) for each ownership change.
+        """
+        return self._watch_entity_event(
+            "owner_changed", callback, from_block=from_block, auto_start=auto_start
         )
 
     def cleanup_filters(self) -> None:
@@ -399,7 +405,10 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
     def _watch_entity_event(
         self,
         event_type: EventType,
-        callback: CreateCallback | UpdateCallback | ExtendCallback,
+        callback: CreateCallback
+        | UpdateCallback
+        | ExtendCallback
+        | ChangeOwnerCallback,
         *,
         from_block: str | int = "latest",
         auto_start: bool = True,
@@ -412,10 +421,10 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
         occurs, receiving details about the event and the transaction hash.
 
         Args:
-            event_type: Type of event to watch for ("created", "updated", "extended", "deleted")
+            event_type: Type of event to watch for ("created", "updated", "extended", "deleted", "ownerChanged")
             callback: Function to call when an event is detected.
                      Receives (Event, TxHash) as arguments where Event is one of:
-                     CreateEvent, UpdateEvent, ExtendEvent, or DeleteEvent depending on event_type.
+                     CreateEvent, UpdateEvent, ExtendEvent, DeleteEvent, or ChangeOwnerEvent depending on event_type.
             from_block: Starting block for the filter. Can be:
                        - "latest": Only watch for new events (default)
                        - Block number (int): Watch from a specific historical block
