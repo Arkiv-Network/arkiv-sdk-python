@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0a5] - 2025-11-05
+
+### Added Features
+- Add change_owner to Arkiv and AsyncArkiv
+- Add watch_owner_changed to Arkiv and AsyncArkiv
+
+### Other Changes
+- Upgrade to latest Arkiv node state including compression of TX data using brotli
+
 ## [1.0.0a4] - 2025-10-30
 
 ### Added Features

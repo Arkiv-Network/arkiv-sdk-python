@@ -36,6 +36,13 @@ Use `uv version --bump ... ` to increase version numbers
 version = "1.0.0a1"  # Choose appropriate version
 ```
 
+In terminal check current version and update it using `uv` as shown below.
+
+```bash
+grep '^version' pyproject.toml
+uv version --bump alpha
+```
+
 ### 2. Update CHANGELOG.md
 
 ```markdown
