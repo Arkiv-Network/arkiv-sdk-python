@@ -213,8 +213,8 @@ Choose option 2 (PyPI)
 2. Create Git tag
 
 ```bash
-git tag -a v1.0.0a2 -m "Release version 1.0.0a2"
-git push origin v1.0.0a2
+git tag -a v1.0.0a5 -m "v1.0.0a5"
+git push origin v1.0.0a5
 ```
 
 # 11. Create GitHub release
