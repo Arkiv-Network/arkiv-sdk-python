@@ -5,8 +5,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+import brotli  # type: ignore[import-untyped]
 import rlp  # type: ignore[import-untyped]
-import zstd  # type: ignore[import-untyped]
 from eth_typing import BlockNumber, ChecksumAddress, HexStr
 from hexbytes import HexBytes
 from web3 import Web3
@@ -195,7 +195,7 @@ def to_tx_params(
 
     # Merge provided tx_params with encoded transaction data
     data = rlp_encode_transaction(operations)
-    data_compressed = zstd.compress(data)
+    data_compressed = brotli.compress(data)
 
     tx_params |= {
         "to": STORAGE_ADDRESS,
