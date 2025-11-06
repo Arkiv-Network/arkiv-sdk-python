@@ -117,7 +117,7 @@ class TestEntityExists:
         entity = arkiv_client_http.arkiv.get_entity(entity_key)
 
         assert exists is True
-        assert entity.entity_key == entity_key
+        assert entity.key == entity_key
         assert entity.payload == payload
         assert entity.attributes == attributes
 

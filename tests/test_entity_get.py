@@ -43,7 +43,7 @@ class TestEntityGetDefault:
         entity = arkiv_client_http.arkiv.get_entity(entity_key)
 
         # Verify all fields are populated
-        assert entity.entity_key == entity_key, "Entity key should match"
+        assert entity.key == entity_key, "Entity key should match"
         assert entity.fields == ALL, "All fields should be populated"
         assert entity.owner is not None, "Owner should be populated"
         assert entity.owner == arkiv_client_http.eth.default_account, (
@@ -76,7 +76,7 @@ class TestEntityGetProjections:
         entity = arkiv_client_http.arkiv.get_entity(entity_key, fields=KEY)
 
         # Verify only key is populated
-        assert entity.entity_key == entity_key, "Entity key should match"
+        assert entity.key == entity_key, "Entity key should match"
         assert entity.fields == KEY, "Only KEY field should be set in bitmask"
 
         # All other fields should be None
@@ -99,7 +99,7 @@ class TestEntityGetProjections:
         entity = arkiv_client_http.arkiv.get_entity(entity_key, fields=NONE)
 
         # Verify entity exists but has no fields populated
-        assert entity.entity_key is None, "Entity key should not be populated"
+        assert entity.key is None, "Entity key should not be populated"
         assert entity.fields == NONE, "No fields should be set in bitmask"
 
         # All optional fields should be None

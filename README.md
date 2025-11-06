@@ -196,7 +196,7 @@ To make querying entities as simple and natural as possible, rely on a suitable 
 ```python
 # Query entities using SQL-like syntax
 results = client.arkiv.query_entities(
-    "SELECT entity_key, payload WHERE attributes.type = 'user' AND attributes.age > 18 ORDER BY attributes.name"
+    "SELECT key, payload WHERE attributes.type = 'user' AND attributes.age > 18 ORDER BY attributes.name"
 )
 ```
 

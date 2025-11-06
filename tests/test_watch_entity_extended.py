@@ -57,7 +57,7 @@ class TestWatchEntityExtended:
             event, event_tx_hash = received_events[0]
 
             # Verify event data
-            assert event.entity_key == entity_key
+            assert event.key == entity_key
             assert event.old_expiration_block == initial_expiration
             assert event.new_expiration_block > event.old_expiration_block
             assert event.new_expiration_block == initial_expiration + 50
@@ -112,7 +112,7 @@ class TestWatchEntityExtended:
             assert len(received_events) == 3
 
             # Verify all entity keys match
-            received_keys = {event.entity_key for event, _ in received_events}
+            received_keys = {event.key for event, _ in received_events}
             expected_keys = set(entity_keys)
             assert received_keys == expected_keys
 
@@ -216,7 +216,7 @@ class TestWatchEntityExtended:
 
             # The new extension should be received
             assert len(received_events) == 1
-            assert received_events[0][0].entity_key == entity_key
+            assert received_events[0][0].key == entity_key
 
         finally:
             event_filter.uninstall()
@@ -249,9 +249,9 @@ class TestWatchEntityExtended:
         try:
             # Extend 3 entities in a single bulk transaction
             extend_ops = [
-                ExtendOp(entity_key=entity_keys[0], number_of_blocks=60),
-                ExtendOp(entity_key=entity_keys[1], number_of_blocks=70),
-                ExtendOp(entity_key=entity_keys[2], number_of_blocks=80),
+                ExtendOp(key=entity_keys[0], number_of_blocks=60),
+                ExtendOp(key=entity_keys[1], number_of_blocks=70),
+                ExtendOp(key=entity_keys[2], number_of_blocks=80),
             ]
             receipt = bulk_extend_entities(
                 arkiv_client_http, extend_ops, label="test_bulk_extend"
@@ -266,7 +266,7 @@ class TestWatchEntityExtended:
             assert len(received_events) == 3
 
             # Verify all entity keys match
-            received_keys = {event.entity_key for event, _ in received_events}
+            received_keys = {event.key for event, _ in received_events}
             expected_keys = set(entity_keys)
             assert received_keys == expected_keys
 
@@ -279,7 +279,7 @@ class TestWatchEntityExtended:
 
             # Verify each entity has the correct extension
             for event, _ in received_events:
-                idx = entity_keys.index(event.entity_key)
+                idx = entity_keys.index(event.key)
                 expected_blocks = [60, 70, 80][idx]
                 assert (
                     event.new_expiration_block
@@ -325,7 +325,7 @@ class TestWatchEntityExtended:
             )
             time.sleep(3)  # Wait for callback
             assert len(received_events) == 1
-            assert received_events[0][0].entity_key == entity_key
+            assert received_events[0][0].key == entity_key
             assert received_events[0][1] == receipt.tx_hash
 
             # Delete the entity - should NOT trigger callback
@@ -335,7 +335,7 @@ class TestWatchEntityExtended:
 
             # Verify the single event is the extend event
             event, tx_hash = received_events[0]
-            assert event.entity_key == entity_key
+            assert event.key == entity_key
             assert tx_hash == receipt.tx_hash
 
         finally:
@@ -387,7 +387,7 @@ class TestWatchEntityExtended:
             # Verify progression of expiration blocks
             expected_old = entity.expires_at_block
             for i, (event, _) in enumerate(received_events):
-                assert event.entity_key == entity_key
+                assert event.key == entity_key
                 assert event.old_expiration_block == expected_old
                 assert (
                     event.new_expiration_block

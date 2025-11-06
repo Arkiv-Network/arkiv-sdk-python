@@ -30,7 +30,7 @@ class TestWatchEntityDeleted:
             """Callback for delete events."""
             received_events.append((event, tx_hash))
             # Only trigger event for OUR entity (prevents cross-test pollution)
-            if event.entity_key == entity_key:
+            if event.key == entity_key:
                 callback_triggered.set()
 
         # Start watching for delete events
@@ -51,7 +51,7 @@ class TestWatchEntityDeleted:
             our_events = [
                 (event, tx_hash)
                 for event, tx_hash in received_events
-                if event.entity_key == entity_key
+                if event.key == entity_key
             ]
 
             # Verify we received exactly one event for our entity
@@ -62,7 +62,7 @@ class TestWatchEntityDeleted:
             event, event_tx_hash = our_events[0]
 
             # Verify event data
-            assert event.entity_key == entity_key
+            assert event.key == entity_key
             assert event_tx_hash == receipt.tx_hash
 
         finally:
@@ -87,7 +87,7 @@ class TestWatchEntityDeleted:
         def on_delete(event: DeleteEvent, tx_hash: TxHash) -> None:
             """Callback for delete events."""
             # Only trigger event for OUR entity (prevents cross-test pollution)
-            if event.entity_key in entity_keys:
+            if event.key in entity_keys:
                 received_events.append((event, tx_hash))
                 if len(received_events) == 3:
                     callback_triggered.set()
@@ -113,7 +113,7 @@ class TestWatchEntityDeleted:
             assert len(received_events) == 3
 
             # Verify all entity keys match
-            received_keys = {event.entity_key for event, _ in received_events}
+            received_keys = {event.key for event, _ in received_events}
             expected_keys = set(entity_keys)
             assert received_keys == expected_keys
 
@@ -138,7 +138,7 @@ class TestWatchEntityDeleted:
         def on_delete(event: DeleteEvent, tx_hash: TxHash) -> None:
             """Callback for delete events."""
             # Only trigger event for OUR entity (prevents cross-test pollution)
-            if event.entity_key in entity_keys:
+            if event.key in entity_keys:
                 received_events.append((event, tx_hash))
                 if len(received_events) == 3:
                     callback_triggered.set()
@@ -165,7 +165,7 @@ class TestWatchEntityDeleted:
             arkiv_client_http.arkiv.delete_entity(entity_key=entity_keys[1])
             time.sleep(5)  # Wait for polling
             assert len(received_events) == 1
-            assert received_events[0][0].entity_key == entity_keys[1]
+            assert received_events[0][0].key == entity_keys[1]
 
             # Stop the filter
             event_filter.stop()
@@ -197,7 +197,7 @@ class TestWatchEntityDeleted:
         def on_delete(event: DeleteEvent, tx_hash: TxHash) -> None:
             """Callback for delete events."""
             # Only trigger event for OUR entity (prevents cross-test pollution)
-            if event.entity_key in entity_keys:
+            if event.key in entity_keys:
                 received_events.append((event, tx_hash))
                 if len(received_events) == 3:
                     callback_triggered.set()
@@ -210,9 +210,9 @@ class TestWatchEntityDeleted:
         try:
             # Delete 3 entities in a single bulk transaction
             delete_ops = [
-                DeleteOp(entity_key=entity_keys[0]),
-                DeleteOp(entity_key=entity_keys[1]),
-                DeleteOp(entity_key=entity_keys[2]),
+                DeleteOp(key=entity_keys[0]),
+                DeleteOp(key=entity_keys[1]),
+                DeleteOp(key=entity_keys[2]),
             ]
             receipt = bulk_delete_entities(
                 arkiv_client_http, delete_ops, label="test_bulk_delete"
@@ -227,7 +227,7 @@ class TestWatchEntityDeleted:
             assert len(received_events) == 3
 
             # Verify all entity keys match
-            received_keys = {event.entity_key for event, _ in received_events}
+            received_keys = {event.key for event, _ in received_events}
             expected_keys = set(entity_keys)
             assert received_keys == expected_keys
 
@@ -253,7 +253,7 @@ class TestWatchEntityDeleted:
         def on_delete(event: DeleteEvent, tx_hash: TxHash) -> None:
             """Callback for delete events."""
             # Only trigger event for OUR entity (prevents cross-test pollution)
-            if event.entity_key == entity_key:
+            if event.key == entity_key:
                 received_events.append((event, tx_hash))
 
         # Start watching
@@ -284,12 +284,12 @@ class TestWatchEntityDeleted:
             receipt = arkiv_client_http.arkiv.delete_entity(entity_key=entity_key)
             time.sleep(3)  # Wait for callback
             assert len(received_events) == 1
-            assert received_events[0][0].entity_key == entity_key
+            assert received_events[0][0].key == entity_key
             assert received_events[0][1] == receipt.tx_hash
 
             # Verify the single event is the delete event
             event, tx_hash = received_events[0]
-            assert event.entity_key == entity_key
+            assert event.key == entity_key
             assert tx_hash == receipt.tx_hash
 
         finally:
@@ -313,7 +313,7 @@ class TestWatchEntityDeleted:
         def on_delete(event: DeleteEvent, tx_hash: TxHash) -> None:
             """Callback for delete events."""
             # Only set event if it's OUR entity (filter isolation from other tests)
-            if event.entity_key == entity_key:
+            if event.key == entity_key:
                 received_events.append((event, tx_hash))
                 callback_triggered.set()
 
@@ -335,13 +335,13 @@ class TestWatchEntityDeleted:
             our_events = [
                 (event, tx_hash)
                 for event, tx_hash in received_events
-                if event.entity_key == entity_key
+                if event.key == entity_key
             ]
             assert len(our_events) == 1, (
                 f"Expected 1 event for our entity, got {len(our_events)}. "
                 f"Total events: {len(received_events)} (may include other tests in same block)"
             )
-            assert our_events[0][0].entity_key == entity_key
+            assert our_events[0][0].key == entity_key
 
             # Verify entity no longer exists
             assert not arkiv_client_http.arkiv.entity_exists(entity_key)
@@ -365,13 +365,13 @@ class TestWatchEntityDeleted:
         def on_delete_1(event: DeleteEvent, tx_hash: TxHash) -> None:
             """First callback for delete events."""
             # Only trigger event for OUR entity (prevents cross-test pollution)
-            if event.entity_key == entity_key:
+            if event.key == entity_key:
                 received_events_1.append((event, tx_hash))
                 callback_1_triggered.set()
 
         def on_delete_2(event: DeleteEvent, tx_hash: TxHash) -> None:
             """Second callback for delete events."""
-            if event.entity_key == entity_key:
+            if event.key == entity_key:
                 received_events_2.append((event, tx_hash))
                 callback_2_triggered.set()
 
@@ -400,8 +400,8 @@ class TestWatchEntityDeleted:
             assert len(received_events_2) == 1
 
             # Verify both events have the same data
-            assert received_events_1[0][0].entity_key == entity_key
-            assert received_events_2[0][0].entity_key == entity_key
+            assert received_events_1[0][0].key == entity_key
+            assert received_events_2[0][0].key == entity_key
             assert received_events_1[0][1] == receipt.tx_hash
             assert received_events_2[0][1] == receipt.tx_hash
 

@@ -115,7 +115,7 @@ class TestEntityDelete:
 
         # Bulk delete
         # Wrap in Operations container and execute
-        delete_ops = [DeleteOp(entity_key=key) for key in entity_keys]
+        delete_ops = [DeleteOp(key=key) for key in entity_keys]
         operations = Operations(deletes=delete_ops)
         receipt = arkiv_client_http.arkiv.execute(operations)
 

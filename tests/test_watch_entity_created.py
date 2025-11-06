@@ -48,7 +48,7 @@ class TestWatchEntityCreated:
             event, event_tx_hash = received_events[0]
 
             # Verify event data
-            assert event.entity_key == entity_key
+            assert event.key == entity_key
             assert event.expiration_block > 0
             assert event_tx_hash == receipt.tx_hash
 
@@ -91,7 +91,7 @@ class TestWatchEntityCreated:
             assert len(received_events) == 3
 
             # Verify all entity keys match
-            received_keys = {event.entity_key for event, _ in received_events}
+            received_keys = {event.key for event, _ in received_events}
             expected_keys = {key for key, _ in keys_and_hashes}
             assert received_keys == expected_keys
 
@@ -166,7 +166,7 @@ class TestWatchEntityCreated:
 
             # The entity created before should NOT be in received_events
             assert not any(
-                event.entity_key == entity_key_before for event, _ in received_events
+                event.key == entity_key_before for event, _ in received_events
             )
 
             # Create a new entity
@@ -176,9 +176,7 @@ class TestWatchEntityCreated:
             time.sleep(3)  # Wait for polling
 
             # The new entity should be received
-            assert any(
-                event.entity_key == entity_key_after for event, _ in received_events
-            )
+            assert any(event.key == entity_key_after for event, _ in received_events)
 
         finally:
             event_filter.uninstall()
@@ -232,7 +230,7 @@ class TestWatchEntityCreated:
             assert len(received_events) == 3
 
             # Verify all entity keys match and all have the same tx_hash (same transaction)
-            received_keys = {event.entity_key for event, _ in received_events}
+            received_keys = {event.key for event, _ in received_events}
             expected_keys = set(entity_keys)
             assert received_keys == expected_keys
 
@@ -266,7 +264,7 @@ class TestWatchEntityCreated:
             )
             time.sleep(3)  # Wait for callback
             assert len(received_events) == 1
-            assert received_events[0][0].entity_key == entity_key
+            assert received_events[0][0].key == entity_key
 
             # Update the entity - should NOT trigger callback
             _ = arkiv_client_http.arkiv.update_entity(
@@ -289,7 +287,7 @@ class TestWatchEntityCreated:
 
             # Verify the single event is the creation event
             event, tx_hash = received_events[0]
-            assert event.entity_key == entity_key
+            assert event.key == entity_key
             assert tx_hash == receipt.tx_hash
 
         finally:

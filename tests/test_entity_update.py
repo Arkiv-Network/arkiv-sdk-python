@@ -154,7 +154,7 @@ class TestEntityUpdate:
         # Bulk update
         update_ops = [
             UpdateOp(
-                entity_key=key,
+                key=key,
                 payload=f"Updated entity {i}".encode(),
                 content_type="text/plain",
                 attributes=Attributes({"batch": "bulk", "index": i, "updated": True}),

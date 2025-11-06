@@ -119,6 +119,6 @@ class TestQueryEntitiesBasic:
         assert len(result.entities) == 3
 
         # Verify the entity keys match (order may differ)
-        result_keys = {entity.entity_key for entity in result.entities}
+        result_keys = {entity.key for entity in result.entities}
         expected_keys = set(entity_keys)
         assert result_keys == expected_keys

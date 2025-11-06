@@ -316,7 +316,7 @@ class TestRlpEncodeTransaction:
             HexStr("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef")
         )
         update_op = UpdateOp(
-            entity_key=entity_key,
+            key=entity_key,
             payload=b"updated data",
             content_type="text/plain",
             btl=2000,
@@ -334,7 +334,7 @@ class TestRlpEncodeTransaction:
         entity_key = EntityKey(
             HexStr("0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890")
         )
-        delete_op = DeleteOp(entity_key=entity_key)
+        delete_op = DeleteOp(key=entity_key)
         operations = Operations(deletes=[delete_op])
 
         encoded = rlp_encode_transaction(operations)
@@ -347,7 +347,7 @@ class TestRlpEncodeTransaction:
         entity_key = EntityKey(
             HexStr("0xfedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321")
         )
-        extend_op = ExtendOp(entity_key=entity_key, number_of_blocks=500)
+        extend_op = ExtendOp(key=entity_key, number_of_blocks=500)
         operations = Operations(extensions=[extend_op])
 
         encoded = rlp_encode_transaction(operations)
@@ -368,15 +368,15 @@ class TestRlpEncodeTransaction:
             HexStr("0x1111111111111111111111111111111111111111111111111111111111111111")
         )
         update_op = UpdateOp(
-            entity_key=entity_key_obj,
+            key=entity_key_obj,
             payload=b"update data",
             content_type="text/plain",
             btl=1500,
             attributes=Attributes({"status": "modified", "revision": 3}),
         )
 
-        delete_op = DeleteOp(entity_key=entity_key_obj)
-        extend_op = ExtendOp(entity_key=entity_key_obj, number_of_blocks=1000)
+        delete_op = DeleteOp(key=entity_key_obj)
+        extend_op = ExtendOp(key=entity_key_obj, number_of_blocks=1000)
 
         operations = Operations(
             creates=[create_op],

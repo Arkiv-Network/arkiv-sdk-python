@@ -60,7 +60,7 @@ class TestWatchEntityUpdated:
             logger.info(f"Received update event: {event}")
 
             # Verify event data
-            assert event.entity_key == entity_key
+            assert event.key == entity_key
             assert event.new_expiration_block > 0
             assert event.new_expiration_block >= event.old_expiration_block
             assert event_tx_hash == receipt.tx_hash
@@ -115,7 +115,7 @@ class TestWatchEntityUpdated:
             assert len(received_events) == 3
 
             # Verify all entity keys match
-            received_keys = {event.entity_key for event, _ in received_events}
+            received_keys = {event.key for event, _ in received_events}
             expected_keys = set(entity_keys)
             assert received_keys == expected_keys
 
@@ -215,7 +215,7 @@ class TestWatchEntityUpdated:
 
             # The new update should be received
             assert len(received_events) == 1
-            assert received_events[0][0].entity_key == entity_key
+            assert received_events[0][0].key == entity_key
 
         finally:
             event_filter.uninstall()
@@ -249,21 +249,21 @@ class TestWatchEntityUpdated:
             # Update 3 entities in a single bulk transaction
             update_ops = [
                 UpdateOp(
-                    entity_key=entity_keys[0],
+                    key=entity_keys[0],
                     payload=b"bulk update 1",
                     content_type="text/plain",
                     attributes=Attributes({}),
                     btl=100,
                 ),
                 UpdateOp(
-                    entity_key=entity_keys[1],
+                    key=entity_keys[1],
                     payload=b"bulk update 2",
                     content_type="text/plain",
                     attributes=Attributes({}),
                     btl=100,
                 ),
                 UpdateOp(
-                    entity_key=entity_keys[2],
+                    key=entity_keys[2],
                     payload=b"bulk update 3",
                     content_type="text/plain",
                     attributes=Attributes({}),
@@ -283,7 +283,7 @@ class TestWatchEntityUpdated:
             assert len(received_events) == 3
 
             # Verify all entity keys match
-            received_keys = {event.entity_key for event, _ in received_events}
+            received_keys = {event.key for event, _ in received_events}
             expected_keys = set(entity_keys)
             assert received_keys == expected_keys
 
@@ -326,7 +326,7 @@ class TestWatchEntityUpdated:
             )
             time.sleep(3)  # Wait for callback
             assert len(received_events) == 1
-            assert received_events[0][0].entity_key == entity_key
+            assert received_events[0][0].key == entity_key
             assert received_events[0][1] == receipt.tx_hash
 
             # Extend the entity - should NOT trigger callback
@@ -343,7 +343,7 @@ class TestWatchEntityUpdated:
 
             # Verify the single event is the update event
             event, tx_hash = received_events[0]
-            assert event.entity_key == entity_key
+            assert event.key == entity_key
             assert tx_hash == receipt.tx_hash
 
         finally:
@@ -386,7 +386,7 @@ class TestWatchEntityUpdated:
             )
 
             assert len(received_events) == 1
-            assert received_events[0][0].entity_key == entity_key
+            assert received_events[0][0].key == entity_key
 
         finally:
             event_filter.uninstall()
@@ -428,7 +428,7 @@ class TestWatchEntityUpdated:
             )
 
             assert len(received_events) == 1
-            assert received_events[0][0].entity_key == entity_key
+            assert received_events[0][0].key == entity_key
 
         finally:
             event_filter.uninstall()

@@ -119,8 +119,8 @@ def validate_entity(
 
     All parameters default to None, meaning we expect those fields to be None.
     """
-    assert entity.entity_key == entity_key, (
-        f"Entity key mismatch: expected {entity_key}, got {entity.entity_key}"
+    assert entity.key == entity_key, (
+        f"Entity key mismatch: expected {entity_key}, got {entity.key}"
     )
 
     assert entity.owner == owner, (

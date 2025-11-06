@@ -60,7 +60,7 @@ class TestWatchOwnerChanged:
             logger.info(f"Received owner transferred event: {event}")
 
             # Verify event data
-            assert event.entity_key == entity_key
+            assert event.key == entity_key
             assert event.old_owner_address == original_owner
             assert event.new_owner_address == account_2.address
             assert event_tx_hash == receipt.tx_hash
@@ -114,7 +114,7 @@ class TestWatchOwnerChanged:
             assert len(received_events) == 3
 
             # Verify all entity keys match
-            received_keys = {event.entity_key for event, _ in received_events}
+            received_keys = {event.key for event, _ in received_events}
             expected_keys = set(entity_keys)
             assert received_keys == expected_keys
 
@@ -234,7 +234,7 @@ class TestWatchOwnerChanged:
             assert len(received_events) == 1
             received_event = received_events[0]
             changed_event = received_event[0]
-            assert changed_event.entity_key == entity_key2, "Entity key mismatch"
+            assert changed_event.key == entity_key2, "Entity key mismatch"
             assert changed_event.old_owner_address == account_1.address, (
                 "Old owner mismatch"
             )
@@ -291,7 +291,7 @@ class TestWatchOwnerChanged:
             )
             time.sleep(3)  # Wait for callback
             assert len(received_events) == 1
-            assert received_events[0][0].entity_key == entity_key
+            assert received_events[0][0].key == entity_key
             assert received_events[0][1] == receipt.tx_hash
 
             # Verify the event details
@@ -354,7 +354,7 @@ class TestWatchOwnerChanged:
             # Verify first transfer
             assert receipt1.tx_hash in events_by_tx
             event1 = events_by_tx[receipt1.tx_hash]
-            assert event1.entity_key == entity_key
+            assert event1.key == entity_key
             assert event1.old_owner_address == account_1.address, (
                 f"Expected old owner {account_1.address}, got {event1.old_owner_address}"
             )
@@ -365,7 +365,7 @@ class TestWatchOwnerChanged:
             # Verify second transfer
             assert receipt2.tx_hash in events_by_tx
             event2 = events_by_tx[receipt2.tx_hash]
-            assert event2.entity_key == entity_key
+            assert event2.key == entity_key
             assert event2.old_owner_address == account_2.address, (
                 f"Expected old owner {account_2.address}, got {event2.old_owner_address}"
             )
@@ -412,7 +412,7 @@ class TestWatchOwnerChanged:
 
             assert len(received_events) == 1
             event, tx_hash = received_events[0]
-            assert event.entity_key == entity_key
+            assert event.key == entity_key
             assert event.old_owner_address == original_owner
             assert event.new_owner_address == original_owner
             assert tx_hash == receipt.tx_hash

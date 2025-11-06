@@ -26,7 +26,7 @@ class TestAsyncWatchEntityCreated:
         events_received = []
 
         async def on_created(event: CreateEvent, tx_hash: TxHash) -> None:
-            logger.info(f"Async callback: Created {event.entity_key}")
+            logger.info(f"Async callback: Created {event.key}")
             events_received.append((event, tx_hash))
 
         # Create and start filter
@@ -43,7 +43,7 @@ class TestAsyncWatchEntityCreated:
 
             # Verify callback was invoked
             assert len(events_received) == 1
-            assert events_received[0][0].entity_key == entity_key
+            assert events_received[0][0].key == entity_key
             assert events_received[0][1] == receipt.tx_hash
 
         finally:
@@ -78,7 +78,7 @@ class TestAsyncWatchEntityCreated:
             await asyncio.wait_for(callback_completed.wait(), timeout=2.0)
 
             assert len(events_received) == 1
-            assert events_received[0].entity_key == entity_key
+            assert events_received[0].key == entity_key
 
         finally:
             await filter.uninstall()
@@ -93,7 +93,7 @@ class TestAsyncWatchEntityUpdated:
         events_received = []
 
         async def on_updated(event: UpdateEvent, tx_hash: TxHash) -> None:
-            logger.info(f"Async callback: Updated {event.entity_key}")
+            logger.info(f"Async callback: Updated {event.key}")
             events_received.append((event, tx_hash))
 
         filter = await async_arkiv_client_http.arkiv.watch_entity_updated(on_updated)
@@ -112,7 +112,7 @@ class TestAsyncWatchEntityUpdated:
             await asyncio.sleep(2)
 
             assert len(events_received) == 1
-            assert events_received[0][0].entity_key == entity_key
+            assert events_received[0][0].key == entity_key
             assert events_received[0][1] == receipt.tx_hash
 
         finally:
@@ -128,7 +128,7 @@ class TestAsyncWatchEntityExtended:
         events_received = []
 
         async def on_extended(event: ExtendEvent, tx_hash: TxHash) -> None:
-            logger.info(f"Async callback: Extended {event.entity_key}")
+            logger.info(f"Async callback: Extended {event.key}")
             events_received.append((event, tx_hash))
 
         filter = await async_arkiv_client_http.arkiv.watch_entity_extended(on_extended)
@@ -147,7 +147,7 @@ class TestAsyncWatchEntityExtended:
             await asyncio.sleep(2)
 
             assert len(events_received) == 1
-            assert events_received[0][0].entity_key == entity_key
+            assert events_received[0][0].key == entity_key
             assert events_received[0][1] == receipt.tx_hash
 
         finally:
@@ -163,7 +163,7 @@ class TestAsyncWatchEntityDeleted:
         events_received = []
 
         async def on_deleted(event: DeleteEvent, tx_hash: TxHash) -> None:
-            logger.info(f"Async callback: Deleted {event.entity_key}")
+            logger.info(f"Async callback: Deleted {event.key}")
             events_received.append((event, tx_hash))
 
         filter = await async_arkiv_client_http.arkiv.watch_entity_deleted(on_deleted)
@@ -180,7 +180,7 @@ class TestAsyncWatchEntityDeleted:
             await asyncio.sleep(2)
 
             assert len(events_received) == 1
-            assert events_received[0][0].entity_key == entity_key
+            assert events_received[0][0].key == entity_key
             assert events_received[0][1] == receipt.tx_hash
 
         finally:
@@ -199,7 +199,7 @@ class TestAsyncWatchOwnerChanged:
 
         async def on_owner_changed(event: ChangeOwnerEvent, tx_hash: TxHash) -> None:
             logger.info(
-                f"Async callback: Owner changed for {event.entity_key} from {event.old_owner_address} to {event.new_owner_address}"
+                f"Async callback: Owner changed for {event.key} from {event.old_owner_address} to {event.new_owner_address}"
             )
             events_received.append((event, tx_hash))
 
@@ -228,7 +228,7 @@ class TestAsyncWatchOwnerChanged:
             # Verify callback was invoked
             assert len(events_received) == 1
             event, event_tx_hash = events_received[0]
-            assert event.entity_key == entity_key
+            assert event.key == entity_key
             assert event.old_owner_address == original_owner
             assert event.new_owner_address == account_2.address
             assert event_tx_hash == receipt.tx_hash
@@ -270,8 +270,8 @@ class TestAsyncWatchConcurrentFilters:
             assert len(events_filter1) == 2
             assert len(events_filter2) == 2
 
-            keys1 = {e.entity_key for e in events_filter1}
-            keys2 = {e.entity_key for e in events_filter2}
+            keys1 = {e.key for e in events_filter1}
+            keys2 = {e.key for e in events_filter2}
             assert keys1 == {entity1, entity2}
             assert keys2 == {entity1, entity2}
 
@@ -329,9 +329,9 @@ class TestAsyncWatchConcurrentFilters:
             assert len(updated_events) == 1
             assert len(deleted_events) == 1
 
-            assert created_events[0].entity_key == entity_key
-            assert updated_events[0].entity_key == entity_key
-            assert deleted_events[0].entity_key == entity_key
+            assert created_events[0].key == entity_key
+            assert updated_events[0].key == entity_key
+            assert deleted_events[0].key == entity_key
 
         finally:
             await filter_created.uninstall()
@@ -376,7 +376,7 @@ class TestAsyncWatchErrorHandling:
             # Filter should still be running and process second event
             assert exception_count == 2
             assert len(events_received) == 1
-            assert events_received[0].entity_key == entity2
+            assert events_received[0].key == entity2
 
         finally:
             await filter.uninstall()
@@ -419,7 +419,7 @@ class TestAsyncWatchFilterLifecycle:
 
             # Only second entity received
             assert len(events_received) == 1
-            assert events_received[0].entity_key == entity2
+            assert events_received[0].key == entity2
 
             # Stop filter
             await filter.stop()

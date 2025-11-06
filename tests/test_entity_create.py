@@ -120,18 +120,16 @@ class TestEntityCreate:
             "Receipt should have at least one entry in 'creates'"
         )
         create = receipt.creates[0]
-        # check that create has an entity_key attribute
-        assert hasattr(create, "entity_key"), (
-            "Create receipt should have 'entity_key' attribute"
-        )
-        entity_key = create.entity_key
+        # check that create has an key attribute
+        assert hasattr(create, "key"), "Create receipt should have 'key' attribute"
+        entity_key = create.key
         assert entity_key is not None, "Entity key should not be None"
         logger.info(f"Entity key: {entity_key}")
 
         entity = arkiv_client_http.arkiv.get_entity(entity_key)
         logger.info(f"Entity: {entity}")
 
-        assert entity.entity_key == entity_key, "Entity key should match"
+        assert entity.key == entity_key, "Entity key should match"
         assert entity.payload == payload, "Entity payload should match"
         assert entity.attributes == attributes, "Entity attributes should match"
         assert entity.owner == expected_from_address, (
@@ -171,7 +169,7 @@ class TestEntityCreate:
         entity = query_result.entities[0]
         # logger.info(f"{label}: Retrieved entity:\n{entity}")
 
-        assert entity.entity_key == entity_key, f"{label}: Entity key should match"
+        assert entity.key == entity_key, f"{label}: Entity key should match"
         assert entity.payload == pl, f"{label}: Entity payload should match"
         assert get_custom_attributes(entity) == ann, (
             f"{label}: Entity attributes should match"
@@ -210,7 +208,7 @@ class TestEntityCreate:
         )
         entity = query_result.entities[0]
 
-        assert entity.entity_key == entity_key, f"{label}: Entity key should match"
+        assert entity.key == entity_key, f"{label}: Entity key should match"
         assert entity.payload == pl, f"{label}: Entity payload should match"
         assert entity.attributes == {}, f"{label}: Entity attributes should be empty"
         assert entity.owner == arkiv_client_http.eth.default_account, (
@@ -251,7 +249,7 @@ class TestEntityCreate:
         entity = query_result.entities[0]
         # logger.info(f"{label}: Retrieved entity:\n{entity}")
 
-        assert entity.entity_key == entity_key, f"{label}: Entity key should match"
+        assert entity.key == entity_key, f"{label}: Entity key should match"
         assert entity.payload == pl, f"{label}: Entity payload should match"
         assert get_custom_attributes(entity) == ann, (
             f"{label}: Entity attributes should match"

@@ -88,7 +88,7 @@ class AsyncArkivModule(ArkivModuleBase["AsyncArkiv"]):
         self._check_operations(receipt.creates, "create", 1)
 
         # Return entity key and receipt
-        entity_key = creates[0].entity_key
+        entity_key = creates[0].key
         return entity_key, receipt
 
     async def update_entity(  # type: ignore[override]
@@ -124,7 +124,7 @@ class AsyncArkivModule(ArkivModuleBase["AsyncArkiv"]):
     ) -> TransactionReceipt:
         # Docstring inherited from ArkivModuleBase.extend_entity
         # Create the extend operation and execute TX
-        extend_op = ExtendOp(entity_key=entity_key, number_of_blocks=number_of_blocks)
+        extend_op = ExtendOp(key=entity_key, number_of_blocks=number_of_blocks)
         operations = Operations(extensions=[extend_op])
         receipt = await self.execute(operations, tx_params)
 
@@ -140,7 +140,7 @@ class AsyncArkivModule(ArkivModuleBase["AsyncArkiv"]):
     ) -> TransactionReceipt:
         # Docstring inherited from ArkivModuleBase.change_owner
         # Create the change owner operation and execute TX
-        change_owner_op = ChangeOwnerOp(entity_key=entity_key, new_owner=new_owner)
+        change_owner_op = ChangeOwnerOp(key=entity_key, new_owner=new_owner)
         operations = Operations(change_owners=[change_owner_op])
         receipt = await self.execute(operations, tx_params)
 
@@ -155,7 +155,7 @@ class AsyncArkivModule(ArkivModuleBase["AsyncArkiv"]):
     ) -> TransactionReceipt:
         # Docstring inherited from ArkivModuleBase.delete_entity
         # Create the delete operation and execute TX
-        delete_op = DeleteOp(entity_key=entity_key)
+        delete_op = DeleteOp(key=entity_key)
         operations = Operations(deletes=[delete_op])
         receipt = await self.execute(operations, tx_params)
 

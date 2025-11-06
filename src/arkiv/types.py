@@ -117,7 +117,7 @@ class Entity:
         existing values with new ones.
     """
 
-    entity_key: EntityKey | None = None  # Unique identifier for the entity
+    key: EntityKey | None = None  # Unique identifier for the entity
     fields: int = ALL  # Bitmask representing which fields are populated
     owner: ChecksumAddress | None = None
     created_at_block: int | None = None
@@ -198,7 +198,7 @@ class CreateOp:
 class UpdateOp:
     """Class to represent an update operation."""
 
-    entity_key: EntityKey
+    key: EntityKey
     payload: bytes
     content_type: str
     attributes: Attributes
@@ -209,14 +209,14 @@ class UpdateOp:
 class DeleteOp:
     """Class to represent a delete operation."""
 
-    entity_key: EntityKey
+    key: EntityKey
 
 
 @dataclass(frozen=True)
 class ExtendOp:
     """Class to represent a entity lifetime extend operation."""
 
-    entity_key: EntityKey
+    key: EntityKey
     number_of_blocks: int
 
 
@@ -224,7 +224,7 @@ class ExtendOp:
 class ChangeOwnerOp:
     """Class to represent a change owner operation."""
 
-    entity_key: EntityKey
+    key: EntityKey
     new_owner: ChecksumAddress
 
 
@@ -277,7 +277,7 @@ class Operations:
 class EntityEvent:
     """Base class for events emitted when an entity is modified."""
 
-    entity_key: EntityKey
+    key: EntityKey
 
 
 @dataclass(frozen=True)

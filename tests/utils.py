@@ -79,15 +79,15 @@ def check_entity(label: str, client: "Arkiv", expected: Entity) -> None:
         - attributes must be equal
         - actual expires_at_block must be >= expected expires_at_block
     """
-    logger.info(f"{label}: Fetching and comparing entity {expected.entity_key}")
+    logger.info(f"{label}: Fetching and comparing entity {expected.key}")
 
     # Fetch the actual entity from storage
-    actual = client.arkiv.get_entity(expected.entity_key)
+    actual = client.arkiv.get_entity(expected.key)
 
     # Check entity_key
-    assert actual.entity_key == expected.entity_key, (
+    assert actual.key == expected.key, (
         f"{label}: Entity keys do not match - "
-        f"actual: {actual.entity_key}, expected: {expected.entity_key}"
+        f"actual: {actual.key}, expected: {expected.key}"
     )
 
     # Check owner
@@ -150,7 +150,7 @@ def create_entities(
             f"Expected {len(create_ops)} creates in receipt, got {len(receipt.creates)}"
         )
 
-    entity_keys = [create.entity_key for create in receipt.creates]
+    entity_keys = [create.key for create in receipt.creates]
     return entity_keys, receipt.tx_hash
 
 
@@ -184,7 +184,7 @@ def bulk_create_entities(
         )
 
     # Extract and return entity keys from receipt
-    entity_keys = [create.entity_key for create in create_receipt.creates]
+    entity_keys = [create.key for create in create_receipt.creates]
     logger.info(f"{label}: Created {len(entity_keys)} entities in bulk transaction")
 
     return entity_keys

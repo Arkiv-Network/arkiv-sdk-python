@@ -52,7 +52,7 @@ class TestEntityChangeOwner:
         assert entity_after.expires_at_block == entity_before.expires_at_block, (
             "Expiration should remain unchanged"
         )
-        assert entity_after.entity_key == entity_before.entity_key, (
+        assert entity_after.key == entity_before.key, (
             "Entity key should remain unchanged"
         )
 

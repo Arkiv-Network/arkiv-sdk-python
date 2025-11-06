@@ -120,8 +120,7 @@ class TestEntityExtend:
         # Bulk extend
         number_of_blocks = 200
         extend_ops = [
-            ExtendOp(entity_key=key, number_of_blocks=number_of_blocks)
-            for key in entity_keys
+            ExtendOp(key=key, number_of_blocks=number_of_blocks) for key in entity_keys
         ]
         operations = Operations(extensions=extend_ops)
         receipt = arkiv_client_http.arkiv.execute(operations)

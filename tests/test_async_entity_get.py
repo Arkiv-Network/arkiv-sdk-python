@@ -34,7 +34,7 @@ class TestAsyncEntityGet:
         entity = await async_arkiv_client_http.arkiv.get_entity(entity_key)
 
         # Verify all fields
-        assert entity.entity_key == entity_key, "Entity key should match"
+        assert entity.key == entity_key, "Entity key should match"
         assert entity.payload == payload, "Payload should match"
         assert entity.content_type == content_type, "Content type should match"
         assert entity.attributes == attributes, "Attributes should match"
@@ -90,7 +90,7 @@ class TestAsyncEntityGet:
 
         # Test ALL fields
         entity = await async_arkiv_client_http.arkiv.get_entity(entity_key, fields=ALL)
-        assert entity.entity_key == entity_key, "All: Entity key should be retrieved"
+        assert entity.key == entity_key, "All: Entity key should be retrieved"
         assert entity.payload == payload, "All: Payload should be retrieved"
         assert entity.content_type == content_type, (
             "All: Content type should be retrieved"
@@ -128,7 +128,7 @@ class TestAsyncEntityGet:
         # Verify all entities were retrieved correctly
         assert len(entities) == 5, "Should retrieve all 5 entities"
         for i, entity in enumerate(entities):
-            assert entity.entity_key == entity_keys[i], f"Entity {i} key should match"
+            assert entity.key == entity_keys[i], f"Entity {i} key should match"
             assert entity.payload == f"Concurrent read test entity {i}".encode(), (
                 f"Entity {i} payload should match"
             )

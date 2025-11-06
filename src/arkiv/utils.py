@@ -108,7 +108,7 @@ def to_update_op(
         payload, content_type, attributes, btl
     )
     return UpdateOp(
-        entity_key=entity_key,
+        key=entity_key,
         content_type=content_type,
         btl=btl,
         payload=payload,
@@ -391,7 +391,7 @@ def to_entity(fields: int, response_item: dict[str, Any]) -> Entity:
         attributes = merge_attributes(string_attributes, numeric_attributes)
 
     entity = Entity(
-        entity_key=entity_key,
+        key=entity_key,
         fields=fields,
         owner=owner,
         created_at_block=created_at_block,
@@ -516,14 +516,14 @@ def to_event(
     match event_name:
         case contract.CREATED_EVENT:
             return CreateEvent(
-                entity_key=entity_key,
+                key=entity_key,
                 owner_address=ChecksumAddress(event_args[OWNER_ADDRESS]),
                 expiration_block=event_args[EXPIRATION_BLOCK],
                 cost=int(event_args[COST]),
             )
         case contract.UPDATED_EVENT:
             return UpdateEvent(
-                entity_key=entity_key,
+                key=entity_key,
                 owner_address=ChecksumAddress(event_args[OWNER_ADDRESS]),
                 old_expiration_block=event_args[OLD_EXPIRATION_BLOCK],
                 new_expiration_block=event_args[NEW_EXPIRATION_BLOCK],
@@ -531,17 +531,17 @@ def to_event(
             )
         case contract.EXPIRED_EVENT:
             return ExpiryEvent(
-                entity_key=entity_key,
+                key=entity_key,
                 owner_address=ChecksumAddress(event_args[OWNER_ADDRESS]),
             )
         case contract.DELETED_EVENT:
             return DeleteEvent(
-                entity_key=entity_key,
+                key=entity_key,
                 owner_address=ChecksumAddress(event_args[OWNER_ADDRESS]),
             )
         case contract.EXTENDED_EVENT:
             return ExtendEvent(
-                entity_key=entity_key,
+                key=entity_key,
                 owner_address=ChecksumAddress(event_args[OWNER_ADDRESS]),
                 old_expiration_block=event_args[OLD_EXPIRATION_BLOCK],
                 new_expiration_block=event_args[NEW_EXPIRATION_BLOCK],
@@ -549,7 +549,7 @@ def to_event(
             )
         case contract.OWNER_CHANGED_EVENT:
             return ChangeOwnerEvent(
-                entity_key=entity_key,
+                key=entity_key,
                 old_owner_address=event_args[OLD_OWNER_ADDRESS],
                 new_owner_address=event_args[NEW_OWNER_ADDRESS],
             )
@@ -695,7 +695,7 @@ def rlp_encode_transaction(tx: Operations) -> bytes:
         # Update
         [
             [
-                entity_key_to_bytes(element.entity_key),
+                entity_key_to_bytes(element.key),
                 element.content_type,
                 element.btl,
                 element.payload,
@@ -704,11 +704,11 @@ def rlp_encode_transaction(tx: Operations) -> bytes:
             for element in tx.updates
         ],
         # Delete
-        [entity_key_to_bytes(element.entity_key) for element in tx.deletes],
+        [entity_key_to_bytes(element.key) for element in tx.deletes],
         # Extend
         [
             [
-                entity_key_to_bytes(element.entity_key),
+                entity_key_to_bytes(element.key),
                 element.number_of_blocks,
             ]
             for element in tx.extensions
@@ -716,7 +716,7 @@ def rlp_encode_transaction(tx: Operations) -> bytes:
         # ChangeOwner
         [
             [
-                entity_key_to_bytes(element.entity_key),
+                entity_key_to_bytes(element.key),
                 bytes.fromhex(element.new_owner[2:]),  # Convert address to bytes
             ]
             for element in tx.change_owners
