@@ -241,6 +241,7 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
         # Docstring inherited from ArkivModuleBase.query_entities
         options.validate(query)
         rpc_options = to_rpc_query_options(options)
+        logger.info(f"Query options: {rpc_options}")
         raw_results = self.client.eth.query(query, rpc_options)
 
         return to_query_result(options.fields, raw_results)

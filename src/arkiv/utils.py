@@ -31,6 +31,7 @@ from .types import (
     ALL,
     ATTRIBUTES,
     CONTENT_TYPE,
+    CREATED_AT,
     EXPIRATION,
     KEY,
     LAST_MODIFIED_AT,
@@ -280,9 +281,10 @@ def to_rpc_query_options(
             "contentType": options.fields & CONTENT_TYPE != 0,
             "expiration": options.fields & EXPIRATION != 0,
             "owner": options.fields & OWNER != 0,
-            "lastModifiedAt": options.fields & LAST_MODIFIED_AT != 0,
-            "txIndexInBlock": options.fields & TX_INDEX_IN_BLOCK != 0,
-            "opIndexInTx": options.fields & OP_INDEX_IN_TX != 0,
+            "createdAtBlock": options.fields & CREATED_AT != 0,
+            "lastModifiedAtBlock": options.fields & LAST_MODIFIED_AT != 0,
+            "transactionIndexInBlock": options.fields & TX_INDEX_IN_BLOCK != 0,
+            "operationIndexInTransaction": options.fields & OP_INDEX_IN_TX != 0,
         },
         "resultsPerPage": options.max_results_per_page,
         "cursor": options.cursor,
@@ -300,7 +302,11 @@ def to_entity(fields: int, response_item: dict[str, Any]) -> Entity:
     # Set defaults
     entity_key: EntityKey | None = None
     owner: ChecksumAddress | None = None
+    created_at_block: int | None = None
+    last_modified_at_block: int | None = None
     expires_at_block: int | None = None
+    transaction_index: int | None = None
+    operation_index: int | None = None
     payload: bytes | None = None
     content_type: str | None = None
     attributes: Attributes | None = None
@@ -317,11 +323,41 @@ def to_entity(fields: int, response_item: dict[str, Any]) -> Entity:
             raise ValueError("RPC query response item missing 'owner' field")
         owner = Web3.to_checksum_address(response_item.owner)
 
+    # Extract created_at if present
+    if fields & CREATED_AT != 0:
+        if not hasattr(response_item, "createdAtBlock"):
+            raise ValueError("RPC query response item missing 'createdAtBlock' field")
+        created_at_block = int(response_item.createdAtBlock)
+
+    # Extract last_modified_at if present
+    if fields & LAST_MODIFIED_AT != 0:
+        if not hasattr(response_item, "lastModifiedAtBlock"):
+            raise ValueError(
+                "RPC query response item missing 'lastModifiedAtBlock' field"
+            )
+        last_modified_at_block = int(response_item.lastModifiedAtBlock)
+
     # Extract expiration if present
     if fields & EXPIRATION != 0:
         if not hasattr(response_item, "expiresAt"):
             raise ValueError("RPC query response item missing 'expiresAt' field")
         expires_at_block = int(response_item.expiresAt)
+
+    # Extract transaction index if present
+    if fields & TX_INDEX_IN_BLOCK != 0:
+        if not hasattr(response_item, "transactionIndexInBlock"):
+            raise ValueError(
+                "RPC query response item missing 'transactionIndexInBlock' field"
+            )
+        transaction_index = int(response_item.transactionIndexInBlock)
+
+    # Extract operation index if present
+    if fields & OP_INDEX_IN_TX != 0:
+        if not hasattr(response_item, "operationIndexInTransaction"):
+            raise ValueError(
+                "RPC query response item missing 'operationIndexInTransaction' field"
+            )
+        operation_index = int(response_item.operationIndexInTransaction)
 
     # Extract payload if present
     if fields & PAYLOAD != 0:
@@ -358,11 +394,11 @@ def to_entity(fields: int, response_item: dict[str, Any]) -> Entity:
         entity_key=entity_key,
         fields=fields,
         owner=owner,
-        created_at_block=None,  # Not provided in query response
-        last_modified_at_block=None,  # Not provided in query response
+        created_at_block=created_at_block,
+        last_modified_at_block=last_modified_at_block,
         expires_at_block=expires_at_block,
-        transaction_index=None,  # Not provided in query response
-        operation_index=None,  # Not provided in query response
+        transaction_index=transaction_index,
+        operation_index=operation_index,
         payload=payload,
         content_type=content_type,
         attributes=attributes,

@@ -8,7 +8,12 @@ from web3.types import TxReceipt
 
 from arkiv.client import Arkiv
 from arkiv.contract import STORAGE_ADDRESS
-from arkiv.types import Attributes, CreateOp, Operations, QueryOptions
+from arkiv.types import (
+    Attributes,
+    CreateOp,
+    Operations,
+    QueryOptions,
+)
 from arkiv.utils import (
     check_entity_key,
     to_receipt,
@@ -157,7 +162,8 @@ class TestEntityCreate:
         assert tx_receipt.block_number > 0, f"{label}: Block number should be positive"
 
         query_result = arkiv_client_http.arkiv.query_entities(
-            f"$key = {entity_key}", QueryOptions(at_block=tx_receipt.block_number)
+            f"$key = {entity_key}",
+            QueryOptions(at_block=tx_receipt.block_number),
         )
         assert len(query_result.entities) == 1, (
             f"{label}: Should return exactly one entity"
