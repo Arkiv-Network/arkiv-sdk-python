@@ -273,7 +273,6 @@ def to_rpc_query_options(
 
     # see https://github.com/Golem-Base/golembase-op-geth/blob/main/eth/api_arkiv.go
     rpc_query_options = {
-        "atBlock": options.at_block,
         "includeData": {
             "key": options.fields & KEY != 0,
             "attributes": options.fields & ATTRIBUTES != 0,
@@ -285,12 +284,20 @@ def to_rpc_query_options(
             "lastModifiedAtBlock": options.fields & LAST_MODIFIED_AT != 0,
             "transactionIndexInBlock": options.fields & TX_INDEX_IN_BLOCK != 0,
             "operationIndexInTransaction": options.fields & OP_INDEX_IN_TX != 0,
-        },
-        "resultsPerPage": options.max_results_per_page,
-        "cursor": options.cursor,
+        }
     }
 
-    logger.debug(f"RPC query options: {rpc_query_options}")
+    if options.at_block is not None:
+        rpc_query_options["atBlock"] = options.at_block
+    else:
+        rpc_query_options["atBlock"] = None
+
+    if options.max_results_per_page is not None:
+        rpc_query_options["resultsPerPage"] = options.max_results_per_page
+
+    if options.cursor is not None:
+        rpc_query_options["cursor"] = options.cursor
+
     return rpc_query_options
 
 

@@ -65,10 +65,7 @@ class QueryOptions:
 
         # Validate mutual exclusivity of query and cursor
         if self.cursor is None and query is None:
-            raise ValueError("Must provide either query or cursor")
-
-        if self.cursor is not None and query is not None:
-            raise ValueError("Cannot provide both query and cursor")
+            raise ValueError("Must provide query or cursor")
 
         if query is not None and len(query.strip()) == 0:
             raise ValueError("Query string cannot be empty")
