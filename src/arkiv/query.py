@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterator
 from typing import TYPE_CHECKING
 
@@ -9,6 +10,8 @@ from .types import Entity, QueryOptions, QueryResult
 
 if TYPE_CHECKING:
     from .client import Arkiv
+
+logger = logging.getLogger(__name__)
 
 
 class QueryIterator:
@@ -73,6 +76,9 @@ class QueryIterator:
         """
         # Lazy initialization - fetch first page on first next()
         if self._current_result is None:
+            logger.info(
+                f"Fetching first page for query: {self._query}, options: {self._options}"
+            )
             self._current_result = self._client.arkiv.query_entities(
                 self._query, options=self._options
             )
@@ -85,7 +91,15 @@ class QueryIterator:
 
         # Fetch next page if available
         if self._current_result.has_more() and not self._exhausted:
-            options = QueryOptions(cursor=self._current_result.cursor)
+            options = QueryOptions(
+                fields=self._options.fields,
+                at_block=self._current_result.block_number,
+                max_results_per_page=self._options.max_results_per_page,
+                cursor=self._current_result.cursor,
+            )
+            logger.info(
+                f"Fetching next page for query: {self._query}, options: {options}"
+            )
             self._current_result = self._client.arkiv.query_entities(
                 query=self._query, options=options
             )

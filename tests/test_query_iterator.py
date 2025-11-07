@@ -3,7 +3,7 @@
 import uuid
 
 from arkiv import Arkiv
-from arkiv.types import Attributes, CreateOp, Operations, QueryOptions
+from arkiv.types import ATTRIBUTES, KEY, Attributes, CreateOp, Operations, QueryOptions
 
 BTL = 100
 CONTENT_TYPE = "text/plain"
@@ -53,20 +53,24 @@ class TestQueryIterator:
 
     def test_iterate_entities_basic(self, arkiv_client_http: Arkiv) -> None:
         """Test basic iteration over multiple pages of entities."""
-        # Create 25 entities
-        batch_id, expected_keys = create_test_entities(arkiv_client_http, 25)
+        # Create test entities
+        num_entities = 10
+        batch_id, expected_keys = create_test_entities(arkiv_client_http, num_entities)
 
-        # Iterate with page size of 10 (should auto-fetch 3 pages: 10, 10, 5)
+        assert len(expected_keys) == num_entities
+
+        # Define query and options
         query = f'batch_id = "{batch_id}"'
-        options = QueryOptions(max_results_per_page=10)
+        options = QueryOptions(fields=KEY | ATTRIBUTES, max_results_per_page=4)
 
         # Collect all entities using iterator
+        # Iterate with page size of 4 (should auto-fetch 3 pages: 4, 4, 2)
         entities = list(
             arkiv_client_http.arkiv.iterate_entities(query=query, options=options)
         )
 
-        # Should get all 25 entities
-        assert len(entities) == 25
+        # Should get all 10 entities
+        assert len(entities) == num_entities
 
         # Verify all entities have the correct batch_id
         for entity in entities:
@@ -75,5 +79,4 @@ class TestQueryIterator:
 
         # Verify all entity keys are present and unique
         result_keys = [entity.key for entity in entities]
-        assert len(result_keys) == len(set(result_keys))
         assert set(result_keys) == set(expected_keys)

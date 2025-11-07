@@ -304,7 +304,7 @@ def to_rpc_query_options(
 def to_entity(fields: int, response_item: dict[str, Any]) -> Entity:
     """Convert a low-level RPC query response to a high-level Entity."""
 
-    logger.info(f"Item: {response_item}")
+    logger.debug(f"Item: {response_item}")
 
     # Set defaults
     entity_key: EntityKey | None = None
