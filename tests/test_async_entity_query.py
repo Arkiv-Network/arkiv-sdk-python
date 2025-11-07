@@ -6,8 +6,7 @@ import uuid
 import pytest
 
 from arkiv import AsyncArkiv
-from arkiv.types import Attributes, Cursor, QueryOptions
-from arkiv.utils import to_query_options
+from arkiv.types import Attributes, QueryOptions
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +19,7 @@ class TestAsyncQueryEntitiesParameterValidation:
         self, async_arkiv_client_http: AsyncArkiv
     ) -> None:
         """Test that query_entities raises ValueError when neither query nor cursor is provided."""
-        with pytest.raises(ValueError, match="Must provide either query or cursor"):
+        with pytest.raises(ValueError, match="Must provide query or cursor"):
             await async_arkiv_client_http.arkiv.query_entities()
 
     @pytest.mark.asyncio
@@ -28,7 +27,7 @@ class TestAsyncQueryEntitiesParameterValidation:
         self, async_arkiv_client_http: AsyncArkiv
     ) -> None:
         """Test that explicitly passing None for both query and cursor raises ValueError."""
-        with pytest.raises(ValueError, match="Must provide either query or cursor"):
+        with pytest.raises(ValueError, match="Must provide query or cursor"):
             await async_arkiv_client_http.arkiv.query_entities(
                 query=None, options=QueryOptions()
             )
@@ -44,21 +43,6 @@ class TestAsyncQueryEntitiesParameterValidation:
         )
         assert not result  # check for falsy result
         assert len(result) == 0  # No entities match this owner
-
-    @pytest.mark.asyncio
-    async def test_async_query_entities_both_query_and_cursor_not_allowed(
-        self, async_arkiv_client_http: AsyncArkiv
-    ) -> None:
-        """Test that query_entities rejects both query and cursor (mutually exclusive)."""
-        cursor = Cursor("dummy_cursor_value")
-        query_options = to_query_options(cursor=cursor)
-
-        # Should raise ValueError when both are provided
-        with pytest.raises(ValueError, match="Cannot provide both query and cursor"):
-            await async_arkiv_client_http.arkiv.query_entities(
-                query='owner = "0x0000000000000000000000000000000000000000"',
-                options=query_options,
-            )
 
 
 class TestAsyncQueryEntitiesBasic:

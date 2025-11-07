@@ -63,7 +63,7 @@ class QueryOptions:
             if self.fields > ALL:
                 raise ValueError(f"Fields contains unknown field flags: {self.fields}")
 
-        # Validate mutual exclusivity of query and cursor
+        # Validate that at least one of query or cursor is provided
         if self.cursor is None and query is None:
             raise ValueError("Must provide query or cursor")
 

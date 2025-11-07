@@ -86,7 +86,9 @@ class QueryIterator:
         # Fetch next page if available
         if self._current_result.has_more() and not self._exhausted:
             options = QueryOptions(cursor=self._current_result.cursor)
-            self._current_result = self._client.arkiv.query_entities(options=options)
+            self._current_result = self._client.arkiv.query_entities(
+                query=self._query, options=options
+            )
             self._current_index = 0
 
             # Check if next page has entities

@@ -272,7 +272,7 @@ def to_rpc_query_options(
         options = QueryOptions()
 
     # see https://github.com/Golem-Base/golembase-op-geth/blob/main/eth/api_arkiv.go
-    rpc_query_options = {
+    rpc_query_options: dict[str, Any] = {
         "includeData": {
             "key": options.fields & KEY != 0,
             "attributes": options.fields & ATTRIBUTES != 0,

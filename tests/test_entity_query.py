@@ -16,7 +16,7 @@ class TestQueryEntitiesParameterValidation:
         self, arkiv_client_http: Arkiv
     ) -> None:
         """Test that query_entities raises ValueError when neither query nor cursor is provided."""
-        with pytest.raises(ValueError, match="Must provide either query or cursor"):
+        with pytest.raises(ValueError, match="Must provide query or cursor"):
             arkiv_client_http.arkiv.query_entities()
 
     def test_query_entities_validates_none_for_both(
@@ -24,7 +24,7 @@ class TestQueryEntitiesParameterValidation:
     ) -> None:
         """Test that explicitly passing None for both query and cursor raises ValueError."""
         query_options = to_query_options()
-        with pytest.raises(ValueError, match="Must provide either query or cursor"):
+        with pytest.raises(ValueError, match="Must provide query or cursor"):
             arkiv_client_http.arkiv.query_entities(options=query_options)
 
     def test_query_entities_accepts_query_only(self, arkiv_client_http: Arkiv) -> None:
@@ -49,21 +49,6 @@ class TestQueryEntitiesParameterValidation:
         # Should not raise ValueError for missing query
         # Will raise NotImplementedError since cursor-based pagination is not yet implemented
         arkiv_client_http.arkiv.query_entities(options=query_options)
-
-    def test_query_entities_both_query_and_cursor_not_allowed(
-        self, arkiv_client_http: Arkiv
-    ) -> None:
-        """Test that query_entities rejects both query and cursor (mutually exclusive)."""
-        query = '$owner = "0x0000000000000000000000000000000000000000"'
-        cursor = Cursor("dummy_cursor_value")
-        query_options = to_query_options(cursor=cursor)
-
-        # Should raise ValueError when both query and cursor are provided
-        with pytest.raises(ValueError, match="Cannot provide both query and cursor"):
-            arkiv_client_http.arkiv.query_entities(
-                query=query,
-                options=query_options,
-            )
 
     def test_query_entities_with_all_parameters(self, arkiv_client_http: Arkiv) -> None:
         """Test that query_entities accepts all parameters."""
