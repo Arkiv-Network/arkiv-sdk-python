@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING
 from eth_typing import ChecksumAddress, HexStr
 from web3.types import TxParams, TxReceipt
 
+from arkiv.query import AsyncQueryIterator
+
 from .events_async import AsyncEventFilter
 from .module_base import ArkivModuleBase
 from .types import (
@@ -169,7 +171,7 @@ class AsyncArkivModule(ArkivModuleBase["AsyncArkiv"]):
         # Docstring inherited from ArkivModuleBase.entity_exists
         try:
             options = QueryOptions(fields=NONE, at_block=at_block)
-            query_result: QueryPage = await self.query_entities(
+            query_result: QueryPage = await self.query_entities_page(
                 f"$key = {entity_key}", options=options
             )
             return len(query_result.entities) > 0
@@ -181,7 +183,7 @@ class AsyncArkivModule(ArkivModuleBase["AsyncArkiv"]):
     ) -> Entity:
         # Docstring inherited from ArkivModuleBase.get_entity
         options = QueryOptions(fields=fields, at_block=at_block)
-        query_result: QueryPage = await self.query_entities(
+        query_result: QueryPage = await self.query_entities_page(
             f"$key = {entity_key}", options=options
         )
 
@@ -194,7 +196,7 @@ class AsyncArkivModule(ArkivModuleBase["AsyncArkiv"]):
         result_entity = query_result.entities[0]
         return result_entity
 
-    async def query_entities(  # type: ignore[override]
+    async def query_entities_page(  # type: ignore[override]
         self,
         query: str,
         options: QueryOptions = QUERY_OPTIONS_DEFAULT,
@@ -205,6 +207,49 @@ class AsyncArkivModule(ArkivModuleBase["AsyncArkiv"]):
         raw_results = await self.client.eth.query(query, rpc_options)
 
         return to_query_result(options.fields, raw_results)
+
+    def query_entities(
+        self, query: str, options: QueryOptions = QUERY_OPTIONS_DEFAULT
+    ) -> AsyncQueryIterator:
+        """
+        Provides an iterator over entity results for the provided query.
+
+        The iterator allows to seamlessly process all matching entities without
+        manual pagination.
+
+        Args:
+            query: SQL-like where clause
+            options: QueryOptions for the query execution
+
+        Returns:
+            QueryIterator that yields Entity objects across all pages.
+
+        Examples:
+            Process all matching entities:
+                >>> for entity in arkiv.arkiv.iterate_entities(
+                ...     "$owner = '0x1234...'"
+                ... ):
+                ...     process(entity)
+
+            Collect all results:
+                >>> entities = list(arkiv.arkiv.iterate_entities(
+                ...     "$owner = '0x1234...'"
+                >>> print(f"Total: {len(entities)}")
+
+        Warning:
+            This method may make many network requests to fetch all pages.
+            Use appropriate limit values to control API usage.
+            For manual pagination control, use query_entities() instead.
+
+        Note:
+            - All pages maintain consistency by querying the same block
+            - The iterator cannot be reused once exhausted
+        """
+        return AsyncQueryIterator(
+            client=self.client,
+            query=query,
+            options=options,
+        )
 
     async def watch_entity_created(
         self,

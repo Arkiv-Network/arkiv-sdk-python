@@ -403,7 +403,7 @@ class ArkivModuleBase(Generic[ClientT]):
         """
         raise NotImplementedError("Subclasses must implement get_entity()")
 
-    def query_entities(
+    def query_entities_page(
         self, query: str, options: QueryOptions = QUERY_OPTIONS_DEFAULT
     ) -> QueryPage:
         """

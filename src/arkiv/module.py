@@ -210,7 +210,7 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
         # Docstring inherited from ArkivModuleBase.entity_exists
         try:
             options = QueryOptions(fields=NONE, at_block=at_block)
-            query_result: QueryPage = self.query_entities(
+            query_result: QueryPage = self.query_entities_page(
                 f"$key = {entity_key}", options=options
             )
             return len(query_result.entities) > 0
@@ -222,7 +222,7 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
     ) -> Entity:
         # Docstring inherited from ArkivModuleBase.get_entity
         options = QueryOptions(fields=fields, at_block=at_block)
-        query_result: QueryPage = self.query_entities(
+        query_result: QueryPage = self.query_entities_page(
             f"$key = {entity_key}", options=options
         )
 
@@ -235,7 +235,7 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
         result_entity = query_result.entities[0]
         return result_entity
 
-    def query_entities(
+    def query_entities_page(
         self, query: str, options: QueryOptions = QUERY_OPTIONS_DEFAULT
     ) -> QueryPage:
         # Docstring inherited from ArkivModuleBase.query_entities
@@ -245,11 +245,11 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
 
         return to_query_result(options.fields, raw_results)
 
-    def iterate_entities(
+    def query_entities(
         self, query: str, options: QueryOptions = QUERY_OPTIONS_DEFAULT
     ) -> QueryIterator:
         """
-        Provides an iterator over entity results for the providedquery.
+        Provides an iterator over entity results for the provided query.
 
         The iterator allows to seamlessly process all matching entities without
         manual pagination.

@@ -159,7 +159,7 @@ class TestEntityCreate:
         check_tx_hash(label, tx_receipt)
         assert tx_receipt.block_number > 0, f"{label}: Block number should be positive"
 
-        query_result = arkiv_client_http.arkiv.query_entities(
+        query_result = arkiv_client_http.arkiv.query_entities_page(
             f"$key = {entity_key}",
             QueryOptions(at_block=tx_receipt.block_number),
         )
@@ -200,7 +200,7 @@ class TestEntityCreate:
         check_tx_hash(label, tx_receipt)
         assert tx_receipt.block_number > 0, f"{label}: Block number should be positive"
 
-        query_result = arkiv_client_http.arkiv.query_entities(
+        query_result = arkiv_client_http.arkiv.query_entities_page(
             f"$key = {entity_key}", QueryOptions(at_block=tx_receipt.block_number)
         )
         assert len(query_result.entities) == 1, (
@@ -240,7 +240,7 @@ class TestEntityCreate:
         check_tx_hash(label, tx_receipt)
         assert tx_receipt.block_number > 0, f"{label}: Block number should be positive"
 
-        query_result = arkiv_client_http.arkiv.query_entities(
+        query_result = arkiv_client_http.arkiv.query_entities_page(
             f"$key = {entity_key}", QueryOptions(at_block=tx_receipt.block_number)
         )
         assert len(query_result.entities) == 1, (

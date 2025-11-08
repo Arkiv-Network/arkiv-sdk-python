@@ -15,7 +15,7 @@ class TestQueryEntitiesParameterValidation:
     def test_query_entities_requires_query(self, arkiv_client_http: Arkiv) -> None:
         """Test that query_entities raises ValueError when query is not provided."""
         with pytest.raises(ValueError, match="Must provide query"):
-            arkiv_client_http.arkiv.query_entities(query=None)
+            arkiv_client_http.arkiv.query_entities_page(query=None)
 
     def test_query_entities_validates_none_for_both(
         self, arkiv_client_http: Arkiv
@@ -23,13 +23,15 @@ class TestQueryEntitiesParameterValidation:
         """Test that explicitly passing None for both query and cursor raises ValueError."""
         query_options = to_query_options()
         with pytest.raises(ValueError, match="Must provide query"):
-            arkiv_client_http.arkiv.query_entities(query=None, options=query_options)
+            arkiv_client_http.arkiv.query_entities_page(
+                query=None, options=query_options
+            )
 
     def test_query_entities_accepts_query_only(self, arkiv_client_http: Arkiv) -> None:
         """Test that query_entities accepts query without cursor."""
         # Should not raise ValueError for missing cursor
         # Query will execute (returns empty result since no matching entities exist)
-        result = arkiv_client_http.arkiv.query_entities(
+        result = arkiv_client_http.arkiv.query_entities_page(
             query='owner = "0x0000000000000000000000000000000000000000"'
         )
         assert not result  # check for falsy result
@@ -49,7 +51,7 @@ class TestQueryEntitiesParameterValidation:
         query_options = to_query_options(
             fields=ALL, max_results_per_page=50, at_block=None, cursor=None
         )
-        result = arkiv_client_http.arkiv.query_entities(
+        result = arkiv_client_http.arkiv.query_entities_page(
             query=query, options=query_options
         )
         assert len(result) == 0  # No entities match this owner
@@ -77,7 +79,7 @@ class TestQueryEntitiesBasic:
         # Query for entities with the shared ID
         # Note: Using Arkiv query syntax with double quotes for string values
         query = f'id = "{shared_id}"'
-        result = arkiv_client_http.arkiv.query_entities(query=query)
+        result = arkiv_client_http.arkiv.query_entities_page(query=query)
 
         # Verify result basics
         assert result  # Check __bool__()

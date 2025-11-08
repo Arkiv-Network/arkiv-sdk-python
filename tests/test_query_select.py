@@ -89,7 +89,7 @@ def query_entity_by_key(
     """
     query = f'$key = "{entity_key}"'
     options = QueryOptions(fields=fields)
-    result = client.arkiv.query_entities(query=query, options=options)
+    result = client.arkiv.query_entities_page(query=query, options=options)
 
     # Should find exactly one entity
     assert len(result.entities) == 1

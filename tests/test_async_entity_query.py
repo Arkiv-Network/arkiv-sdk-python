@@ -20,7 +20,7 @@ class TestAsyncQueryEntitiesParameterValidation:
     ) -> None:
         """Test that query_entities raises ValueError when neither query nor cursor is provided."""
         with pytest.raises(ValueError, match="Must provide query"):
-            await async_arkiv_client_http.arkiv.query_entities(query=None)
+            await async_arkiv_client_http.arkiv.query_entities_page(query=None)
 
     @pytest.mark.asyncio
     async def test_async_query_entities_validates_none(
@@ -28,7 +28,7 @@ class TestAsyncQueryEntitiesParameterValidation:
     ) -> None:
         """Test that explicitly passing None for both query and cursor raises ValueError."""
         with pytest.raises(ValueError, match="Must provide query"):
-            await async_arkiv_client_http.arkiv.query_entities(
+            await async_arkiv_client_http.arkiv.query_entities_page(
                 query=None, options=QueryOptions()
             )
 
@@ -38,7 +38,7 @@ class TestAsyncQueryEntitiesParameterValidation:
     ) -> None:
         """Test that query_entities accepts query without cursor."""
         # Should not raise ValueError for missing cursor
-        result = await async_arkiv_client_http.arkiv.query_entities(
+        result = await async_arkiv_client_http.arkiv.query_entities_page(
             query='owner = "0x0000000000000000000000000000000000000000"'
         )
         assert not result  # check for falsy result
@@ -68,7 +68,7 @@ class TestAsyncQueryEntitiesBasic:
 
         # Query for entities with the shared ID
         query = f'id = "{shared_id}"'
-        result = await async_arkiv_client_http.arkiv.query_entities(query=query)
+        result = await async_arkiv_client_http.arkiv.query_entities_page(query=query)
 
         # Verify result basics
         assert result  # Check __bool__()
@@ -133,9 +133,9 @@ class TestAsyncQueryEntitiesBasic:
 
         # Execute all queries concurrently
         results = await asyncio.gather(
-            async_arkiv_client_http.arkiv.query_entities(query=query_all),
-            async_arkiv_client_http.arkiv.query_entities(query=query_single),
-            async_arkiv_client_http.arkiv.query_entities(query=query_none),
+            async_arkiv_client_http.arkiv.query_entities_page(query=query_all),
+            async_arkiv_client_http.arkiv.query_entities_page(query=query_single),
+            async_arkiv_client_http.arkiv.query_entities_page(query=query_none),
         )
 
         result_all, result_single, result_none = results

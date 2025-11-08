@@ -70,7 +70,9 @@ class TestQueryPaging:
         # Query with max_results_per_page > num entities (should get all in one page)
         query = f'batch_id = "{batch_id}"'
         options = QueryOptions(fields=KEY | ATTRIBUTES, max_results_per_page=20)
-        result = arkiv_client_http.arkiv.query_entities(query=query, options=options)
+        result = arkiv_client_http.arkiv.query_entities_page(
+            query=query, options=options
+        )
 
         # Should get all 10 entities in one page
         assert len(result.entities) == 10
@@ -95,7 +97,9 @@ class TestQueryPaging:
         options = QueryOptions(max_results_per_page=max_results)
 
         # Page 1: Should get 10 entities
-        page1 = arkiv_client_http.arkiv.query_entities(query=query, options=options)
+        page1 = arkiv_client_http.arkiv.query_entities_page(
+            query=query, options=options
+        )
         logger.info(f"Page 1 cursor: {page1.cursor}")
         assert len(page1.entities) == max_results
         assert page1.has_more() is True
@@ -106,7 +110,7 @@ class TestQueryPaging:
             cursor=page1.cursor,
             max_results_per_page=max_results,
         )
-        page2 = arkiv_client_http.arkiv.query_entities(
+        page2 = arkiv_client_http.arkiv.query_entities_page(
             query=query, options=options_page2
         )
         assert len(page2.entities) == max_results
@@ -118,7 +122,7 @@ class TestQueryPaging:
             cursor=page2.cursor,
             max_results_per_page=max_results,
         )
-        page3 = arkiv_client_http.arkiv.query_entities(
+        page3 = arkiv_client_http.arkiv.query_entities_page(
             query=query, options=options_page3
         )
         assert len(page3.entities) == 2
