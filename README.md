@@ -128,7 +128,18 @@ from arkiv import Arkiv
 from arkiv.account import NamedAccount
 from arkiv.provider import ProviderBuilder
 
-# Create account from wallet json
+## Advanced Features
+
+### Provider Builder
+
+The snippet below demonstrates the creation of various nodes to connect to using the `ProviderBuilder`.
+
+```python
+from arkiv import Arkiv
+from arkiv.account import NamedAccount
+from arkiv.provider import ProviderBuilder
+
+# Create account from wallet json
 with open ('wallet_bob.json', 'r') as f:
     wallet = f.read()
 
@@ -142,6 +153,30 @@ client = Arkiv(provider, account=bob)
 provider_container = ProviderBuilder().node().build()
 provider_kaolin_ws = ProviderBuilder().kaolin().ws().build()
 provider_custom = ProviderBuilder().custom("https://my-rpc.io").build()
+```
+
+### Query Iterator
+
+The `query_entities` method returns an iterator that automatically handles pagination, making it easy to work with large result sets:
+
+```python
+from arkiv import Arkiv
+from arkiv.types import QueryOptions, KEY, ATTRIBUTES
+
+client = Arkiv()
+
+# Query entities with automatic pagination
+query = 'type = "user" AND age > 18'
+options = QueryOptions(fields=KEY | ATTRIBUTES, max_results_per_page=100)
+
+# Iterate over all matching entities
+# Pagination is handled automatically by the iterator
+for entity in client.arkiv.query_entities(query=query, options=options):
+    print(f"Entity {entity.key}: {entity.attributes}")
+
+# Or collect all results into a list
+entities = list(client.arkiv.query_entities(query=query, options=options))
+print(f"Found {len(entities)} entities")
 ```
 
 ## Arkiv Topics/Features

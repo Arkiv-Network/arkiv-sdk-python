@@ -176,7 +176,7 @@ class AsyncQueryIterator:
         self._current_index = 0
         self._exhausted = False
 
-    def __aiter__(self):
+    def __aiter__(self) -> AsyncQueryIterator:
         """Return the async iterator instance."""
         return self
 
