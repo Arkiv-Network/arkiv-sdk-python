@@ -30,7 +30,7 @@ from .types import (
     ExtendOp,
     Operations,
     QueryOptions,
-    QueryResult,
+    QueryPage,
     TransactionReceipt,
     TxHash,
     UpdateCallback,
@@ -210,7 +210,7 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
         # Docstring inherited from ArkivModuleBase.entity_exists
         try:
             options = QueryOptions(fields=NONE, at_block=at_block)
-            query_result: QueryResult = self.query_entities(
+            query_result: QueryPage = self.query_entities(
                 f"$key = {entity_key}", options=options
             )
             return len(query_result.entities) > 0
@@ -222,7 +222,7 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
     ) -> Entity:
         # Docstring inherited from ArkivModuleBase.get_entity
         options = QueryOptions(fields=fields, at_block=at_block)
-        query_result: QueryResult = self.query_entities(
+        query_result: QueryPage = self.query_entities(
             f"$key = {entity_key}", options=options
         )
 
@@ -236,8 +236,8 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
         return result_entity
 
     def query_entities(
-        self, query: str | None = None, options: QueryOptions = QUERY_OPTIONS_DEFAULT
-    ) -> QueryResult:
+        self, query: str, options: QueryOptions = QUERY_OPTIONS_DEFAULT
+    ) -> QueryPage:
         # Docstring inherited from ArkivModuleBase.query_entities
         options.validate(query)
         rpc_options = to_rpc_query_options(options)

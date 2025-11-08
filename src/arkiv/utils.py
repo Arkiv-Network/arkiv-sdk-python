@@ -54,7 +54,7 @@ from .types import (
     NumericAttributesRlp,
     Operations,
     QueryOptions,
-    QueryResult,
+    QueryPage,
     StringAttributes,
     StringAttributesRlp,
     TransactionReceipt,
@@ -414,7 +414,7 @@ def to_entity(fields: int, response_item: dict[str, Any]) -> Entity:
     return entity
 
 
-def to_query_result(fields: int, rpc_query_response: dict[str, Any]) -> QueryResult:
+def to_query_result(fields: int, rpc_query_response: dict[str, Any]) -> QueryPage:
     """Convert a low-level RPC query response to a high-level QueryResult."""
 
     logger.info(f"Raw query result(s): {rpc_query_response}")
@@ -445,7 +445,7 @@ def to_query_result(fields: int, rpc_query_response: dict[str, Any]) -> QueryRes
         rpc_query_response["cursor"] if "cursor" in rpc_query_response else None
     )
 
-    query_result = QueryResult(
+    query_result = QueryPage(
         entities=entities, block_number=block_number, cursor=cursor
     )
 

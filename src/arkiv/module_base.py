@@ -44,7 +44,7 @@ from arkiv.types import (
     EntityKey,
     Operations,
     QueryOptions,
-    QueryResult,
+    QueryPage,
     TransactionReceipt,
     TxHash,
 )
@@ -404,8 +404,8 @@ class ArkivModuleBase(Generic[ClientT]):
         raise NotImplementedError("Subclasses must implement get_entity()")
 
     def query_entities(
-        self, query: str | None = None, options: QueryOptions = QUERY_OPTIONS_DEFAULT
-    ) -> QueryResult:
+        self, query: str, options: QueryOptions = QUERY_OPTIONS_DEFAULT
+    ) -> QueryPage:
         """
         Execute a query against entity storage.
 

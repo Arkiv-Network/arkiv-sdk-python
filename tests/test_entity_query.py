@@ -5,27 +5,25 @@ import uuid
 import pytest
 
 from arkiv import Arkiv
-from arkiv.types import ALL, Attributes, Cursor
+from arkiv.types import ALL, Attributes
 from arkiv.utils import to_query_options
 
 
 class TestQueryEntitiesParameterValidation:
     """Test parameter validation for query_entities method."""
 
-    def test_query_entities_requires_query_or_cursor(
-        self, arkiv_client_http: Arkiv
-    ) -> None:
-        """Test that query_entities raises ValueError when neither query nor cursor is provided."""
-        with pytest.raises(ValueError, match="Must provide query or cursor"):
-            arkiv_client_http.arkiv.query_entities()
+    def test_query_entities_requires_query(self, arkiv_client_http: Arkiv) -> None:
+        """Test that query_entities raises ValueError when query is not provided."""
+        with pytest.raises(ValueError, match="Must provide query"):
+            arkiv_client_http.arkiv.query_entities(query=None)
 
     def test_query_entities_validates_none_for_both(
         self, arkiv_client_http: Arkiv
     ) -> None:
         """Test that explicitly passing None for both query and cursor raises ValueError."""
         query_options = to_query_options()
-        with pytest.raises(ValueError, match="Must provide query or cursor"):
-            arkiv_client_http.arkiv.query_entities(options=query_options)
+        with pytest.raises(ValueError, match="Must provide query"):
+            arkiv_client_http.arkiv.query_entities(query=None, options=query_options)
 
     def test_query_entities_accepts_query_only(self, arkiv_client_http: Arkiv) -> None:
         """Test that query_entities accepts query without cursor."""
@@ -36,19 +34,6 @@ class TestQueryEntitiesParameterValidation:
         )
         assert not result  # check for falsy result
         assert len(result) == 0  # No entities match this owner
-
-    @pytest.mark.skip(
-        reason="TODO: Revisit once cursor-based queries are properly tested. Currently fails with invalid cursor error."
-    )
-    def test_query_entities_accepts_cursor_only(self, arkiv_client_http: Arkiv) -> None:
-        """Test that query_entities accepts cursor without query."""
-        # Create a dummy cursor (opaque string)
-        cursor = Cursor("dummy_cursor_value")
-        query_options = to_query_options(cursor=cursor)
-
-        # Should not raise ValueError for missing query
-        # Will raise NotImplementedError since cursor-based pagination is not yet implemented
-        arkiv_client_http.arkiv.query_entities(options=query_options)
 
     def test_query_entities_with_all_parameters(self, arkiv_client_http: Arkiv) -> None:
         """Test that query_entities accepts all parameters."""

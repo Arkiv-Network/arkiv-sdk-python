@@ -6,7 +6,7 @@ import logging
 from collections.abc import Iterator
 from typing import TYPE_CHECKING
 
-from .types import Entity, QueryOptions, QueryResult
+from .types import Entity, QueryOptions, QueryPage
 
 if TYPE_CHECKING:
     from .client import Arkiv
@@ -56,7 +56,7 @@ class QueryIterator:
         self._client = client
         self._query = query
         self._options = options
-        self._current_result: QueryResult | None = None
+        self._current_result: QueryPage | None = None
         self._current_index = 0
         self._exhausted = False
 

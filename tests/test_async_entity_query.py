@@ -19,15 +19,15 @@ class TestAsyncQueryEntitiesParameterValidation:
         self, async_arkiv_client_http: AsyncArkiv
     ) -> None:
         """Test that query_entities raises ValueError when neither query nor cursor is provided."""
-        with pytest.raises(ValueError, match="Must provide query or cursor"):
-            await async_arkiv_client_http.arkiv.query_entities()
+        with pytest.raises(ValueError, match="Must provide query"):
+            await async_arkiv_client_http.arkiv.query_entities(query=None)
 
     @pytest.mark.asyncio
-    async def test_async_query_entities_validates_none_for_both(
+    async def test_async_query_entities_validates_none(
         self, async_arkiv_client_http: AsyncArkiv
     ) -> None:
         """Test that explicitly passing None for both query and cursor raises ValueError."""
-        with pytest.raises(ValueError, match="Must provide query or cursor"):
+        with pytest.raises(ValueError, match="Must provide query"):
             await async_arkiv_client_http.arkiv.query_entities(
                 query=None, options=QueryOptions()
             )

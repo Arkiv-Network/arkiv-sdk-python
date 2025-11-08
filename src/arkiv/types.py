@@ -64,8 +64,8 @@ class QueryOptions:
                 raise ValueError(f"Fields contains unknown field flags: {self.fields}")
 
         # Validate that at least one of query or cursor is provided
-        if self.cursor is None and query is None:
-            raise ValueError("Must provide query or cursor")
+        if query is None:
+            raise ValueError("Must provide query")
 
         if query is not None and len(query.strip()) == 0:
             raise ValueError("Query string cannot be empty")
@@ -132,9 +132,9 @@ class Entity:
 
 
 @dataclass(frozen=True)
-class QueryResult:
+class QueryPage:
     """
-    Result of an entity query operation.
+    Single page result of an entity query operation.
 
     Attributes:
         entities: List of entities matching the query.
@@ -147,13 +147,13 @@ class QueryResult:
             The cursor implicitly carries the block_number for consistency.
 
     Example:
-        >>> result = arkiv.query_entities("SELECT * WHERE owner = '0x...' LIMIT 50")
-        >>> print(f"Found {len(result)} at block {result.block_number}")
+        >>> page = arkiv.query_entities("SELECT * WHERE owner = '0x...' LIMIT 50")
+        >>> print(f"Found {len(page)} at block {page.block_number}")
         >>>
         >>> # Pagination (automatically uses same block_number)
-        >>> while result.has_more():
-        ...     result = arkiv.query_entities(cursor=result.next_cursor)
-        ...     print(f"Page entities: {result.entities}")
+        >>> while page.has_more():
+        ...     page = arkiv.query_entities(cursor=page.next_cursor)
+        ...     print(f"Page entities: {page.entities}")
     """
 
     entities: list[Entity]
