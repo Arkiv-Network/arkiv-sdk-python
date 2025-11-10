@@ -25,20 +25,140 @@ def create_test_entities(client: Arkiv) -> tuple[str, list[str]]:
 
     # Build list of CreateOp operations
     c: list[CreateOp] = []
-    add_to_c(c, {"batch": batch, "id": 1, "type": "A", "size": "xs", "idx": 1})
-    add_to_c(c, {"batch": batch, "id": 2, "type": "A", "size": "s", "idx": 2})
-    add_to_c(c, {"batch": batch, "id": 3, "type": "A", "size": "m", "idx": 3})
-    add_to_c(c, {"batch": batch, "id": 4, "type": "A", "size": "l", "idx": 4})
+    add_to_c(
+        c,
+        {
+            "batch": batch,
+            "id": 1,
+            "type": "A",
+            "size": "xs",
+            "idx": 1,
+            "email": "alice@example.com",
+        },
+    )
+    add_to_c(
+        c,
+        {
+            "batch": batch,
+            "id": 2,
+            "type": "A",
+            "size": "s",
+            "idx": 2,
+            "email": "bob@test.org",
+        },
+    )
+    add_to_c(
+        c,
+        {
+            "batch": batch,
+            "id": 3,
+            "type": "A",
+            "size": "m",
+            "idx": 3,
+            "email": "charlie@example.com",
+        },
+    )
+    add_to_c(
+        c,
+        {
+            "batch": batch,
+            "id": 4,
+            "type": "A",
+            "size": "l",
+            "idx": 4,
+            "email": "david@example.org",
+        },
+    )
 
-    add_to_c(c, {"batch": batch, "id": 5, "type": "B", "size": "xs", "idx": 1})
-    add_to_c(c, {"batch": batch, "id": 6, "type": "B", "size": "s", "idx": 2})
-    add_to_c(c, {"batch": batch, "id": 7, "type": "B", "size": "m", "idx": 3})
-    add_to_c(c, {"batch": batch, "id": 8, "type": "B", "size": "l", "idx": 4})
+    add_to_c(
+        c,
+        {
+            "batch": batch,
+            "id": 5,
+            "type": "B",
+            "size": "xs",
+            "idx": 1,
+            "email": "eve@example.com",
+        },
+    )
+    add_to_c(
+        c,
+        {
+            "batch": batch,
+            "id": 6,
+            "type": "B",
+            "size": "s",
+            "idx": 2,
+            "email": "frank@test.org",
+        },
+    )
+    add_to_c(
+        c,
+        {
+            "batch": batch,
+            "id": 7,
+            "type": "B",
+            "size": "m",
+            "idx": 3,
+            "email": "grace@example.com",
+        },
+    )
+    add_to_c(
+        c,
+        {
+            "batch": batch,
+            "id": 8,
+            "type": "B",
+            "size": "l",
+            "idx": 4,
+            "email": "henry@example.org",
+        },
+    )
 
-    add_to_c(c, {"batch": batch, "id": 9, "type": "C", "size": "xs", "idx": 1})
-    add_to_c(c, {"batch": batch, "id": 10, "type": "C", "size": "s", "idx": 2})
-    add_to_c(c, {"batch": batch, "id": 11, "type": "C", "size": "m", "idx": 3})
-    add_to_c(c, {"batch": batch, "id": 12, "type": "C", "size": "l", "idx": 4})
+    add_to_c(
+        c,
+        {
+            "batch": batch,
+            "id": 9,
+            "type": "C",
+            "size": "xs",
+            "idx": 1,
+            "email": "iris@example.com",
+        },
+    )
+    add_to_c(
+        c,
+        {
+            "batch": batch,
+            "id": 10,
+            "type": "C",
+            "size": "s",
+            "idx": 2,
+            "email": "jack@test.org",
+        },
+    )
+    add_to_c(
+        c,
+        {
+            "batch": batch,
+            "id": 11,
+            "type": "C",
+            "size": "m",
+            "idx": 3,
+            "email": "kate@example.com",
+        },
+    )
+    add_to_c(
+        c,
+        {
+            "batch": batch,
+            "id": 12,
+            "type": "C",
+            "size": "l",
+            "idx": 4,
+            "email": "leo@example.org",
+        },
+    )
 
     # Execute all creates in a single transaction
     operations = Operations(creates=c)
@@ -270,4 +390,60 @@ class TestQueryLanguage:
             "IN Idx 1, 3 or 4",
             "idx IN (1 3 4)",
             [1, 3, 4, 5, 7, 8, 9, 11, 12],
+        )
+
+    # === LIKE/GLOB Tests ===#
+    # GLOB operator tests (pattern matching with wildcards using email addresses)
+    def test_query_language_glob_prefix(self, arkiv_client_http: Arkiv) -> None:
+        """Test GLOB with prefix pattern: emails starting with 'alice'."""
+        execute_query_test(
+            arkiv_client_http,
+            "GLOB Prefix alice*",
+            'email GLOB "alice*"',
+            [1],
+        )
+
+    def test_query_language_glob_suffix(self, arkiv_client_http: Arkiv) -> None:
+        """Test GLOB with suffix pattern: emails ending with @example.com."""
+        execute_query_test(
+            arkiv_client_http,
+            "GLOB Suffix *@example.com",
+            'email GLOB "*@example.com"',
+            [1, 3, 5, 7, 9, 11],
+        )
+
+    def test_query_language_glob_contains(self, arkiv_client_http: Arkiv) -> None:
+        """Test GLOB with contains pattern: emails containing 'test'."""
+        execute_query_test(
+            arkiv_client_http,
+            "GLOB Contains *test*",
+            'email GLOB "*test*"',
+            [2, 6, 10],
+        )
+
+    def test_query_language_glob_exact(self, arkiv_client_http: Arkiv) -> None:
+        """Test GLOB with exact match: exact email match."""
+        execute_query_test(
+            arkiv_client_http,
+            "GLOB Exact bob@test.org",
+            'email GLOB "bob@test.org"',
+            [2],
+        )
+
+    def test_query_language_glob_with_and(self, arkiv_client_http: Arkiv) -> None:
+        """Test GLOB with AND: type = 'A' AND email ends with .org."""
+        execute_query_test(
+            arkiv_client_http,
+            "GLOB with AND",
+            'type = "A" AND email GLOB "*@*.org"',
+            [2, 4],
+        )
+
+    def test_query_language_glob_with_or(self, arkiv_client_http: Arkiv) -> None:
+        """Test GLOB with OR: emails from example.org or test.org domains."""
+        execute_query_test(
+            arkiv_client_http,
+            "GLOB with OR",
+            '(email GLOB "*@example.org" OR email GLOB "*@test.org")',
+            [2, 4, 6, 8, 10, 12],
         )

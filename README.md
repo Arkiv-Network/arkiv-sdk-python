@@ -231,9 +231,16 @@ query = '(type = "user" OR type = "admin") AND (age >= 18 AND age <= 65)'
 
 # Multiple NOT conditions
 query = 'type = "user" AND status != "deleted" AND status != "banned"'
+
+# Pattern matching with GLOB (using * as wildcard)
+query = 'name GLOB "John*"'  # Names starting with "John"
+
+# Pattern matching with suffix
+query = 'email GLOB "*@example.com"'  # Emails ending with @example.com
 ```
 
-**Note:** String values in queries must be enclosed in double quotes (`"`). Numeric values do not require quotes.
+**Note:** String values in queries must be enclosed in double quotes (`"`). Numeric values do not require quotes. The `GLOB` operator supports pattern matching using `*` as a wildcard character.
+Note that the GLOB operator might be replace by a SQL standard LIKE operator in the future.
 
 ### Watch Entity Events
 
