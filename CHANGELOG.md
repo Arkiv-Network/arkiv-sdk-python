@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0a6] - 2025-11-10
+
+### Added Features
+- Switch to iterator pattern for query_entities
+
+### Other Changes
+- Add README sections for querying
+- Renamings and refactorings for the iterator approach
+- Add query tests for select, paging and query language
+
 ## [1.0.0a5] - 2025-11-05
 
 ### Added Features

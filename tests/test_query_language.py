@@ -3,8 +3,6 @@
 import logging
 import uuid
 
-import pytest
-
 from arkiv import Arkiv
 from arkiv.types import ATTRIBUTES, KEY, CreateOp, Operations, QueryOptions
 
@@ -254,22 +252,22 @@ class TestQueryLanguage:
         )
 
     # === IN Tests ===#
-    @pytest.mark.xfail(reason="IN operator not yet supported by query parser")
+    # @pytest.mark.xfail(reason="IN operator not yet supported by query parser")
     def test_query_language_in_type_list(self, arkiv_client_http: Arkiv) -> None:
         """Test IN condition: type in ('A', 'B')."""
         execute_query_test(
             arkiv_client_http,
             "IN Type A or B",
-            'type IN ("A", "B")',
+            'type IN ("A" "B")',
             [1, 2, 3, 4, 5, 6, 7, 8],
         )
 
-    @pytest.mark.xfail(reason="IN operator not yet supported by query parser")
+    # @pytest.mark.xfail(reason="IN operator not yet supported by query parser")
     def test_query_language_in_idx_list(self, arkiv_client_http: Arkiv) -> None:
         """Test IN condition: idx in (1, 3, 4)."""
         execute_query_test(
             arkiv_client_http,
-            "IN Idx 1, 3, 4",
-            "idx IN (1, 3, 4)",
+            "IN Idx 1, 3 or 4",
+            "idx IN (1 3 4)",
             [1, 3, 4, 5, 7, 8, 9, 11, 12],
         )
