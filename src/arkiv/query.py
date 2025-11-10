@@ -91,10 +91,11 @@ class QueryIterator:
 
         # Fetch next page if available
         if self._current_result.has_more() and not self._exhausted:
-            options = QueryOptions(
-                fields=self._options.fields,
+            from dataclasses import replace
+
+            options = replace(
+                self._options,
                 at_block=self._current_result.block_number,
-                max_results_per_page=self._options.max_results_per_page,
                 cursor=self._current_result.cursor,
             )
             logger.info(
@@ -207,10 +208,11 @@ class AsyncQueryIterator:
 
         # Fetch next page if available
         if self._current_result.has_more() and not self._exhausted:
-            options = QueryOptions(
-                fields=self._options.fields,
+            from dataclasses import replace
+
+            options = replace(
+                self._options,
                 at_block=self._current_result.block_number,
-                max_results_per_page=self._options.max_results_per_page,
                 cursor=self._current_result.cursor,
             )
             logger.info(

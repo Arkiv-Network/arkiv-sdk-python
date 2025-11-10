@@ -1,5 +1,6 @@
 import logging
 import os
+import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -327,3 +328,63 @@ def load_wallet_json(wallet_file: str) -> str:
     wallet_path = Path(wallet_file)
     with wallet_path.open() as f:
         return f.read()
+
+
+def add2c(c: list[CreateOp], a: dict[str, str | int]) -> None:
+    """Helper to add a CreateOp to the list with given attributes."""
+    c.append(to_create(attributes=Attributes(a)))
+
+
+def create_test_entities(client: "Arkiv") -> tuple[str, list[str]]:
+    """
+    Create a batch of 12 test entities with structured attributes for testing.
+
+    Creates entities with the following structure:
+    - 4 entities of type "A" (ids 1-4)
+    - 4 entities of type "B" (ids 5-8)
+    - 4 entities of type "C" (ids 9-12)
+
+    Each entity has:
+    - batch: UUID to group all entities from this call
+    - id: Sequential ID 1-12
+    - type: "A", "B", or "C"
+    - size: "xs", "s", "m", or "l" (cycles through sizes)
+    - idx: 1, 2, 3, or 4 (cycles through indices)
+    - email: Unique email address (alice@example.com, bob@test.org, etc.)
+
+    Args:
+        client: Arkiv client instance
+
+    Returns:
+        Tuple of (batch_id, list of entity keys)
+    """
+    batch = str(uuid.uuid4())
+
+    # Build list of CreateOp operations
+    c: list[CreateOp] = []
+    # fmt: off
+    add2c(c, {"batch": batch, "id": 1, "type": "A", "size": "xs", "idx": 1, "email": "alice@example.com"})
+    add2c(c, {"batch": batch, "id": 2, "type": "A", "size": "s", "idx": 2, "email": "bob@test.org"})
+    add2c(c, {"batch": batch, "id": 3, "type": "A", "size": "m", "idx": 3, "email": "charlie@example.com"})
+    add2c(c, {"batch": batch, "id": 4, "type": "A", "size": "l", "idx": 4, "email": "david@example.org"})
+
+    add2c(c, {"batch": batch, "id": 5, "type": "B", "size": "xs", "idx": 1, "email": "eve@example.com"})
+    add2c(c, {"batch": batch, "id": 6, "type": "B", "size": "s", "idx": 2, "email": "frank@test.org"})
+    add2c(c, {"batch": batch, "id": 7, "type": "B", "size": "m", "idx": 3, "email": "grace@example.com"})
+    add2c(c, {"batch": batch, "id": 8, "type": "B", "size": "l", "idx": 4, "email": "henry@example.org"})
+
+    add2c(c, {"batch": batch, "id": 9, "type": "C", "size": "xs", "idx": 1, "email": "iris@example.com"})
+    add2c(c, {"batch": batch, "id": 10, "type": "C", "size": "s", "idx": 2, "email": "jack@test.org"})
+    add2c(c, {"batch": batch, "id": 11, "type": "C", "size": "m", "idx": 3, "email": "kate@example.com"})
+    add2c(c, {"batch": batch, "id": 12, "type": "C", "size": "l", "idx": 4, "email": "leo@example.org"})
+    # fmt: on
+
+    # Execute all creates in a single transaction
+    operations = Operations(creates=c)
+    receipt = client.arkiv.execute(operations)
+
+    # Extract entity keys from receipt
+    entity_keys = [create.key for create in receipt.creates]
+    assert len(entity_keys) == 12
+
+    return batch, entity_keys

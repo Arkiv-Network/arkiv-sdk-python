@@ -40,12 +40,30 @@ MAX_RESULTS_PER_PAGE_DEFAULT = 20
 # Cursor type for entity set pagination for query results
 Cursor = NewType("Cursor", str)
 
+# Order by type constants
+STR = "str"
+INT = "int"
+
+# Order by direction constants
+ASC = "asc"
+DESC = "desc"
+
+
+@dataclass(frozen=True)
+class OrderByAttribute:
+    """Annotation for specifying order by fields in queries."""
+
+    attribute: str
+    type: Literal["str", "int"]
+    direction: Literal["asc", "desc"] = "asc"
+
 
 @dataclass(frozen=True)
 class QueryOptions:
     """Options for querying entities."""
 
     fields: int = ALL  # Bitmask of fields to populate
+    order_by: Sequence[OrderByAttribute] | None = None  # Fields to order results by
     at_block: int | None = (
         None  # Block number to pin query to specific block, or None to use latest block available
     )

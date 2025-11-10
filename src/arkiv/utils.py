@@ -32,6 +32,7 @@ from .types import (
     ATTRIBUTES,
     CONTENT_TYPE,
     CREATED_AT,
+    DESC,
     EXPIRATION,
     KEY,
     LAST_MODIFIED_AT,
@@ -39,6 +40,7 @@ from .types import (
     OP_INDEX_IN_TX,
     OWNER,
     PAYLOAD,
+    STR,
     TX_INDEX_IN_BLOCK,
     Attributes,
     ChangeOwnerEvent,
@@ -297,6 +299,16 @@ def to_rpc_query_options(
 
     if options.cursor is not None:
         rpc_query_options["cursor"] = options.cursor
+
+    if options.order_by is not None:
+        rpc_query_options["orderBy"] = [
+            {
+                "name": ob.attribute,
+                "type": "string" if ob.type == STR else "numeric",
+                "desc": ob.direction == DESC,
+            }
+            for ob in options.order_by
+        ]
 
     return rpc_query_options
 

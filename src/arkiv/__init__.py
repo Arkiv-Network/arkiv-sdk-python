@@ -9,9 +9,14 @@ from .events_async import AsyncEventFilter
 from .node import ArkivNode
 from .query import QueryIterator
 from .types import (
+    ASC,
+    DESC,
+    INT,
+    STR,
     CreateEvent,
     DeleteEvent,
     ExtendEvent,
+    OrderByAttribute,
     TransactionReceipt,
     UpdateEvent,
 )
@@ -23,6 +28,10 @@ except PackageNotFoundError:
     __version__ = "dev"
 
 __all__ = [
+    "ASC",
+    "DESC",
+    "INT",
+    "STR",
     "Arkiv",
     "ArkivNode",
     "AsyncArkiv",
@@ -32,6 +41,7 @@ __all__ = [
     "EventFilter",
     "ExtendEvent",
     "NamedAccount",
+    "OrderByAttribute",
     "QueryIterator",
     "TransactionReceipt",
     "UpdateEvent",
