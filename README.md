@@ -242,6 +242,51 @@ query = 'email GLOB "*@example.com"'  # Emails ending with @example.com
 **Note:** String values in queries must be enclosed in double quotes (`"`). Numeric values do not require quotes. The `GLOB` operator supports pattern matching using `*` as a wildcard character.
 Note that the GLOB operator might be replace by a SQL standard LIKE operator in the future.
 
+### Sorting
+
+Query results can be sorted by one or more attribute fields in ascending or descending order. Sorting supports both string and numeric attributes, with multi-field sorting following priority order (first field has highest priority).
+
+#### Basic Sorting
+
+```python
+from arkiv import Arkiv, ASC, DESC, STR, INT, OrderByAttribute, QueryOptions
+
+client = Arkiv()
+
+# Sort by string attribute (default sorting: ascending)
+order_by = [OrderByAttribute(attribute="name", type=STR)]
+options = QueryOptions(order_by=order_by)
+entities = list(client.arkiv.query_entities('type = "user"', options=options))
+
+# Sort by numeric attribute (descending, needs to be set explicitly)
+order_by = [OrderByAttribute(attribute="age", type=INT, direction=DESC)]
+options = QueryOptions(order_by=order_by)
+entities = list(client.arkiv.query_entities('type = "user"', options=options))
+```
+
+#### Multi-Attribute Sorting
+
+When sorting by multiple attributes, the first attribute has the highest priority, with subsequent attributes acting as tie-breakers:
+
+```python
+# Sort by status (ascending), then by age (descending)
+order_by = [
+    OrderByAttribute(attribute="status", type=STR, direction=ASC),
+    OrderByAttribute(attribute="age", type=INT, direction=DESC),
+]
+options = QueryOptions(order_by=order_by)
+entities = list(client.arkiv.query_entities('type = "user"', options=options))
+
+# Three-level sorting: type, then priority, then name
+order_by = [
+    OrderByAttribute(attribute="type", type=STR),
+    OrderByAttribute(attribute="priority", type=INT, direction=DESC),
+    OrderByAttribute(attribute="name", type=STR),
+]
+options = QueryOptions(order_by=order_by)
+entities = list(client.arkiv.query_entities('status = "active"', options=options))
+```
+
 ### Watch Entity Events
 
 Arkiv provides near real-time event monitoring for entity lifecycle changes. You can watch for entity creation, updates, extensions, deletions, and ownership changes using callback-based event filters.
