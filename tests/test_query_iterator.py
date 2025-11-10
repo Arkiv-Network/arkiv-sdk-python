@@ -110,3 +110,90 @@ class TestQueryIterator:
         # Verify all entity keys are present and unique
         result_keys = [entity.key for entity in entities]
         assert set(result_keys) == set(expected_keys)
+
+    def test_iterate_entities_empty(self, arkiv_client_http: Arkiv) -> None:
+        """Test basic iteration over multiple pages of entities."""
+        # Create test entities
+        num_entities = 10
+        _, expected_keys = create_test_entities(arkiv_client_http, num_entities)
+
+        assert len(expected_keys) == num_entities
+
+        # Define query and options
+        query = 'batch_id = "does not exist"'
+        options = QueryOptions(fields=KEY | ATTRIBUTES, max_results_per_page=4)
+
+        # Classical for loop
+        # Should get all 10 entities
+        iterator = arkiv_client_http.arkiv.query_entities(query=query, options=options)
+        entities = []
+        for entity in iterator:
+            entities.append(entity)
+
+        assert len(entities) == 0
+
+    def test_iterate_entities_less_than_page(self, arkiv_client_http: Arkiv) -> None:
+        """Test basic iteration over multiple pages of entities."""
+        # Create test entities
+        num_entities = 10
+        batch_id, expected_keys = create_test_entities(arkiv_client_http, num_entities)
+
+        assert len(expected_keys) == num_entities
+
+        # Define query and options
+        query = f'batch_id = "{batch_id}"'
+        options = QueryOptions(
+            fields=KEY | ATTRIBUTES, max_results_per_page=2 * num_entities
+        )
+
+        # Classical for loop
+        # Should get all 10 entities
+        iterator = arkiv_client_http.arkiv.query_entities(query=query, options=options)
+        entities = []
+        for entity in iterator:
+            entities.append(entity)
+
+        # Should get all 10 entities
+        assert len(entities) == num_entities
+
+        # Verify all entities have the correct batch_id
+        for entity in entities:
+            assert entity.attributes is not None
+            assert entity.attributes["batch_id"] == batch_id
+
+        # Verify all entity keys are present and unique
+        result_keys = [entity.key for entity in entities]
+        assert set(result_keys) == set(expected_keys)
+
+    def test_iterate_entities_exactly_page(self, arkiv_client_http: Arkiv) -> None:
+        """Test basic iteration over multiple pages of entities."""
+        # Create test entities
+        num_entities = 10
+        batch_id, expected_keys = create_test_entities(arkiv_client_http, num_entities)
+
+        assert len(expected_keys) == num_entities
+
+        # Define query and options
+        query = f'batch_id = "{batch_id}"'
+        options = QueryOptions(
+            fields=KEY | ATTRIBUTES, max_results_per_page=num_entities
+        )
+
+        # Classical for loop
+        # Should get all 10 entities
+        iterator = arkiv_client_http.arkiv.query_entities(query=query, options=options)
+        entities = []
+        for entity in iterator:
+            entities.append(entity)
+
+        # Should get all 10 entities
+        assert len(entities) == num_entities
+
+        # Verify all entities have the correct batch_id
+        for entity in entities:
+            assert entity.attributes is not None
+            assert entity.attributes["batch_id"] == batch_id
+
+        # Verify all entity keys are present and unique
+        result_keys = [entity.key for entity in entities]
+        assert set(result_keys) == set(expected_keys)

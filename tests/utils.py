@@ -25,7 +25,24 @@ if TYPE_CHECKING:
 WALLET_FILE_ENV_PREFIX = "WALLET_FILE"
 WALLET_PASSWORD_ENV_PREFIX = "WALLET_PASSWORD"
 
+BTL = 100
+CONTENT_TYPE = "text/plain"
+
 logger = logging.getLogger(__name__)
+
+
+def to_create(
+    payload: bytes = b"",
+    content_type: str = CONTENT_TYPE,
+    attributes: dict[str, str | int] | None = None,
+    btl: int = BTL,
+) -> CreateOp:
+    return CreateOp(
+        payload=payload,
+        content_type=content_type,
+        attributes=Attributes(attributes),
+        btl=btl,
+    )
 
 
 def get_custom_attributes(entity: Entity) -> Attributes:

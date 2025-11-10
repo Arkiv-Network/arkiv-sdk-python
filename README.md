@@ -115,7 +115,7 @@ entity_key, tx_hash = client.arkiv.create_entity(
 
 entity = client.arkiv.get_entity(entity_key)
 exists = client.arkiv.exists(entity_key)
-```
+  ```
 
 ## Advanced Features
 
@@ -126,9 +126,7 @@ The snippet below demonstrates the creation of various nodes to connect to using
 ```python
 from arkiv import Arkiv
 from arkiv.account import NamedAccount
-from arkiv.provider import ProviderBuilder
-
-## Advanced Features
+from arkiv.provider import ProviderBuilder## Advanced Features
 
 ### Provider Builder
 
@@ -179,6 +177,173 @@ entities = list(client.arkiv.query_entities(query=query, options=options))
 print(f"Found {len(entities)} entities")
 ```
 
+### Query Language
+
+Arkiv uses a SQL-like query language to filter and retrieve entities based on their attributes. The query language supports standard comparison operators, logical operators, and parentheses for complex conditions.
+
+#### Supported Operators
+
+**Comparison Operators:**
+- `=` - Equal to
+- `!=` - Not equal to
+- `>` - Greater than
+- `>=` - Greater than or equal to
+- `<` - Less than
+- `<=` - Less than or equal to
+
+**Logical Operators:**
+- `AND` - Logical AND
+- `OR` - Logical OR
+- `NOT` - Logical NOT (can also use `!=`)
+
+**Parentheses** can be used to group conditions and control evaluation order.
+
+#### Query Examples
+
+```python
+from arkiv import Arkiv
+
+client = Arkiv()
+
+# Simple equality
+query = 'type = "user"'
+entities = list(client.arkiv.query_entities(query))
+
+# Note that inn the examples below the call to query_entities is omitted
+
+# Multiple conditions with AND
+query = 'type = "user" AND status = "active"'
+
+# OR conditions with parentheses
+query = 'type = "user" AND (status = "active" OR status = "pending")'
+
+# Comparison operators
+query = 'type = "user" AND age >= 18 AND age < 65'
+
+# NOT conditions
+query = 'type = "user" AND status != "deleted"'
+
+# Alternative NOT syntax
+query = 'type = "user" AND NOT (status = "deleted")'
+
+# Complex nested conditions
+query = '(type = "user" OR type = "admin") AND (age >= 18 AND age <= 65)'
+
+# Multiple NOT conditions
+query = 'type = "user" AND status != "deleted" AND status != "banned"'
+```
+
+**Note:** String values in queries must be enclosed in double quotes (`"`). Numeric values do not require quotes.
+
+### Watch Entity Events
+
+Arkiv provides near real-time event monitoring for entity lifecycle changes. You can watch for entity creation, updates, extensions, deletions, and ownership changes using callback-based event filters.
+
+#### Available Event Types
+
+- **`watch_entity_created`** - Monitor when new entities are created
+- **`watch_entity_updated`** - Monitor when entities are updated
+- **`watch_entity_extended`** - Monitor when entity lifetimes are extended
+- **`watch_entity_deleted`** - Monitor when entities are deleted
+- **`watch_owner_changed`** - Monitor when entity ownership changes
+
+#### Basic Usage
+
+```python
+from arkiv import Arkiv
+
+client = Arkiv()
+
+# Define callback function to handle events
+def on_entity_created(event, tx_hash):
+    print(f"New entity created: {event.key}")
+    print(f"Owner: {event.owner}")
+    print(f"Transaction: {tx_hash}")
+
+# Start watching for entity creation events
+event_filter = client.arkiv.watch_entity_created(on_entity_created)
+
+# Create an entity - callback will be triggered
+entity_key, _ = client.arkiv.create_entity(
+    payload=b"Hello World",
+    attributes={"type": "greeting"}
+)
+
+# Stop watching when done
+event_filter.stop()
+event_filter.uninstall()
+```
+
+#### Watching Multiple Event Types
+
+```python
+created_events = []
+updated_events = []
+deleted_events = []
+
+def on_created(event, tx_hash):
+    created_events.append((event, tx_hash))
+
+def on_updated(event, tx_hash):
+    updated_events.append((event, tx_hash))
+
+def on_deleted(event, tx_hash):
+    deleted_events.append((event, tx_hash))
+
+# Watch multiple event types simultaneously
+filter_created = client.arkiv.watch_entity_created(on_created)
+filter_updated = client.arkiv.watch_entity_updated(on_updated)
+filter_deleted = client.arkiv.watch_entity_deleted(on_deleted)
+
+# Perform operations...
+# Events are captured in real-time
+
+# Cleanup all filters
+filter_created.uninstall()
+filter_updated.uninstall()
+filter_deleted.uninstall()
+```
+
+#### Historical Events
+
+By default, watchers only capture new events from the current block forward. You can also watch from a specific historical block:
+
+```python
+# Watch from a specific block number
+event_filter = client.arkiv.watch_entity_created(
+    on_entity_created,
+    from_block=1000
+)
+
+# Watch from the beginning of the chain
+event_filter = client.arkiv.watch_entity_created(
+    on_entity_created,
+    from_block=0
+)
+```
+
+#### Automatic Cleanup
+
+When using Arkiv as a context manager, all event filters are automatically cleaned up on exit:
+
+```python
+with Arkiv() as client:
+    # Create event filters
+    filter1 = client.arkiv.watch_entity_created(callback1)
+    filter2 = client.arkiv.watch_entity_updated(callback2)
+
+    # Perform operations...
+    # Filters are automatically stopped and uninstalled when exiting context
+```
+
+You can also manually clean up all active filters:
+
+```python
+client.arkiv.cleanup_filters()
+```
+
+**Note:** Event watching requires polling the node for new events. The SDK handles this automatically in the background.
+
 ## Arkiv Topics/Features
 
 ### BTL
@@ -215,24 +380,6 @@ updated_entity = replace(
 
 # Update entity
 client.arkiv.update_entity(updated_entity)
-```
-
-### Query DSL
-
-To make querying entities as simple and natural as possible, rely on a suitable and existing query DSL. Since Arkiv currently uses a SQL database backend and is likely to support SQL databases in the future, the Arkiv query DSL is defined as a **subset of the SQL standard**.
-
-**Rationale:**
-- Leverages existing SQL knowledge - no new language to learn
-- Well-defined semantics and broad tooling support
-- Natural fit for relational data structures
-- Enables familiar filtering, joining, and aggregation patterns
-
-**Example:**
-```python
-# Query entities using SQL-like syntax
-results = client.arkiv.query_entities(
-    "SELECT key, payload WHERE attributes.type = 'user' AND attributes.age > 18 ORDER BY attributes.name"
-)
 ```
 
 ### Sorting
