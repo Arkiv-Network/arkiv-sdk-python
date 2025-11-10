@@ -54,6 +54,65 @@ class TestArkivClientCreation:
         _assert_arkiv_client_properties(client, account, "With Account")
         logger.info("Created Arkiv client with default account")
 
+    def test_create_arkiv_with_local_account(self, arkiv_node) -> None:
+        """Test creating Arkiv client with LocalAccount (gets wrapped in NamedAccount)."""
+        from eth_account import Account
+
+        provider = HTTPProvider(arkiv_node.http_url)
+        local_account = Account.create()
+        client = Arkiv(provider, account=local_account)
+
+        # LocalAccount should be wrapped in NamedAccount with default name
+        assert len(client.accounts) == 1, "Should have one account registered"
+        assert "default" in client.accounts, (
+            "LocalAccount should be wrapped with 'default' name"
+        )
+        assert client.current_signer == "default", "Should use 'default' as signer name"
+        assert client.eth.default_account == local_account.address, (
+            "Should set default account to LocalAccount address"
+        )
+        assert client.accounts["default"].address == local_account.address, (
+            "Wrapped account should have same address as original LocalAccount"
+        )
+
+        logger.info("Created Arkiv client with LocalAccount (wrapped in NamedAccount)")
+
+    def test_create_arkiv_with_local_account_then_add_named_default(
+        self, arkiv_node
+    ) -> None:
+        """Test that adding another 'default' named account overwrites the wrapped LocalAccount."""
+        from eth_account import Account
+
+        provider = HTTPProvider(arkiv_node.http_url)
+        local_account = Account.create()
+        client = Arkiv(provider, account=local_account)
+
+        # LocalAccount wrapped as "default"
+        original_address = client.accounts["default"].address
+        assert original_address == local_account.address
+
+        # Now manually add another account also named "default"
+        new_account = NamedAccount.create("default")
+        client.accounts["default"] = new_account
+
+        # The new account should overwrite the old one
+        assert len(client.accounts) == 1, "Should still have one account"
+        assert client.accounts["default"].address == new_account.address, (
+            "New account should replace the wrapped LocalAccount"
+        )
+        assert client.accounts["default"].address != original_address, (
+            "Address should be different from original"
+        )
+
+        # Switch to the new account
+        client.switch_to("default")
+        assert client.current_signer == "default"
+        assert client.eth.default_account == new_account.address
+
+        logger.info(
+            "Successfully replaced wrapped LocalAccount with new 'default' named account"
+        )
+
     def test_create_arkiv_with_kwargs(self, arkiv_node) -> None:
         """Test creating Arkiv client with additional kwargs."""
         provider = HTTPProvider(arkiv_node.http_url)

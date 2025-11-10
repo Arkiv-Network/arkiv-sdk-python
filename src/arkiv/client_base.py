@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any, Literal
 
+from eth_account.signers.local import LocalAccount
 from web3.providers.async_base import AsyncBaseProvider
 from web3.providers.base import BaseProvider
 
@@ -93,27 +94,10 @@ class ArkivBase:
 
         return node, provider
 
-    @staticmethod
-    def _create_default_account(account_name: str = "default") -> NamedAccount:
-        """
-        Create a default named account for local node prototyping.
-
-        Used by both Arkiv (sync) and AsyncArkiv (async) when no account is provided
-        and a local node is auto-created.
-
-        Args:
-            account_name: Name for the account (default: "default")
-
-        Returns:
-            NamedAccount with the specified name
-        """
-        logger.info(f"Creating default account '{account_name}' for local node...")
-        return NamedAccount.create(account_name)
-
     def _setup_node_and_account(
         self,
         provider: Any | None,
-        account: NamedAccount | None,
+        account: NamedAccount | LocalAccount | None,
         transport: Literal["http", "ws"],
     ) -> tuple[ArkivNode | None, Any, NamedAccount | None]:
         """
@@ -133,7 +117,17 @@ class ArkivBase:
 
             # Create default account if none provided (for local node prototyping)
             if account is None:
-                account = self._create_default_account()
+                logger.debug(
+                    f"Creating default account '{self.ACCOUNT_NAME_DEFAULT}' for local node..."
+                )
+                account = NamedAccount.create(self.ACCOUNT_NAME_DEFAULT)
+
+        # If account is a LocalAccount, wrap it in NamedAccount with default name
+        if isinstance(account, LocalAccount):
+            logger.debug(
+                f"Wrapping provided LocalAccount in NamedAccount with name '{self.ACCOUNT_NAME_DEFAULT}'"
+            )
+            account = NamedAccount(self.ACCOUNT_NAME_DEFAULT, account)
 
         return node, provider, account
 

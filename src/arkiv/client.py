@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any, cast
 
+from eth_account.signers.local import LocalAccount
 from web3 import AsyncWeb3, Web3
 from web3.middleware import SignAndSendRawMiddlewareBuilder
 from web3.providers import WebSocketProvider
@@ -31,7 +32,7 @@ class Arkiv(ArkivBase, Web3):
     def __init__(
         self,
         provider: BaseProvider | None = None,
-        account: NamedAccount | None = None,
+        account: NamedAccount | LocalAccount | None = None,
         **kwargs: Any,
     ) -> None:
         """Initialize Arkiv client with Web3 provider.
@@ -167,7 +168,7 @@ class AsyncArkiv(ArkivBase, AsyncWeb3):
     def __init__(
         self,
         provider: AsyncBaseProvider | None = None,
-        account: NamedAccount | None = None,
+        account: NamedAccount | LocalAccount | None = None,
         **kwargs: Any,
     ) -> None:
         """Initialize AsyncArkiv client with async Web3 provider.

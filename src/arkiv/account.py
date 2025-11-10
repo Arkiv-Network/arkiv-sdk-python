@@ -35,8 +35,8 @@ class NamedAccount:
             name: Human-readable name for the account
             account: The LocalAccount instance to wrap
         """
-        self.name = self._check_and_trim(name)
-        self._account = account
+        self.name: str = self._check_and_trim(name)
+        self._account: LocalAccount = account
 
     def __repr__(self) -> str:
         """String representation showing name and address."""
