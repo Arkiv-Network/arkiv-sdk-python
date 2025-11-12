@@ -209,7 +209,7 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
     def entity_exists(self, entity_key: EntityKey, at_block: int | None = None) -> bool:
         # Docstring inherited from ArkivModuleBase.entity_exists
         try:
-            options = QueryOptions(fields=NONE, at_block=at_block)
+            options = QueryOptions(attributes=NONE, at_block=at_block)
             query_result: QueryPage = self.query_entities_page(
                 f"$key = {entity_key}", options=options
             )
@@ -221,7 +221,7 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
         self, entity_key: EntityKey, fields: int = ALL, at_block: int | None = None
     ) -> Entity:
         # Docstring inherited from ArkivModuleBase.get_entity
-        options = QueryOptions(fields=fields, at_block=at_block)
+        options = QueryOptions(attributes=fields, at_block=at_block)
         query_result: QueryPage = self.query_entities_page(
             f"$key = {entity_key}", options=options
         )
@@ -243,7 +243,7 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
         rpc_options = to_rpc_query_options(options)
         raw_results = self.client.eth.query(query, rpc_options)
 
-        return to_query_result(options.fields, raw_results)
+        return to_query_result(options.attributes, raw_results)
 
     def query_entities(
         self, query: str, options: QueryOptions = QUERY_OPTIONS_DEFAULT

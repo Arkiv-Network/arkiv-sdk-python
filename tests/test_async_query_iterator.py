@@ -68,7 +68,7 @@ class TestAsyncQueryIterator:
 
         # Define query and options
         query = f'batch_id = "{batch_id}"'
-        options = QueryOptions(fields=KEY | ATTRIBUTES, max_results_per_page=4)
+        options = QueryOptions(attributes=KEY | ATTRIBUTES, max_results_per_page=4)
 
         # Collect all entities using async iterator
         # Iterate with page size of 4 (should auto-fetch 3 pages: 4, 4, 2)

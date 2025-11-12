@@ -88,7 +88,7 @@ def query_entity_by_key(
         Tuple of (result entity, expected entity_key)
     """
     query = f'$key = "{entity_key}"'
-    options = QueryOptions(fields=fields)
+    options = QueryOptions(attributes=fields)
     result = client.arkiv.query_entities_page(query=query, options=options)
 
     # Should find exactly one entity

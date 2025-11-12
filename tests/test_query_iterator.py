@@ -61,7 +61,7 @@ class TestQueryIterator:
 
         # Define query and options
         query = f'batch_id = "{batch_id}"'
-        options = QueryOptions(fields=KEY | ATTRIBUTES, max_results_per_page=4)
+        options = QueryOptions(attributes=KEY | ATTRIBUTES, max_results_per_page=4)
 
         # Classical for loop
         # Should get all 10 entities
@@ -91,7 +91,7 @@ class TestQueryIterator:
 
         # Define query and options
         query = f'batch_id = "{batch_id}"'
-        options = QueryOptions(fields=KEY | ATTRIBUTES, max_results_per_page=4)
+        options = QueryOptions(attributes=KEY | ATTRIBUTES, max_results_per_page=4)
 
         # Collect all entities using iterator
         # Iterate with page size of 4 (should auto-fetch 3 pages: 4, 4, 2)
@@ -121,7 +121,7 @@ class TestQueryIterator:
 
         # Define query and options
         query = 'batch_id = "does not exist"'
-        options = QueryOptions(fields=KEY | ATTRIBUTES, max_results_per_page=4)
+        options = QueryOptions(attributes=KEY | ATTRIBUTES, max_results_per_page=4)
 
         # Classical for loop
         # Should get all 10 entities
@@ -143,7 +143,7 @@ class TestQueryIterator:
         # Define query and options
         query = f'batch_id = "{batch_id}"'
         options = QueryOptions(
-            fields=KEY | ATTRIBUTES, max_results_per_page=2 * num_entities
+            attributes=KEY | ATTRIBUTES, max_results_per_page=2 * num_entities
         )
 
         # Classical for loop
@@ -176,7 +176,7 @@ class TestQueryIterator:
         # Define query and options
         query = f'batch_id = "{batch_id}"'
         options = QueryOptions(
-            fields=KEY | ATTRIBUTES, max_results_per_page=num_entities
+            attributes=KEY | ATTRIBUTES, max_results_per_page=num_entities
         )
 
         # Classical for loop

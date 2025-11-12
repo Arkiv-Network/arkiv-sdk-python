@@ -69,7 +69,7 @@ class TestQueryPaging:
 
         # Query with max_results_per_page > num entities (should get all in one page)
         query = f'batch_id = "{batch_id}"'
-        options = QueryOptions(fields=KEY | ATTRIBUTES, max_results_per_page=20)
+        options = QueryOptions(attributes=KEY | ATTRIBUTES, max_results_per_page=20)
         result = arkiv_client_http.arkiv.query_entities_page(
             query=query, options=options
         )

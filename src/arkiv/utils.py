@@ -251,7 +251,7 @@ def to_query_options(
         raise ValueError(f"at_block cannot be negative: {at_block}")
 
     return QueryOptions(
-        fields=fields,
+        attributes=fields,
         max_results_per_page=max_results_per_page,
         at_block=at_block,
         cursor=cursor,
@@ -276,16 +276,16 @@ def to_rpc_query_options(
     # see https://github.com/Golem-Base/golembase-op-geth/blob/main/eth/api_arkiv.go
     rpc_query_options: dict[str, Any] = {
         "includeData": {
-            "key": options.fields & KEY != 0,
-            "attributes": options.fields & ATTRIBUTES != 0,
-            "payload": options.fields & PAYLOAD != 0,
-            "contentType": options.fields & CONTENT_TYPE != 0,
-            "expiration": options.fields & EXPIRATION != 0,
-            "owner": options.fields & OWNER != 0,
-            "createdAtBlock": options.fields & CREATED_AT != 0,
-            "lastModifiedAtBlock": options.fields & LAST_MODIFIED_AT != 0,
-            "transactionIndexInBlock": options.fields & TX_INDEX_IN_BLOCK != 0,
-            "operationIndexInTransaction": options.fields & OP_INDEX_IN_TX != 0,
+            "key": options.attributes & KEY != 0,
+            "attributes": options.attributes & ATTRIBUTES != 0,
+            "payload": options.attributes & PAYLOAD != 0,
+            "contentType": options.attributes & CONTENT_TYPE != 0,
+            "expiration": options.attributes & EXPIRATION != 0,
+            "owner": options.attributes & OWNER != 0,
+            "createdAtBlock": options.attributes & CREATED_AT != 0,
+            "lastModifiedAtBlock": options.attributes & LAST_MODIFIED_AT != 0,
+            "transactionIndexInBlock": options.attributes & TX_INDEX_IN_BLOCK != 0,
+            "operationIndexInTransaction": options.attributes & OP_INDEX_IN_TX != 0,
         }
     }
 

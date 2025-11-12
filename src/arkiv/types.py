@@ -62,7 +62,7 @@ class OrderByAttribute:
 class QueryOptions:
     """Options for querying entities."""
 
-    fields: int = ALL  # Bitmask of fields to populate
+    attributes: int = ALL  # Bitmask of fields to populate
     order_by: Sequence[OrderByAttribute] | None = None  # Fields to order results by
     at_block: int | None = (
         None  # Block number to pin query to specific block, or None to use latest block available
@@ -74,12 +74,14 @@ class QueryOptions:
 
     def validate(self, query: str | None) -> None:
         # Validates fields
-        if self.fields is not None:
-            if self.fields < 0:
-                raise ValueError(f"Fields cannot be negative: {self.fields}")
+        if self.attributes is not None:
+            if self.attributes < 0:
+                raise ValueError(f"Fields cannot be negative: {self.attributes}")
 
-            if self.fields > ALL:
-                raise ValueError(f"Fields contains unknown field flags: {self.fields}")
+            if self.attributes > ALL:
+                raise ValueError(
+                    f"Fields contains unknown field flags: {self.attributes}"
+                )
 
         # Validate that at least one of query or cursor is provided
         if query is None:

@@ -7,7 +7,7 @@ from arkiv.types import ATTRIBUTES, KEY, QueryOptions
 
 from .utils import create_test_entities
 
-OPTIONS = QueryOptions(fields=KEY | ATTRIBUTES, max_results_per_page=20)
+OPTIONS = QueryOptions(attributes=KEY | ATTRIBUTES, max_results_per_page=20)
 
 logger = logging.getLogger(__name__)
 
