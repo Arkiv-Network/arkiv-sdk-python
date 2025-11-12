@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from eth_typing import ChecksumAddress, HexStr
 from web3 import Web3
@@ -396,6 +396,39 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
 
         self._active_filters.clear()
         logger.info("All event filters cleaned up")
+
+    def get_block_timing(self) -> Any:
+        block_timing_response = self.client.eth.get_block_timing()
+        logger.info(f"Block timing response: {block_timing_response}")
+
+        return block_timing_response
+
+    def to_blocks(
+        self, seconds: int = 0, minutes: int = 0, hours: int = 0, days: int = 0
+    ) -> int:
+        """
+        Convert a time duration to number of blocks.
+
+        Useful for calculating blocks-to-live (BTL) parameters based on
+        desired entity lifetime.
+
+        Args:
+            seconds: Number of seconds
+            minutes: Number of minutes
+            hours: Number of hours
+            days: Number of days
+
+        Returns:
+            Number of blocks corresponding to the time duration
+        """
+        total_seconds = seconds + minutes * 60 + hours * 3600 + days * 86400
+
+        if not hasattr(self, "_block_duration"):
+            block_timing = self.get_block_timing()
+            self._block_duration = block_timing["duration"]
+
+        block_time = self._block_duration
+        return total_seconds // block_time if block_time else 0
 
     @property
     def active_filters(self) -> list[EventFilter]:

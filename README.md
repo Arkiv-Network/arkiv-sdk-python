@@ -126,7 +126,7 @@ The snippet below demonstrates the creation of various nodes to connect to using
 ```python
 from arkiv import Arkiv
 from arkiv.account import NamedAccount
-from arkiv.provider import ProviderBuilder## Advanced Features
+from arkiv.provider import ProviderBuilder
 
 ### Provider Builder
 

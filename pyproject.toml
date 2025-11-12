@@ -57,6 +57,8 @@ lint = [
 ]
 dev = [
     "ipython>=8.37.0",
+    "testcontainers>=4.13.1",
+    "websockets>=13.0",
 ]
 
 [build-system]

@@ -191,4 +191,12 @@ FUNCTIONS_ABI: dict[str, Method[Any]] = {
         json_rpc_method=RPCEndpoint("arkiv_query"),
         mungers=[default_root_munger],
     ),
+    "get_block_timing": Method(
+        json_rpc_method=RPCEndpoint("arkiv_getBlockTiming"),
+        mungers=[default_root_munger],
+    ),
+    "estimate_costs": Method(
+        json_rpc_method=RPCEndpoint("arkiv_estimateStorageCosts"),
+        mungers=[default_root_munger],
+    ),
 }

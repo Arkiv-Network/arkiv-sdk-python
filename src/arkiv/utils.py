@@ -344,9 +344,12 @@ def to_entity(fields: int, response_item: dict[str, Any]) -> Entity:
 
     # Extract created_at if present
     if fields & CREATED_AT != 0:
-        if not hasattr(response_item, "createdAtBlock"):
-            raise ValueError("RPC query response item missing 'createdAtBlock' field")
-        created_at_block = int(response_item.createdAtBlock)
+        if hasattr(response_item, "createdAtBlock"):
+            created_at_block = int(response_item.createdAtBlock)
+        else:
+            # TODO revert to raise pattern once available
+            # raise ValueError("RPC query response item missing 'createdAtBlock' field")
+            logger.info("RPC query response item missing 'createdAtBlock' field")
 
     # Extract last_modified_at if present
     if fields & LAST_MODIFIED_AT != 0:
