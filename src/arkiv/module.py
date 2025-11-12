@@ -75,13 +75,16 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
         payload: bytes | None = None,
         content_type: str | None = None,
         attributes: Attributes | None = None,
-        btl: int | None = None,
+        expires_in: int | None = None,
         tx_params: TxParams | None = None,
     ) -> tuple[EntityKey, TransactionReceipt]:
         # Docstring inherited from ArkivModuleBase.create_entity
         # Create operation and execute TX
         create_op = to_create_op(
-            payload=payload, content_type=content_type, attributes=attributes, btl=btl
+            payload=payload,
+            content_type=content_type,
+            attributes=attributes,
+            expires_in=expires_in,
         )
         operations = Operations(creates=[create_op])
         receipt = self.execute(operations, tx_params)
@@ -100,7 +103,7 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
         payload: bytes | None = None,
         content_type: str | None = None,
         attributes: Attributes | None = None,
-        btl: int | None = None,
+        expires_in: int | None = None,
         tx_params: TxParams | None = None,
     ) -> TransactionReceipt:
         # Docstring inherited from ArkivModuleBase.update_entity
@@ -110,7 +113,7 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
             payload=payload,
             content_type=content_type,
             attributes=attributes,
-            btl=btl,
+            expires_in=expires_in,
         )
         operations = Operations(updates=[update_op])
         receipt = self.execute(operations, tx_params)
@@ -402,33 +405,6 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
         logger.info(f"Block timing response: {block_timing_response}")
 
         return block_timing_response
-
-    def to_blocks(
-        self, seconds: int = 0, minutes: int = 0, hours: int = 0, days: int = 0
-    ) -> int:
-        """
-        Convert a time duration to number of blocks.
-
-        Useful for calculating blocks-to-live (BTL) parameters based on
-        desired entity lifetime.
-
-        Args:
-            seconds: Number of seconds
-            minutes: Number of minutes
-            hours: Number of hours
-            days: Number of days
-
-        Returns:
-            Number of blocks corresponding to the time duration
-        """
-        total_seconds = seconds + minutes * 60 + hours * 3600 + days * 86400
-
-        if not hasattr(self, "_block_duration"):
-            block_timing = self.get_block_timing()
-            self._block_duration = block_timing["duration"]
-
-        block_time = self._block_duration
-        return total_seconds // block_time if block_time else 0
 
     @property
     def active_filters(self) -> list[EventFilter]:

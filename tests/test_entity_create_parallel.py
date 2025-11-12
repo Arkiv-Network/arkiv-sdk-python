@@ -72,8 +72,10 @@ def random_attributes(client: int, entity_no: int) -> Attributes:
     )
 
 
-def random_btl(btl_min: int = 100, btl_extension: int = 1000) -> int:
-    return btl_min + random.randint(1, btl_extension)
+def random_expires_in(
+    expires_in_min: int = 100, expires_in_extension: int = 1000
+) -> int:
+    return expires_in_min + random.randint(1, expires_in_extension)
 
 
 def client_creation_task(
@@ -99,7 +101,7 @@ def client_creation_task(
             entity_index = tx_no * batch_size + entity_no
             payload = random_payload()
             attributes = random_attributes(client_idx, entity_index)
-            btl = random_btl()
+            btl = random_expires_in()
             entities_in_batch.append((payload, attributes, btl))
 
         # Create entity/entities based on batch_size
@@ -109,7 +111,7 @@ def client_creation_task(
                 payload, attributes, btl = entities_in_batch[0]
                 try:
                     entity_key, tx_hash = client.arkiv.create_entity(
-                        payload=payload, attributes=attributes, btl=btl
+                        payload=payload, attributes=attributes, expires_in=btl
                     )
                     logger.info(
                         f"Entity creation TX[{client_idx}][{tx_no}]: {tx_hash} (1 entity)"
@@ -121,7 +123,7 @@ def client_creation_task(
             else:
                 # Bulk entity creation
                 create_ops = [
-                    CreateOp(payload=p, attributes=a, btl=b)
+                    CreateOp(payload=p, attributes=a, expires_in=b)
                     for p, a, b in entities_in_batch
                 ]
                 try:

@@ -7,7 +7,7 @@ from hexbytes import HexBytes
 from web3.types import TxReceipt
 
 from arkiv.client import Arkiv
-from arkiv.contract import STORAGE_ADDRESS
+from arkiv.contract import ARKIV_ADDRESS
 from arkiv.types import (
     Attributes,
     CreateOp,
@@ -34,14 +34,17 @@ class TestEntityCreate:
         """Test create_entity with custom payload checking against Web3 client behavior."""
         payload = b"Hello world!"
         attributes: Attributes = Attributes({"type": "Greeting", "version": 1})
-        btl = 60  # 60 blocks to live
+        expires_in = 60  # 60 blocks to live
 
         # Get the expected sender address from client's default account
         expected_from_address = arkiv_client_http.eth.default_account
 
         # Wrap in Operations container
         create_op = CreateOp(
-            payload=payload, content_type="text/plain", attributes=attributes, btl=btl
+            payload=payload,
+            content_type="text/plain",
+            attributes=attributes,
+            expires_in=expires_in,
         )
         operations = Operations(creates=[create_op])
 
@@ -97,8 +100,8 @@ class TestEntityCreate:
         )
 
         # Verify transaction was sent to the correct Arkiv storage contract
-        assert tx_details["to"] == STORAGE_ADDRESS, (
-            f"Transaction should be sent to Arkiv storage contract {STORAGE_ADDRESS}, got {tx_details['to']}"
+        assert tx_details["to"] == ARKIV_ADDRESS, (
+            f"Transaction should be sent to Arkiv storage contract {ARKIV_ADDRESS}, got {tx_details['to']}"
         )
 
         # Verify transaction value is 0 (no ETH should be sent)
@@ -148,10 +151,10 @@ class TestEntityCreate:
         pl: bytes = b"Hello world!"
         content_type = "text/plain"
         ann: Attributes = Attributes({"type": "Greeting", "version": 1})
-        btl: int = 60
+        expires_in: int = 60
 
         entity_key, tx_receipt = arkiv_client_http.arkiv.create_entity(
-            payload=pl, content_type=content_type, attributes=ann, btl=btl
+            payload=pl, content_type=content_type, attributes=ann, expires_in=expires_in
         )
 
         label = "create_entity (a)"
@@ -189,10 +192,13 @@ class TestEntityCreate:
         """Test create_entity with only payload, no attributes."""
         pl: bytes = b"Hello world without attributes!"
         content_type = "text/plain"
-        btl: int = 60
+        expires_in: int = 60
 
         entity_key, tx_receipt = arkiv_client_http.arkiv.create_entity(
-            payload=pl, content_type=content_type, attributes=None, btl=btl
+            payload=pl,
+            content_type=content_type,
+            attributes=None,
+            expires_in=expires_in,
         )
 
         label = "test_create_entity_payload_only"
@@ -229,10 +235,10 @@ class TestEntityCreate:
         pl: bytes | None = b""
         content_type = "text/plain"
         ann: Attributes = Attributes({"type": "Greeting", "version": 1})
-        btl: int = 60
+        expires_in: int = 60
 
         entity_key, tx_receipt = arkiv_client_http.arkiv.create_entity(
-            payload=pl, content_type=content_type, attributes=ann, btl=btl
+            payload=pl, content_type=content_type, attributes=ann, expires_in=expires_in
         )
 
         label = "test_create_entity_attributes_only"

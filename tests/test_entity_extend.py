@@ -26,7 +26,10 @@ class TestEntityExtend:
         btl = 100
 
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
-            payload=payload, content_type=content_type, attributes=attributes, btl=btl
+            payload=payload,
+            content_type=content_type,
+            attributes=attributes,
+            expires_in=btl,
         )
 
         logger.info(f"Created entity {entity_key} for extension test")
@@ -65,7 +68,7 @@ class TestEntityExtend:
         """Test extending the same entity multiple times."""
         # Create an entity
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
-            payload=b"Entity for multiple extensions", btl=100
+            payload=b"Entity for multiple extensions", expires_in=100
         )
 
         # Get initial expiration
@@ -99,7 +102,7 @@ class TestEntityExtend:
                 payload=f"Bulk entity {i}".encode(),
                 content_type="text/plain",
                 attributes=Attributes({"batch": "bulk", "index": i}),
-                btl=100,
+                expires_in=100,
             )
             for i in range(3)
         ]
@@ -177,7 +180,7 @@ class TestEntityExtend:
         """Test that extending a deleted entity raises an exception."""
         # Create an entity
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
-            payload=b"Entity to delete then extend", btl=100
+            payload=b"Entity to delete then extend", expires_in=100
         )
 
         # Delete the entity
@@ -208,7 +211,7 @@ class TestEntityExtend:
         """Test extending an entity by a minimal number of blocks."""
         # Create an entity
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
-            payload=b"Entity for minimal extension", btl=100
+            payload=b"Entity for minimal extension", expires_in=100
         )
 
         # Get initial expiration

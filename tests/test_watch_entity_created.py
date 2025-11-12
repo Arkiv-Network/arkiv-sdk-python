@@ -35,7 +35,7 @@ class TestWatchEntityCreated:
             entity_key, receipt = arkiv_client_http.arkiv.create_entity(
                 payload=b"test data",
                 attributes=Attributes({"test": "value"}),
-                btl=100,
+                expires_in=100,
             )
 
             # Wait for callback (with timeout)
@@ -78,7 +78,7 @@ class TestWatchEntityCreated:
             for i in range(3):
                 entity_key, tx_hash = arkiv_client_http.arkiv.create_entity(
                     payload=f"test data {i}".encode(),
-                    btl=100,
+                    expires_in=100,
                 )
                 keys_and_hashes.append((entity_key, tx_hash))
 
@@ -116,7 +116,7 @@ class TestWatchEntityCreated:
             assert not event_filter.is_running
 
             # Create an entity - should NOT trigger callback (filter not started)
-            arkiv_client_http.arkiv.create_entity(payload=b"test 1", btl=100)
+            arkiv_client_http.arkiv.create_entity(payload=b"test 1", expires_in=100)
             time.sleep(2)  # Wait a bit
             assert len(received_events) == 0
 
@@ -125,7 +125,7 @@ class TestWatchEntityCreated:
             assert event_filter.is_running
 
             # Create another entity - SHOULD trigger callback
-            arkiv_client_http.arkiv.create_entity(payload=b"test 2", btl=100)
+            arkiv_client_http.arkiv.create_entity(payload=b"test 2", expires_in=100)
             time.sleep(3)  # Wait for polling
             assert len(received_events) == 1
 
@@ -135,7 +135,7 @@ class TestWatchEntityCreated:
 
             # Create another entity - should NOT trigger callback
             count_after_stopping = len(received_events)
-            arkiv_client_http.arkiv.create_entity(payload=b"test 3", btl=100)
+            arkiv_client_http.arkiv.create_entity(payload=b"test 3", expires_in=100)
             time.sleep(2)
             assert len(received_events) == count_after_stopping
 
@@ -148,7 +148,7 @@ class TestWatchEntityCreated:
 
         # Create an entity BEFORE starting the watcher
         entity_key_before, _ = arkiv_client_http.arkiv.create_entity(
-            payload=b"before", btl=100
+            payload=b"before", expires_in=100
         )
 
         def on_create(event: CreateEvent, tx_hash: TxHash) -> None:
@@ -171,7 +171,7 @@ class TestWatchEntityCreated:
 
             # Create a new entity
             entity_key_after, _ = arkiv_client_http.arkiv.create_entity(
-                payload=b"after", btl=100
+                payload=b"after", expires_in=100
             )
             time.sleep(3)  # Wait for polling
 
@@ -204,19 +204,19 @@ class TestWatchEntityCreated:
                     payload=b"bulk entity 1",
                     content_type="text/plain",
                     attributes=Attributes({}),
-                    btl=100,
+                    expires_in=100,
                 ),
                 CreateOp(
                     payload=b"bulk entity 2",
                     content_type="text/plain",
                     attributes=Attributes({}),
-                    btl=100,
+                    expires_in=100,
                 ),
                 CreateOp(
                     payload=b"bulk entity 3",
                     content_type="text/plain",
                     attributes=Attributes({}),
-                    btl=100,
+                    expires_in=100,
                 ),
             ]
             entity_keys, tx_hash = create_entities(arkiv_client_http, create_ops)
@@ -260,7 +260,7 @@ class TestWatchEntityCreated:
         try:
             # Create an entity - SHOULD trigger callback
             entity_key, receipt = arkiv_client_http.arkiv.create_entity(
-                payload=b"initial data", btl=100
+                payload=b"initial data", expires_in=100
             )
             time.sleep(3)  # Wait for callback
             assert len(received_events) == 1
@@ -268,7 +268,7 @@ class TestWatchEntityCreated:
 
             # Update the entity - should NOT trigger callback
             _ = arkiv_client_http.arkiv.update_entity(
-                entity_key=entity_key, payload=b"updated data", btl=100
+                entity_key=entity_key, payload=b"updated data", expires_in=100
             )
             time.sleep(3)  # Wait to ensure no callback
             assert len(received_events) == 1  # Still only 1 event

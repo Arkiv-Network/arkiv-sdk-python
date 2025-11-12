@@ -9,10 +9,9 @@ from web3.method import Method, default_root_munger
 from web3.types import RPCEndpoint
 
 # ArkivProcessorAddress
-STORAGE_ADDRESS: Final[ChecksumAddress] = Web3.to_checksum_address(
+ARKIV_ADDRESS: Final[ChecksumAddress] = Web3.to_checksum_address(
     "0x00000000000000000000000000000061726B6976"
 )
-
 
 CREATED_EVENT: Final[str] = "ArkivEntityCreated"
 UPDATED_EVENT: Final[str] = "ArkivEntityUpdated"

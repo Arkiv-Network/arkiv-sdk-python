@@ -121,13 +121,13 @@ def create_entity(
     payload = b"Test entity data"
     content_type = "text/plain"
     attributes = Attributes({"type": "test", "version": 1})
-    btl = 100
+    expires_in = 100
 
     entity_key, _ = arkiv_client_http.arkiv.create_entity(
         payload=payload,
         content_type=content_type,
         attributes=attributes,
-        btl=btl,
+        expires_in=expires_in,
     )
 
     return entity_key, payload, content_type, attributes

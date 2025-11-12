@@ -19,7 +19,7 @@ class TestWatchEntityDeleted:
         # Setup: Create an entity first
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
             payload=b"test data",
-            btl=100,
+            expires_in=100,
         )
 
         # Setup callback with threading event
@@ -76,7 +76,7 @@ class TestWatchEntityDeleted:
         for i in range(3):
             entity_key, _ = arkiv_client_http.arkiv.create_entity(
                 payload=f"data {i}".encode(),
-                btl=100,
+                expires_in=100,
             )
             entity_keys.append(entity_key)
 
@@ -127,7 +127,7 @@ class TestWatchEntityDeleted:
         for i in range(3):
             entity_key, _ = arkiv_client_http.arkiv.create_entity(
                 payload=f"data {i}".encode(),
-                btl=100,
+                expires_in=100,
             )
             entity_keys.append(entity_key)
 
@@ -186,7 +186,7 @@ class TestWatchEntityDeleted:
         entity_keys = []
         for i in range(3):
             entity_key, _ = arkiv_client_http.arkiv.create_entity(
-                payload=f"initial {i}".encode(), btl=100
+                payload=f"initial {i}".encode(), expires_in=100
             )
             entity_keys.append(entity_key)
 
@@ -245,7 +245,7 @@ class TestWatchEntityDeleted:
         """Test that only deletions trigger callback, not create/update/extend."""
         # Create an entity first
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
-            payload=b"initial data", btl=100
+            payload=b"initial data", expires_in=100
         )
 
         received_events: list[tuple[DeleteEvent, TxHash]] = []
@@ -268,7 +268,7 @@ class TestWatchEntityDeleted:
 
             # Update the entity - should NOT trigger callback
             _ = arkiv_client_http.arkiv.update_entity(
-                entity_key=entity_key, payload=b"updated data", btl=100
+                entity_key=entity_key, payload=b"updated data", expires_in=100
             )
             time.sleep(3)  # Wait to ensure no callback
             assert len(received_events) == 0
@@ -301,7 +301,7 @@ class TestWatchEntityDeleted:
         """Test that deleted entities no longer exist in storage."""
         # Create entity
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
-            payload=b"test data", btl=100
+            payload=b"test data", expires_in=100
         )
 
         # Verify entity exists
@@ -353,7 +353,7 @@ class TestWatchEntityDeleted:
         """Test multiple delete filters can coexist."""
         # Create an entity
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
-            payload=b"test data", btl=100
+            payload=b"test data", expires_in=100
         )
 
         # Setup two separate callbacks

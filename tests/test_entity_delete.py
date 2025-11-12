@@ -20,10 +20,10 @@ class TestEntityDelete:
         # First, create an entity to delete
         payload = b"Test entity for deletion"
         attributes: Attributes = Attributes({"type": "test", "purpose": "deletion"})
-        btl = 100
+        expires_in = 100
 
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
-            payload=payload, attributes=attributes, btl=btl
+            payload=payload, attributes=attributes, expires_in=expires_in
         )
 
         logger.info(f"Created entity {entity_key} for deletion test")
@@ -57,7 +57,7 @@ class TestEntityDelete:
             payload = f"Entity {i} for sequential deletion".encode()
             attributes: Attributes = Attributes({"index": i, "batch": "sequential"})
             entity_key, _ = arkiv_client_http.arkiv.create_entity(
-                payload=payload, attributes=attributes, btl=150
+                payload=payload, attributes=attributes, expires_in=150
             )
             entity_keys.append(entity_key)
 
@@ -96,7 +96,7 @@ class TestEntityDelete:
                 payload=f"Bulk entity {i}".encode(),
                 content_type="text/plain",
                 attributes=Attributes({"batch": "bulk", "index": i}),
-                btl=100,
+                expires_in=100,
             )
             for i in range(3)
         ]
@@ -177,7 +177,7 @@ class TestEntityDelete:
 
         # Create an entity
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
-            payload=b"Entity to delete twice", btl=100
+            payload=b"Entity to delete twice", expires_in=100
         )
 
         # First deletion

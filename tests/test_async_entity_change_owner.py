@@ -26,10 +26,10 @@ class TestAsyncEntityChangeOwner:
         attributes: Attributes = Attributes(
             {"type": "test", "purpose": "async_ownership"}
         )
-        btl = 100
+        expires_in = 100
 
         entity_key, _ = await async_arkiv_client_http.arkiv.create_entity(
-            payload=payload, attributes=attributes, btl=btl
+            payload=payload, attributes=attributes, expires_in=expires_in
         )
 
         logger.info(f"Created entity {entity_key} for async ownership test")
@@ -73,10 +73,10 @@ class TestAsyncEntityChangeOwner:
         # Create an entity
         payload = b"Entity data should remain unchanged in async"
         attributes: Attributes = Attributes({"data": "important", "version": 1})
-        btl = 150
+        expires_in = 150
 
         entity_key, _ = await async_arkiv_client_http.arkiv.create_entity(
-            payload=payload, attributes=attributes, btl=btl
+            payload=payload, attributes=attributes, expires_in=expires_in
         )
 
         # Get entity before ownership change
@@ -122,7 +122,7 @@ class TestAsyncEntityChangeOwner:
                 {"index": i, "batch": "async_ownership"}
             )
             entity_key, _ = await async_arkiv_client_http.arkiv.create_entity(
-                payload=payload, attributes=attributes, btl=100
+                payload=payload, attributes=attributes, expires_in=100
             )
             entity_keys.append(entity_key)
 
@@ -160,7 +160,7 @@ class TestAsyncEntityChangeOwner:
         payload = b"Test entity for async same-owner transfer"
         attributes: Attributes = Attributes({"type": "test"})
         entity_key, _ = await async_arkiv_client_http.arkiv.create_entity(
-            payload=payload, attributes=attributes, btl=100
+            payload=payload, attributes=attributes, expires_in=100
         )
 
         # Get current owner

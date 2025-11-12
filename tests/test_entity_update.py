@@ -28,10 +28,10 @@ class TestEntityUpdate:
         # Create an entity to update
         original_payload = b"Original payload"
         attributes: Attributes = Attributes({"type": "test", "purpose": "update"})
-        btl = 100
+        expires_in = 100
 
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
-            payload=original_payload, attributes=attributes, btl=btl
+            payload=original_payload, attributes=attributes, expires_in=expires_in
         )
 
         logger.info(f"Created entity {entity_key} for update test")
@@ -45,7 +45,10 @@ class TestEntityUpdate:
         # Update the entity with new payload
         new_payload = b"Updated payload"
         tx_receipt = arkiv_client_http.arkiv.update_entity(
-            entity_key, payload=new_payload, attributes=attributes, btl=btl
+            entity_key,
+            payload=new_payload,
+            attributes=attributes,
+            expires_in=expires_in,
         )
 
         label = "update_entity_payload"
@@ -63,10 +66,10 @@ class TestEntityUpdate:
         # Create an entity
         payload = b"Test payload"
         original_attributes = Attributes({"status": "draft", "version": 1})
-        btl = 100
+        expires_in = 100
 
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
-            payload=payload, attributes=original_attributes, btl=btl
+            payload=payload, attributes=original_attributes, expires_in=expires_in
         )
 
         logger.info(f"Created entity {entity_key} with original attributes")
@@ -80,7 +83,10 @@ class TestEntityUpdate:
         # Update with new attributes
         new_attributes = Attributes({"status": "published", "version": 2})
         tx_receipt = arkiv_client_http.arkiv.update_entity(
-            entity_key, payload=payload, attributes=new_attributes, btl=btl
+            entity_key,
+            payload=payload,
+            attributes=new_attributes,
+            expires_in=expires_in,
         )
 
         label = "update_attributes"
@@ -96,7 +102,7 @@ class TestEntityUpdate:
         """Test updating the same entity multiple times."""
         # Create an entity
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
-            payload=b"Version 0", btl=100
+            payload=b"Version 0", expires_in=100
         )
 
         # Verify original entity
@@ -108,7 +114,7 @@ class TestEntityUpdate:
         versions = [b"Version 1", b"Version 2", b"Version 3"]
         for i, version_payload in enumerate(versions):
             tx_receipt = arkiv_client_http.arkiv.update_entity(
-                entity_key, payload=version_payload, btl=100
+                entity_key, payload=version_payload, expires_in=100
             )
             label = f"update_{i}"
             check_tx_hash(label, tx_receipt)
@@ -128,7 +134,7 @@ class TestEntityUpdate:
                 payload=f"Original entity {i}".encode(),
                 content_type="text/plain",
                 attributes=Attributes({"batch": "bulk", "index": i}),
-                btl=100,
+                expires_in=100,
             )
             for i in range(3)
         ]
@@ -158,7 +164,7 @@ class TestEntityUpdate:
                 payload=f"Updated entity {i}".encode(),
                 content_type="text/plain",
                 attributes=Attributes({"batch": "bulk", "index": i, "updated": True}),
-                btl=150,
+                expires_in=150,
             )
             for i, key in enumerate(entity_keys)
         ]
@@ -198,13 +204,13 @@ class TestEntityUpdate:
             payload=b"Non-empty payload",
             content_type="text/plain",
             attributes=attributes,
-            btl=100,
+            expires_in=100,
         )
         entity_before = arkiv_client_http.arkiv.get_entity(entity_key)
 
         # Update with empty payload
         update_tx_hash = arkiv_client_http.arkiv.update_entity(
-            entity_key, payload=b"", attributes=attributes, btl=100
+            entity_key, payload=b"", attributes=attributes, expires_in=100
         )
         label = "update_to_empty_payload"
         check_tx_hash(label, update_tx_hash)
@@ -220,14 +226,17 @@ class TestEntityUpdate:
         # Create an entity with some payload
         attributes = Attributes({"type": "test_empty_payload"})
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
-            payload=b"", content_type="text/plain", attributes=attributes, btl=100
+            payload=b"",
+            content_type="text/plain",
+            attributes=attributes,
+            expires_in=100,
         )
         entity_before = arkiv_client_http.arkiv.get_entity(entity_key)
 
         # Update with empty payload
         non_empty_payload = b"Non-empty payload"
         update_tx_hash = arkiv_client_http.arkiv.update_entity(
-            entity_key, payload=non_empty_payload, btl=100
+            entity_key, payload=non_empty_payload, expires_in=100
         )
         label = "update_empty_payload"
         check_tx_hash(label, update_tx_hash)
@@ -255,7 +264,7 @@ class TestEntityUpdate:
         # Attempt to update should raise a Web3RPCError
         with pytest.raises(Web3RPCError) as exc_info:
             arkiv_client_http.arkiv.update_entity(
-                fake_entity_key, payload=b"New payload", btl=100
+                fake_entity_key, payload=b"New payload", expires_in=100
             )
 
         # Verify the error message indicates entity not found
@@ -272,7 +281,7 @@ class TestEntityUpdate:
         """Test that updating a deleted entity raises an exception."""
         # Create an entity
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
-            payload=b"Entity to delete then update", btl=100
+            payload=b"Entity to delete then update", expires_in=100
         )
 
         # Delete the entity
@@ -287,7 +296,7 @@ class TestEntityUpdate:
         # Attempt to update should raise a Web3RPCError
         with pytest.raises(Web3RPCError) as exc_info:
             arkiv_client_http.arkiv.update_entity(
-                entity_key, payload=b"Updated payload", btl=100
+                entity_key, payload=b"Updated payload", expires_in=100
             )
 
         # Verify the error message indicates entity not found
@@ -312,7 +321,7 @@ class TestEntityUpdate:
         payload = b"Entity owned by Alice"
         attributes: Attributes = Attributes({"owner": "alice"})
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
-            payload=payload, attributes=attributes, btl=100
+            payload=payload, attributes=attributes, expires_in=100
         )
 
         # Verify entity was created by account_1
@@ -331,7 +340,7 @@ class TestEntityUpdate:
         new_payload = b"Bob trying to update Alice's entity"
         with pytest.raises(Web3RPCError) as exc_info:
             arkiv_client_http.arkiv.update_entity(
-                entity_key, payload=new_payload, btl=100
+                entity_key, payload=new_payload, expires_in=100
             )
 
         # Verify the error is related to authorization
@@ -352,15 +361,14 @@ class TestEntityUpdate:
 
         logger.info("Unauthorized update test successful")
 
-    # TODO figure out what the idea behind btl extension was
-    def test_update_entity_btl_extension(self, arkiv_client_http: Arkiv) -> None:
-        """Test that updating an entity with a higher btl extends its lifetime."""
-        # Create an entity with initial btl
+    def test_update_entity_expires_in_extension(self, arkiv_client_http: Arkiv) -> None:
+        """Test that updating an entity with a higher expires_in extends its lifetime."""
+        # Create an entity with initial expires_in
         payload = b"Test payload"
         content_type = "text/plain"
-        initial_btl = 100
+        initial_expires_in = 100
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
-            payload=payload, content_type=content_type, btl=initial_btl
+            payload=payload, content_type=content_type, expires_in=initial_expires_in
         )
 
         # Get initial expiration
@@ -369,30 +377,35 @@ class TestEntityUpdate:
         assert initial_expiration is not None, "Entity should have expiration block"
         logger.info(f"Initial expiration block: {initial_expiration}")
 
-        # Update with higher btl
-        new_btl = 200
+        # Update with higher expires_in
+        new_expires_in = 200
         update_tx_hash = arkiv_client_http.arkiv.update_entity(
-            entity_key, payload=payload, content_type=content_type, btl=new_btl
+            entity_key,
+            payload=payload,
+            content_type=content_type,
+            expires_in=new_expires_in,
         )
-        check_tx_hash("update_btl", update_tx_hash)
+        check_tx_hash("update_expires_in", update_tx_hash)
 
-        # Verify new expiration (btl extension calculation)
+        # Verify new expiration (expiration extension calculation)
         assert entity_before.expires_at_block is not None
         expected = replace(
             entity_before,
-            expires_at_block=entity_before.expires_at_block - initial_btl + new_btl,
+            expires_at_block=entity_before.expires_at_block
+            - initial_expiration
+            + new_expires_in,
         )
-        check_entity("update_btl", arkiv_client_http, expected)
+        check_entity("update_expires_in", arkiv_client_http, expected)
 
-        # Verify expiration was extended (should be roughly initial + new_btl)
+        # Verify expiration was extended (should be roughly initial + new_expires_in)
         # Note: exact value depends on block advancement during the update
         assert expected.expires_at_block is not None
         assert expected.expires_at_block > initial_expiration, (
-            "Expiration should increase with higher btl"
+            "Expiration should increase with higher expires_in"
         )
 
         logger.info(
-            f"BTL extension successful: {initial_expiration} -> {expected.expires_at_block}"
+            f"Expiration extension successful: {initial_expiration} -> {expected.expires_at_block}"
         )
 
     def test_update_entity_both_payload_and_attributes(
@@ -403,7 +416,7 @@ class TestEntityUpdate:
         original_payload = b"Original data"
         original_attributes = Attributes({"version": 1, "status": "initial"})
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
-            payload=original_payload, attributes=original_attributes, btl=100
+            payload=original_payload, attributes=original_attributes, expires_in=100
         )
 
         # Get original entity
@@ -413,7 +426,7 @@ class TestEntityUpdate:
         new_payload = b"New data"
         new_attributes = Attributes({"version": 2, "status": "updated"})
         update_tx_hash = arkiv_client_http.arkiv.update_entity(
-            entity_key, payload=new_payload, attributes=new_attributes, btl=100
+            entity_key, payload=new_payload, attributes=new_attributes, expires_in=100
         )
         label = "update_both"
         check_tx_hash(label, update_tx_hash)

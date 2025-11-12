@@ -50,7 +50,7 @@ from arkiv.types import (
 )
 from arkiv.utils import to_receipt
 
-from .contract import EVENTS_ABI, FUNCTIONS_ABI, STORAGE_ADDRESS
+from .contract import ARKIV_ADDRESS, EVENTS_ABI, FUNCTIONS_ABI
 
 if TYPE_CHECKING:
     pass
@@ -72,19 +72,22 @@ class ArkivModuleBase(Generic[ClientT]):
     - Utility methods (_check_operations, _check_tx_and_get_receipt, etc.)
     """
 
-    BTL_DEFAULT = (
-        1000  # Default blocks to live for created entities (~30 mins with 2s blocks)
+    BLOCK_TIME_SECONDS = 2  # Block time in seconds
+    EXPIRES_IN_DEFAULT = (
+        1000  # Default expiration time for created entities (~30 mins with 2s blocks)
     )
 
-    def __init__(self, client: ClientT, btl_default: int = BTL_DEFAULT) -> None:
+    def __init__(
+        self, client: ClientT, expires_in_default: int = EXPIRES_IN_DEFAULT
+    ) -> None:
         """Initialize Arkiv module with client reference.
 
         Args:
             client: Arkiv or AsyncArkiv client instance
-            btl_default: Default blocks-to-live for created entities
+            expires_in_default: Default expiration time for created entities
         """
         self.client = client
-        self.btl_default = btl_default
+        self.expires_in_default = expires_in_default
 
         # Attach custom Arkiv RPC methods to the eth object
         # Type checking: client has 'eth' attribute from Web3/AsyncWeb3
@@ -93,7 +96,7 @@ class ArkivModuleBase(Generic[ClientT]):
             logger.debug(f"Custom RPC method: eth.{method_name}")
 
         # Create contract instance for events (using EVENTS_ABI)
-        self.contract = client.eth.contract(address=STORAGE_ADDRESS, abi=EVENTS_ABI)  # type: ignore[attr-defined]
+        self.contract = client.eth.contract(address=ARKIV_ADDRESS, abi=EVENTS_ABI)  # type: ignore[attr-defined]
         for event in self.contract.all_events():
             logger.debug(f"Entity event {event.topic}: {event.signature}")
 
@@ -145,8 +148,8 @@ class ArkivModuleBase(Generic[ClientT]):
         Example:
             Create and update entities in a single transaction:
                 >>> operations = Operations(
-                ...     creates=[CreateOp(payload=b"data", btl=100)],
-                ...     updates=[UpdateOp(entity_key=key, payload=b"new", btl=100)]
+                ...     creates=[CreateOp(payload=b"data", expires_in=100)],
+                ...     updates=[UpdateOp(entity_key=key, payload=b"new", expires_in=100)]
                 ... )
                 >>> receipt = client.arkiv.execute(operations)
                 >>> print(f"Created {len(receipt.creates)} entities")
@@ -165,7 +168,7 @@ class ArkivModuleBase(Generic[ClientT]):
         payload: bytes | None = None,
         content_type: str | None = None,
         attributes: Attributes | None = None,
-        btl: int | None = None,
+        expires_in: int | None = None,
         tx_params: TxParams | None = None,
     ) -> tuple[EntityKey, TransactionReceipt]:
         """
@@ -175,7 +178,7 @@ class ArkivModuleBase(Generic[ClientT]):
             payload: Optional data payload for the entity (default: empty bytes)
             content_type: Optional content type for the payload (default: "application/octet-stream")
             attributes: Optional key-value attributes as metadata
-            btl: Blocks to live - entity lifetime in blocks (default: self.btl_default)
+            expires_in: Entity lifetime in seconds (default: self.expires_in_default)
             tx_params: Optional transaction parameters (gas, gasPrice, etc.)
 
         Returns:
@@ -191,13 +194,13 @@ class ArkivModuleBase(Generic[ClientT]):
             >>> entity_key, receipt = client.arkiv.create_entity(
             ...     payload=b"Hello, Arkiv!",
             ...     attributes=Attributes({"type": "greeting", "version": 1}),
-            ...     btl=1000
+            ...     expires_in=1000
             ... )
             >>> print(f"Created entity: {entity_key}")
 
         Note:
             - When using AsyncArkiv, use 'await' before calling this method
-            - Entity will expire after btl blocks from current block
+            - Entity will expire after expires_in seconds from current block
             - All attributes values must be strings or non-negative integers
         """
         raise NotImplementedError("Subclasses must implement create_entity()")
@@ -208,7 +211,7 @@ class ArkivModuleBase(Generic[ClientT]):
         payload: bytes | None = None,
         content_type: str | None = None,
         attributes: Attributes | None = None,
-        btl: int | None = None,
+        expires_in: int | None = None,
         tx_params: TxParams | None = None,
     ) -> TransactionReceipt:
         """
@@ -222,7 +225,7 @@ class ArkivModuleBase(Generic[ClientT]):
             payload: Optional new data payload (default: empty bytes)
             content_type: Optional new content type (default: "application/octet-stream")
             attributes: Optional new attributes (default: empty dict)
-            btl: New blocks to live from current block (default: self.btl_default)
+            expires_in: New expiration time in seconds (default: self.expires_in_default)
             tx_params: Optional transaction parameters
 
         Returns:
@@ -449,6 +452,27 @@ class ArkivModuleBase(Generic[ClientT]):
             - Cursor-based pagination not yet fully implemented
         """
         raise NotImplementedError("Subclasses must implement query_entities()")
+
+    def to_blocks(
+        self, seconds: int = 0, minutes: int = 0, hours: int = 0, days: int = 0
+    ) -> int:
+        """
+        Convert a time duration to number of blocks.
+
+        Useful for calculating expires_in parameters based on
+        desired entity lifetime.
+
+        Args:
+            seconds: Number of seconds
+            minutes: Number of minutes
+            hours: Number of hours
+            days: Number of days
+
+        Returns:
+            Number of blocks corresponding to the time duration
+        """
+        total_seconds = seconds + minutes * 60 + hours * 3600 + days * 86400
+        return total_seconds // self.BLOCK_TIME_SECONDS
 
     # NOTE: Other public API methods (iterate_entities, watch_entity_*, etc.) could also
     # be defined here, but they have more significant differences between sync/async

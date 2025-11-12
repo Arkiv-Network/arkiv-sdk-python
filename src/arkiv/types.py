@@ -208,7 +208,7 @@ class CreateOp:
     payload: bytes
     content_type: str
     attributes: Attributes
-    btl: int
+    expires_in: int
 
 
 @dataclass(frozen=True)
@@ -219,7 +219,7 @@ class UpdateOp:
     payload: bytes
     content_type: str
     attributes: Attributes
-    btl: int
+    expires_in: int
 
 
 @dataclass(frozen=True)

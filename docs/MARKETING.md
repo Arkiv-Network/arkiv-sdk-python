@@ -348,7 +348,7 @@ Each record ("entity") contains:
 ### **Poor Use Cases (Don't Market These)**
 
 1. ❌ **Permanent Document Archive**
-   - Why: All data expires via BTL, not suitable for permanent legal records
+   - Why: All data expires via expires_in, not suitable for permanent legal records
    - Alternative: Extend important entities regularly, but acknowledge the maintenance
 
 2. ❌ **Real-Time Database Replacement**

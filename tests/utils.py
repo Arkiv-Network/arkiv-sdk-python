@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 WALLET_FILE_ENV_PREFIX = "WALLET_FILE"
 WALLET_PASSWORD_ENV_PREFIX = "WALLET_PASSWORD"
 
-BTL = 100
+EXPIRES_IN = 100
 CONTENT_TYPE = "text/plain"
 
 logger = logging.getLogger(__name__)
@@ -36,13 +36,13 @@ def to_create(
     payload: bytes = b"",
     content_type: str = CONTENT_TYPE,
     attributes: dict[str, str | int] | None = None,
-    btl: int = BTL,
+    expires_in: int = EXPIRES_IN,
 ) -> CreateOp:
     return CreateOp(
         payload=payload,
         content_type=content_type,
         attributes=Attributes(attributes),
-        btl=btl,
+        expires_in=expires_in,
     )
 
 

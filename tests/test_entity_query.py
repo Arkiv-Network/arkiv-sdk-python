@@ -72,7 +72,7 @@ class TestQueryEntitiesBasic:
                 payload=f"Entity {i}".encode(),
                 content_type="text/plain",
                 attributes=Attributes({"id": shared_id}),
-                btl=100,  # Set blocks to live (required by Arkiv node)
+                expires_in=100,  # Set blocks to live (required by Arkiv node)
             )
             entity_keys.append(entity_key)
 

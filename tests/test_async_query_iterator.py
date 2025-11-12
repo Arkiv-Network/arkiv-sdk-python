@@ -36,7 +36,7 @@ async def create_test_entities(client: AsyncArkiv, n: int) -> tuple[str, list[st
             payload=payload,
             content_type=CONTENT_TYPE,
             attributes=attributes,
-            btl=BTL,
+            expires_in=BTL,
         )
         create_ops.append(create_op)
 

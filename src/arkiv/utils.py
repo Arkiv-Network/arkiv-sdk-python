@@ -16,6 +16,7 @@ from web3.types import EventData, LogReceipt, TxParams, TxReceipt
 
 from . import contract
 from .contract import (
+    ARKIV_ADDRESS,
     COST,
     ENTITY_KEY,
     EXPIRATION_BLOCK,
@@ -24,7 +25,6 @@ from .contract import (
     OLD_EXPIRATION_BLOCK,
     OLD_OWNER_ADDRESS,
     OWNER_ADDRESS,
-    STORAGE_ADDRESS,
 )
 from .exceptions import AttributeException, EntityKeyException
 from .types import (
@@ -66,7 +66,7 @@ from .types import (
 )
 
 CONTENT_TYPE_DEFAULT = "application/octet-stream"
-BTL_DEFAULT = (
+EXPIRES_IN_DEFAULT = (
     1000  # Default blocks to live for created entities (~30 mins with 2s blocks)
 )
 
@@ -89,13 +89,16 @@ def to_create_op(
     payload: bytes | None = None,
     content_type: str | None = None,
     attributes: Attributes | None = None,
-    btl: int | None = None,
+    expires_in: int | None = None,
 ) -> CreateOp:
-    payload, content_type, attributes, btl = check_and_set_entity_op_defaults(
-        payload, content_type, attributes, btl
+    payload, content_type, attributes, expires_in = check_and_set_entity_op_defaults(
+        payload, content_type, attributes, expires_in
     )
     return CreateOp(
-        payload=payload, content_type=content_type, attributes=attributes, btl=btl
+        payload=payload,
+        content_type=content_type,
+        attributes=attributes,
+        expires_in=expires_in,
     )
 
 
@@ -104,15 +107,15 @@ def to_update_op(
     payload: bytes | None = None,
     content_type: str | None = None,
     attributes: Attributes | None = None,
-    btl: int | None = None,
+    expires_in: int | None = None,
 ) -> UpdateOp:
-    payload, content_type, attributes, btl = check_and_set_entity_op_defaults(
-        payload, content_type, attributes, btl
+    payload, content_type, attributes, expires_in = check_and_set_entity_op_defaults(
+        payload, content_type, attributes, expires_in
     )
     return UpdateOp(
         key=entity_key,
         content_type=content_type,
-        btl=btl,
+        expires_in=expires_in,
         payload=payload,
         attributes=attributes,
     )
@@ -122,11 +125,11 @@ def check_and_set_entity_op_defaults(
     payload: bytes | None,
     content_type: str | None,
     attributes: Attributes | None,
-    btl: int | None,
+    expires_in: int | None,
 ) -> tuple[bytes, str, Attributes, int]:
     """Check and set defaults for entity management arguments."""
-    if btl is None:
-        btl = BTL_DEFAULT
+    if expires_in is None:
+        expires_in = EXPIRES_IN_DEFAULT
     if not payload:
         payload = b""
     if not content_type:
@@ -134,7 +137,7 @@ def check_and_set_entity_op_defaults(
     if not attributes:
         attributes = Attributes({})
 
-    return payload, content_type, attributes, btl
+    return payload, content_type, attributes, expires_in
 
 
 def check_entity_key(entity_key: Any | None, label: str | None = None) -> None:
@@ -204,7 +207,7 @@ def to_tx_params(
     data_compressed = brotli.compress(data)
 
     tx_params |= {
-        "to": STORAGE_ADDRESS,
+        "to": ARKIV_ADDRESS,
         "value": Web3.to_wei(0, "ether"),
         "data": data_compressed,
     }
@@ -707,7 +710,7 @@ def rlp_encode_transaction(tx: Operations) -> bytes:
         # Create
         [
             [
-                element.btl,
+                element.expires_in,
                 element.content_type,
                 element.payload,
                 *split_attributes(element.attributes),
@@ -719,7 +722,7 @@ def rlp_encode_transaction(tx: Operations) -> bytes:
             [
                 entity_key_to_bytes(element.key),
                 element.content_type,
-                element.btl,
+                element.expires_in,
                 element.payload,
                 *split_attributes(element.attributes),
             ]

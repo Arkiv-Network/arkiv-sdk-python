@@ -38,7 +38,7 @@ class TestEntityExists:
         """Test that entity_exists returns True for a created entity."""
         # Create an entity
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
-            payload=b"test data", btl=1000
+            payload=b"test data", expires_in=1000
         )
 
         # Check it exists
@@ -51,7 +51,7 @@ class TestEntityExists:
         for i in range(5):
             payload = f"entity {i}".encode()
             entity_key, _ = arkiv_client_http.arkiv.create_entity(
-                payload=payload, btl=1000
+                payload=payload, expires_in=1000
             )
             entity_keys.append(entity_key)
 
@@ -65,7 +65,7 @@ class TestEntityExists:
         """Test that calling entity_exists multiple times gives same result."""
         payload = b"test idempotency"
         entity_key, receipt = arkiv_client_http.arkiv.create_entity(
-            payload=payload, btl=1000
+            payload=payload, expires_in=1000
         )
 
         # Call multiple times
@@ -89,14 +89,16 @@ class TestEntityExists:
         """Test entity_exists transitions from False to True on creation."""
         # Generate a unique entity key by creating and noting it
         payload = b"transition test"
-        entity_key, _ = arkiv_client_http.arkiv.create_entity(payload=payload, btl=1000)
+        entity_key, _ = arkiv_client_http.arkiv.create_entity(
+            payload=payload, expires_in=1000
+        )
 
         # Now it should exist
         assert arkiv_client_http.arkiv.entity_exists(entity_key) is True
 
         # Create a different one to verify the first is still there
         entity_key2, _ = arkiv_client_http.arkiv.create_entity(
-            payload=b"second entity", btl=1000
+            payload=b"second entity", expires_in=1000
         )
         assert arkiv_client_http.arkiv.entity_exists(entity_key) is True
         assert arkiv_client_http.arkiv.entity_exists(entity_key2) is True
@@ -109,7 +111,7 @@ class TestEntityExists:
         payload = b"consistency test"
         attributes = Attributes({"test": "consistency"})
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
-            payload=payload, attributes=attributes, btl=1000
+            payload=payload, attributes=attributes, expires_in=1000
         )
 
         # Both methods should agree it exists
@@ -133,7 +135,7 @@ class TestEntityExists:
                 payload=f"bulk entity {i}".encode(),
                 content_type="text/plain",
                 attributes=Attributes({}),
-                btl=1000,
+                expires_in=1000,
             )
             for i in range(5)
         ]

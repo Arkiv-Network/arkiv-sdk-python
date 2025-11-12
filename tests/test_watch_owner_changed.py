@@ -21,7 +21,7 @@ class TestWatchOwnerChanged:
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
             payload=b"test data",
             attributes=Attributes({"type": "test"}),
-            btl=100,
+            expires_in=100,
         )
 
         # Get original owner
@@ -76,7 +76,7 @@ class TestWatchOwnerChanged:
         for i in range(3):
             entity_key, _ = arkiv_client_http.arkiv.create_entity(
                 payload=f"entity {i}".encode(),
-                btl=100,
+                expires_in=100,
             )
             entity_keys.append(entity_key)
 
@@ -129,7 +129,7 @@ class TestWatchOwnerChanged:
         """Test manual start/stop of event filter."""
         # Create an entity first
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
-            payload=b"initial", btl=100
+            payload=b"initial", expires_in=100
         )
 
         received_events: list[tuple[ChangeOwnerEvent, TxHash]] = []
@@ -160,7 +160,7 @@ class TestWatchOwnerChanged:
 
             # Create a new entity and transfer - SHOULD trigger callback
             entity_key2, _ = arkiv_client_http.arkiv.create_entity(
-                payload=b"second entity", btl=100
+                payload=b"second entity", expires_in=100
             )
             arkiv_client_http.arkiv.change_owner(
                 entity_key=entity_key2, new_owner=account_2.address
@@ -174,7 +174,7 @@ class TestWatchOwnerChanged:
 
             # Transfer again - should NOT trigger callback
             entity_key3, _ = arkiv_client_http.arkiv.create_entity(
-                payload=b"third entity", btl=100
+                payload=b"third entity", expires_in=100
             )
             count_after_stopping = len(received_events)
             arkiv_client_http.arkiv.change_owner(
@@ -192,7 +192,7 @@ class TestWatchOwnerChanged:
         """Test that from_block='latest' only catches new ownership transfers."""
         # Create entity and transfer ownership BEFORE starting the watcher
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
-            payload=b"from account_1 (initial)", btl=100
+            payload=b"from account_1 (initial)", expires_in=100
         )
 
         # Transfer ownership before starting the filter
@@ -220,7 +220,7 @@ class TestWatchOwnerChanged:
 
             # Create new entity as account_1 (default account)
             entity_key2, _ = arkiv_client_http.arkiv.create_entity(
-                payload=b"from account_1 (after)", btl=100
+                payload=b"from account_1 (after)", expires_in=100
             )
 
             # Transfer the second entity (this should be captured)
@@ -252,7 +252,7 @@ class TestWatchOwnerChanged:
         """Test that only ownership transfers trigger callback, not create/update/delete."""
         # Create an entity first
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
-            payload=b"initial data", btl=100
+            payload=b"initial data", expires_in=100
         )
 
         received_events: list[tuple[ChangeOwnerEvent, TxHash]] = []
@@ -273,7 +273,7 @@ class TestWatchOwnerChanged:
 
             # Update the entity - should NOT trigger callback
             arkiv_client_http.arkiv.update_entity(
-                entity_key=entity_key, payload=b"updated data", btl=100
+                entity_key=entity_key, payload=b"updated data", expires_in=100
             )
             time.sleep(3)  # Wait to ensure no callback
             assert len(received_events) == 0
@@ -308,7 +308,7 @@ class TestWatchOwnerChanged:
         """Test watching multiple transfers of the same entity."""
         # Create entity as account_1 (default)
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
-            payload=b"test entity", btl=100
+            payload=b"test entity", expires_in=100
         )
 
         callback_triggered = ThreadEvent()
@@ -381,7 +381,9 @@ class TestWatchOwnerChanged:
     def test_watch_owner_changed_same_owner(self, arkiv_client_http):
         """Test that transferring to same owner still triggers event."""
         # Create entity
-        entity_key, _ = arkiv_client_http.arkiv.create_entity(payload=b"test", btl=100)
+        entity_key, _ = arkiv_client_http.arkiv.create_entity(
+            payload=b"test", expires_in=100
+        )
 
         entity = arkiv_client_http.arkiv.get_entity(entity_key)
         original_owner = entity.owner

@@ -24,10 +24,10 @@ class TestEntityChangeOwner:
         # Create an entity
         payload = b"Entity data should remain unchanged"
         attributes: Attributes = Attributes({"data": "important", "version": 1})
-        btl = 150
+        expires_in = 150
 
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
-            payload=payload, attributes=attributes, btl=btl
+            payload=payload, attributes=attributes, expires_in=expires_in
         )
 
         # Get entity before ownership change
@@ -68,7 +68,7 @@ class TestEntityChangeOwner:
             payload = f"Entity {i} for ownership transfer".encode()
             attributes: Attributes = Attributes({"index": i, "batch": "ownership"})
             entity_key, _ = arkiv_client_http.arkiv.create_entity(
-                payload=payload, attributes=attributes, btl=100
+                payload=payload, attributes=attributes, expires_in=100
             )
             entity_keys.append(entity_key)
 
@@ -102,7 +102,7 @@ class TestEntityChangeOwner:
         payload = b"Test entity for unauthorized transfer"
         attributes: Attributes = Attributes({"type": "test"})
         _entity_key, _ = arkiv_client_http.arkiv.create_entity(
-            payload=payload, attributes=attributes, btl=100
+            payload=payload, attributes=attributes, expires_in=100
         )
 
         assert arkiv_client_http.eth.default_account == account_1.address, (
@@ -131,7 +131,7 @@ class TestEntityChangeOwner:
         payload = b"Test entity for same-owner transfer"
         attributes: Attributes = Attributes({"type": "test"})
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
-            payload=payload, attributes=attributes, btl=100
+            payload=payload, attributes=attributes, expires_in=100
         )
 
         # Get current owner

@@ -19,7 +19,7 @@ class TestWatchEntityExtended:
         # Setup: Create an entity first
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
             payload=b"test data",
-            btl=100,
+            expires_in=100,
         )
 
         # Get initial expiration block
@@ -74,7 +74,7 @@ class TestWatchEntityExtended:
         for i in range(3):
             entity_key, _ = arkiv_client_http.arkiv.create_entity(
                 payload=f"data {i}".encode(),
-                btl=100,
+                expires_in=100,
             )
             entity_keys.append(entity_key)
 
@@ -127,7 +127,7 @@ class TestWatchEntityExtended:
         """Test manual start/stop of event filter."""
         # Create an entity first
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
-            payload=b"initial", btl=100
+            payload=b"initial", expires_in=100
         )
 
         received_events: list[tuple[ExtendEvent, TxHash]] = []
@@ -182,7 +182,7 @@ class TestWatchEntityExtended:
         """Test that from_block='latest' only catches new extensions."""
         # Create entity
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
-            payload=b"initial", btl=100
+            payload=b"initial", expires_in=100
         )
 
         received_events: list[tuple[ExtendEvent, TxHash]] = []
@@ -227,7 +227,7 @@ class TestWatchEntityExtended:
         entity_keys = []
         for i in range(3):
             entity_key, _ = arkiv_client_http.arkiv.create_entity(
-                payload=f"initial {i}".encode(), btl=100
+                payload=f"initial {i}".encode(), expires_in=100
             )
             entity_keys.append(entity_key)
 
@@ -293,7 +293,7 @@ class TestWatchEntityExtended:
         """Test that only extensions trigger callback, not create/update/delete."""
         # Create an entity first
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
-            payload=b"initial data", btl=100
+            payload=b"initial data", expires_in=100
         )
 
         received_events: list[tuple[ExtendEvent, TxHash]] = []
@@ -314,7 +314,7 @@ class TestWatchEntityExtended:
 
             # Update the entity - should NOT trigger callback
             _ = arkiv_client_http.arkiv.update_entity(
-                entity_key=entity_key, payload=b"updated data", btl=100
+                entity_key=entity_key, payload=b"updated data", expires_in=100
             )
             time.sleep(3)  # Wait to ensure no callback
             assert len(received_events) == 0
@@ -345,7 +345,7 @@ class TestWatchEntityExtended:
         """Test watching multiple extensions of the same entity."""
         # Create entity
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
-            payload=b"test data", btl=100
+            payload=b"test data", expires_in=100
         )
 
         # Get initial expiration
@@ -401,9 +401,9 @@ class TestWatchEntityExtended:
 
     def test_watch_entity_extended_expiration_tracking(self, arkiv_client_http):
         """Test that extend events correctly track old and new expiration blocks."""
-        # Create entity with specific BTL
+        # Create entity with specific expiration time
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
-            payload=b"tracking test", btl=200
+            payload=b"tracking test", expires_in=200
         )
 
         # Get initial expiration block

@@ -14,7 +14,7 @@ from arkiv.types import (
     QueryOptions,
 )
 
-BTL = 100
+EXPIRES_IN = 100
 CONTENT_TYPE = "text/plain"
 
 logger = logging.getLogger(__name__)
@@ -45,7 +45,7 @@ def create_test_entities(client: Arkiv, n: int) -> tuple[str, list[EntityKey]]:
             payload=payload,
             content_type=CONTENT_TYPE,
             attributes=attributes,
-            btl=BTL,
+            expires_in=EXPIRES_IN,
         )
         create_ops.append(create_op)
 

@@ -34,7 +34,7 @@ def create_test_entities(client: Arkiv, n: int) -> tuple[str, list[str]]:
             payload=payload,
             content_type=CONTENT_TYPE,
             attributes=attributes,
-            btl=BTL,
+            expires_in=BTL,
         )
         create_ops.append(create_op)
 

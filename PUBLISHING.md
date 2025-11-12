@@ -192,7 +192,7 @@ Python session in interactive shell.
 ```python
 from arkiv import Arkiv
 client = Arkiv()
-entity_key, _ = client.arkiv.create_entity(payload=b'Hello world!', btl=1000)
+entity_key, _ = client.arkiv.create_entity(payload=b'Hello world!', expires_in=1000)
 client.arkiv.get_entity(entity_key)
 ```
 

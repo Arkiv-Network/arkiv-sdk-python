@@ -25,7 +25,7 @@ class TestAsyncEntityExtend:
         entity_key, create_tx_hash = await async_arkiv_client_http.arkiv.create_entity(
             payload=b"Test entity for async extension",
             attributes=Attributes({"type": "test"}),
-            btl=100,
+            expires_in=100,
         )
 
         check_entity_key(entity_key, "test_async_extend_entity_basic")
@@ -63,7 +63,7 @@ class TestAsyncEntityExtend:
             entity_key, _tx_hash = await async_arkiv_client_http.arkiv.create_entity(
                 payload=f"Entity {i}".encode(),
                 attributes=Attributes({"index": i}),
-                btl=100,
+                expires_in=100,
             )
             entity_keys.append(entity_key)
 

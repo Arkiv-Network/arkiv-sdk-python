@@ -116,7 +116,7 @@ class TestAsyncEntityGet:
             payload = f"Concurrent read test entity {i}".encode()
             attributes = Attributes({"index": i, "batch": "concurrent_read"})
             entity_key, _tx_hash = await async_arkiv_client_http.arkiv.create_entity(
-                payload=payload, attributes=attributes, btl=100
+                payload=payload, attributes=attributes, expires_in=100
             )
             entity_keys.append(entity_key)
             logger.info(f"Created entity {i + 1}/5: {entity_key}")
@@ -168,13 +168,13 @@ async def create_entity(
     payload = b"Test entity data"
     content_type = "text/plain"
     attributes = Attributes({"type": "test", "version": 1})
-    btl = 100
+    expires_in = 100
 
     entity_key, _ = await arkiv_client_http.arkiv.create_entity(
         payload=payload,
         content_type=content_type,
         attributes=attributes,
-        btl=btl,
+        expires_in=expires_in,
     )
 
     return entity_key, payload, content_type, attributes

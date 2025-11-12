@@ -41,7 +41,7 @@ entity_key, receipt = client.arkiv.create_entity(
     payload=b"Hello World!",
     content_type="text/plain",
     attributes={"type": "greeting", "version": 1},
-    btl=1000
+    expires_in=1000
 )
 
 # Check and print entity key
@@ -71,7 +71,7 @@ async def main():
         entity_key, tx_hash = await client.arkiv.create_entity(
             payload=b"Hello Async World!",
             attributes={"type": "greeting", "version": 1},
-            btl=1000
+            expires_in=1000
         )
 
         # Get entity and check existence
@@ -110,7 +110,7 @@ client = Arkiv(provider, account=account)
 entity_key, tx_hash = client.arkiv.create_entity(
     payload=b"Hello World!",
     attributes={"type": "greeting", "version": 1},
-    btl = 1000
+    expires_in = 1000
 )
 
 entity = client.arkiv.get_entity(entity_key)
@@ -397,60 +397,6 @@ client.arkiv.cleanup_filters()
 **Note:** Event watching requires polling the node for new events. The SDK handles this automatically in the background.
 
 ## Arkiv Topics/Features
-
-### BTL
-
-BTL (Blocks-To-Live) should be replaced with explicit `expires_at_block` values for predictability and composability.
-
-Relative `BTL` depends on execution timing and creates unnecessary complexity:
-- An entity created with `btl=100` will have different expiration blocks depending on when the transaction is mined
-- Extending entity lifetimes requires fetching the entity, calculating remaining blocks, and adding more—a race-prone pattern
-- Creates asymmetry between write operations (which use `btl`) and read operations (which return `expires_at_block`)
-- Mempool management can accept any value
-
-Absolute `expires_at_block` is predictable, composable, and matches what you get when reading entities:
-- Deterministic regardless of execution timing
-- Maps directly to `Entity.expires_at_block` field returned by queries
-- Enables clean compositional patterns like `replace(entity, expires_at_block=entity.expires_at_block + 100)`
-- Aligns write API with read API, making the SDK more intuitive
-- Mempool needs to manage/delete tx with expires at values in the past
-
-It's complicated. Deterministic mempool management vs predictable tx management in mempool.
-
-```python
-from dataclasses import replace
-
-# Fetch entity
-entity = client.arkiv.get_entity(entity_key)
-
-# Modify payload and extend expiration by 100 blocks
-updated_entity = replace(
-    entity,
-    payload=b"new data",
-    expires_at_block=entity.expires_at_block + 100
-)
-
-# Update entity
-client.arkiv.update_entity(updated_entity)
-```
-
-### Sorting
-
-Querying entities should support sorting results by one or more fields.
-
-**Requirements:**
-- Sort by attributes (string and numeric)
-- Sort by metadata (owner, expires_at_block)
-- Support ascending and descending order
-- Multi-field sorting with priority
-
-**Example:**
-```python
-# SQL-style sorting
-results = client.arkiv.query(
-    "SELECT * FROM entities ORDER BY attributes.priority DESC, attributes.name ASC"
-)
-```
 
 ### Other Features
 

@@ -62,7 +62,7 @@ class TestAsyncQueryEntitiesBasic:
             entity_key, _tx_hash = await async_arkiv_client_http.arkiv.create_entity(
                 payload=f"Entity {i}".encode(),
                 attributes=Attributes({"id": shared_id}),
-                btl=100,
+                expires_in=100,
             )
             entity_keys.append(entity_key)
 
@@ -114,7 +114,7 @@ class TestAsyncQueryEntitiesBasic:
             entity_key, _tx_hash = await async_arkiv_client_http.arkiv.create_entity(
                 payload=f"Entity {i}".encode(),
                 attributes=Attributes(attributes),
-                btl=100,
+                expires_in=100,
             )
             entity_keys.append(entity_key)
 

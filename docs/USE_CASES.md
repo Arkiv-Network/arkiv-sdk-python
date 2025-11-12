@@ -30,7 +30,7 @@ entity_key, tx_hash = client.arkiv.create_entity(
         "trait_type": "beanie",
         "trait_eyes": "blue"
     },
-    btl=100_000_000  # a few years with 2s blocks
+    expires_in=100_000_000  # a few years with 2s blocks
 )
 
 # NFT contract points to entity_key
@@ -82,7 +82,7 @@ for i in range(0, len(file_data), CHUNK_SIZE):
     chunk_key, _ = client.arkiv.create_entity(
         payload=file_data[i:i + CHUNK_SIZE],
         attributes={"file_hash": file_hash, "chunk_index": i // CHUNK_SIZE},
-        btl=100_000_000
+        expires_in=100_000_000
     )
     chunk_keys.append(chunk_key)
 
@@ -94,7 +94,7 @@ manifest_key, _ = client.arkiv.create_entity(
         "file_name": "video.mp4",
         "chunk_keys": ",".join(chunk_keys),
     },
-    btl=100_000_000
+    expires_in=100_000_000
 )
 
 # Reconstruct file
@@ -243,7 +243,7 @@ proposal = client.arkiv.create_entity(
         "votes_against": 0,
         "quorum": 40000000
     },
-    btl=100_000_000  # Keep for historical record
+    expires_in=100_000_000  # Keep for historical record
 )
 
 # Update vote counts (cheap!)
@@ -251,7 +251,7 @@ arkiv.update_entity(
     proposal_key,
     payload=proposal.payload,  # Same text
     attributes={"votes_for": 1234, "votes_against": 567, "status": "passed"},
-    btl=100_000_000  # Keep for historical record
+    expires_in=100_000_000  # Keep for historical record
 )
 
 # Query all active proposals
@@ -300,7 +300,7 @@ btc_price_data = client.arkiv.create_entity(
         "network_id": network_id,
         "market": "crypto"
     },
-    btl=100_000  # Keep 1 month
+    expires_in=100_000  # Keep 1 month
 )
 
 # Applications read latest or query history
@@ -342,7 +342,7 @@ shipment_key = client.arkiv.create_entity(
         "product_sku": "PROD-789",
         "status": "in_transit",
     },
-    btl=10_000_000  # Keep 6 months
+    expires_in=10_000_000  # Keep 6 months
 )
 
 status_key = client.arkiv.create_entity(
@@ -354,7 +354,7 @@ status_key = client.arkiv.create_entity(
         "location": "warehouse_b",
         "temperature": 5.0,
     }
-    btl=10_000_000  # Keep 6 months
+    expires_in=10_000_000  # Keep 6 months
 )
 
 delivery_key = client.arkiv.create_entity(
@@ -368,7 +368,7 @@ delivery_key = client.arkiv.create_entity(
         "delivery_timestamp": delivery_timestamp,
         "signature": customer_signature_hash,
     }
-    btl=10_000_000  # Keep 6 months
+    expires_in=10_000_000  # Keep 6 months
 )
 
 # Update status at each checkpoint
@@ -430,7 +430,7 @@ model_entity_key = client.arkiv.create_entity(
         "author": researcher_address,
         "framework": "pytorch"
     },
-    btl=10_000_000
+    expires_in=10_000_000
 )
 
 # Track experiments
@@ -446,7 +446,7 @@ experiment = client.arkiv.create_entity(
         "accuracy": 95,
         "f1_score": 93,
         },
-    btl=5_000_000
+    expires_in=5_000_000
 )
 
 # Provable model lineage

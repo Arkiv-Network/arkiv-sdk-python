@@ -33,7 +33,7 @@ def test_filter_cleanup_on_context_exit(arkiv_node):
         assert event_filter in arkiv.arkiv.active_filters
 
         # Create an entity to trigger the event
-        arkiv.arkiv.create_entity(payload=b"test", btl=100)
+        arkiv.arkiv.create_entity(payload=b"test", expires_in=100)
         time.sleep(3)  # Wait for event
 
         # Event should be received

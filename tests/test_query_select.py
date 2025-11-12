@@ -22,7 +22,7 @@ from arkiv.types import (
     QueryOptions,
 )
 
-BTL = 100
+EXPIRES_IN = 100
 CONTENT_TYPE_VALUE = "text/plain"
 
 
@@ -42,7 +42,7 @@ def create_test_entities(
         payload=payload1,
         content_type=CONTENT_TYPE_VALUE,
         attributes=attributes1,
-        btl=BTL,
+        expires_in=EXPIRES_IN,
     )
 
     # Update first entity to change last_modified_at
@@ -52,7 +52,7 @@ def create_test_entities(
         payload=updated_payload1,
         content_type=CONTENT_TYPE_VALUE,
         attributes=attributes1,
-        btl=BTL,
+        expires_in=EXPIRES_IN,
     )
 
     # Create second entity
@@ -62,7 +62,7 @@ def create_test_entities(
         payload=payload2,
         content_type=CONTENT_TYPE_VALUE,
         attributes=attributes2,
-        btl=BTL,
+        expires_in=EXPIRES_IN,
     )
 
     # Update second entity to change last_modified_at
@@ -72,7 +72,7 @@ def create_test_entities(
         payload=updated_payload2,
         content_type=CONTENT_TYPE_VALUE,
         attributes=attributes2,
-        btl=BTL,
+        expires_in=EXPIRES_IN,
     )
 
     return entity_key_1, entity_key_2
@@ -193,7 +193,9 @@ class TestQuerySelect:
             expected_created_at + 1 if expected_created_at else None
         )
         expected_expires_at = (
-            expected_last_modified_at + BTL if expected_last_modified_at else None
+            expected_last_modified_at + EXPIRES_IN
+            if expected_last_modified_at
+            else None
         )
 
         # Verify all fields are populated with correct values

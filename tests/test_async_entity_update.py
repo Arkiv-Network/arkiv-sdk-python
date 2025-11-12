@@ -25,7 +25,7 @@ class TestAsyncEntityUpdate:
         original_payload = b"Original payload"
         original_attributes = Attributes({"status": "initial", "version": 1})
         entity_key, _tx_hash = await async_arkiv_client_http.arkiv.create_entity(
-            payload=original_payload, attributes=original_attributes, btl=100
+            payload=original_payload, attributes=original_attributes, expires_in=100
         )
 
         # Update entity
@@ -35,7 +35,7 @@ class TestAsyncEntityUpdate:
             entity_key=entity_key,
             payload=new_payload,
             attributes=new_attributes,
-            btl=150,
+            expires_in=150,
         )
 
         # Verify update transaction hash
