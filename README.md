@@ -38,10 +38,10 @@ print(f"Balance: {client.from_wei(client.eth.get_balance(client.eth.default_acco
 
 # Create entity with data and attributes
 entity_key, receipt = client.arkiv.create_entity(
-    payload=b"Hello World!",
-    content_type="text/plain",
-    attributes={"type": "greeting", "version": 1},
-    expires_in=1000
+    payload = b"Hello World!",
+    content_type = "text/plain",
+    attributes = {"type": "greeting", "version": 1},
+    expires_in = client.arkiv.to_seconds(days=1)
 )
 
 # Get individual entity and print its details
@@ -66,9 +66,10 @@ async def main():
     async with AsyncArkiv() as client:
         # Create entity with data and attributes
         entity_key, tx_hash = await client.arkiv.create_entity(
-            payload=b"Hello Async World!",
-            attributes={"type": "greeting", "version": 1},
-            expires_in=1000
+            payload = b"Hello Async World!",
+            content_type = "text/plain",
+            attributes = {"type": "greeting", "version": 1},
+            expires_in = client.arkiv.to_seconds(days=1)
         )
 
         # Get entity and check existence
@@ -105,9 +106,10 @@ account = NamedAccount.from_wallet('Alice', wallet, 's3cret')
 client = Arkiv(provider, account=account)
 
 entity_key, tx_hash = client.arkiv.create_entity(
-    payload=b"Hello World!",
-    attributes={"type": "greeting", "version": 1},
-    expires_in = 1000
+    payload = b"Hello World!",
+    content_type = "text/plain",
+    attributes = {"type": "greeting", "version": 1},
+    expires_in = client.arkiv.to_seconds(hours=2)
 )
 
 entity = client.arkiv.get_entity(entity_key)
@@ -526,3 +528,5 @@ Pre-commit hooks run automatically on `git commit` and will:
 function gl { git log --format="%C(green)%ad%C(reset) %C(yellow)%h%C(reset)%C(auto)%d%C(reset) %s" --date=format:"%Y-%m-%d_%H:%M:%S" -n ${1:-10}; }
 alias gs='git status'
 ```
+
+
