@@ -1,6 +1,6 @@
 # Arkiv SDK Python Snippets
 
-## Hello World
+## Hello World
 
 ```python
 from arkiv import Arkiv
@@ -39,7 +39,7 @@ proposal_key, _ = client.arkiv.create_entity(
 print("Proposal key:", proposal_key)
 ```
 
-## Cast Votes
+## Cast Votes
 
 ```python
 voter = client.eth.default_account  # type: ignore
@@ -123,7 +123,7 @@ filter_extended = client.arkiv.watch_entity_extended(on_extended, from_block="la
 # client.arkiv.cleanup_filters()
 ```
 
-## Watch Live
+## Extend Proposal Lifetime
 
 ```python
 receipt = client.arkiv.extend_entity(proposal_key, number_of_blocks=2000)
