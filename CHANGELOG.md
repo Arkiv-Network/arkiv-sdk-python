@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0a7] - 2025-11-13
+
+### Added Features
+- Add sorting support for query results with `OrderByAttribute` (string and numeric, ascending/descending)
+- Add multi-attribute sorting with priority-based ordering
+- Add `to_seconds()` and `to_blocks()` utility methods to (Async)Arkiv for time/block conversions
+
+### Other Changes
+- Breaking: Changed expires_in parameter from blocks to seconds across all entity operations
+- Migrated from `btl` (blocks to live) to `expires_in` (seconds) for clearer, more intuitive API
+- Consolidated configuration constants (BLOCK_TIME_SECONDS, EXPIRES_IN_DEFAULT, CONTENT_TYPE_DEFAULT) to ArkivModuleBase
+
 ## [1.0.0a6] - 2025-11-10
 
 ### Added Features

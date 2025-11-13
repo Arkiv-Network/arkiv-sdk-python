@@ -23,13 +23,13 @@ class TestEntityExtend:
         payload = b"Test entity for extension"
         content_type = "text/plain"
         attributes: Attributes = Attributes({"type": "test", "purpose": "extension"})
-        btl = 100
+        expires_in = 100
 
         entity_key, _ = arkiv_client_http.arkiv.create_entity(
             payload=payload,
             content_type=content_type,
             attributes=attributes,
-            expires_in=btl,
+            expires_in=expires_in,
         )
 
         logger.info(f"Created entity {entity_key} for extension test")
