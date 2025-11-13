@@ -65,12 +65,51 @@ from .types import (
     UpdateOp,
 )
 
-CONTENT_TYPE_DEFAULT = "application/octet-stream"
-EXPIRES_IN_DEFAULT = (
-    1000  # Default blocks to live for created entities (~30 mins with 2s blocks)
-)
-
 logger = logging.getLogger(__name__)
+
+
+def to_seconds(
+    seconds: int = 0, minutes: int = 0, hours: int = 0, days: int = 0
+) -> int:
+    """
+    Convert a time duration to number of seconds.
+
+    Useful for calculating expires_in parameters based on
+    desired entity lifetime.
+
+    Args:
+        seconds: Number of seconds
+        minutes: Number of minutes
+        hours: Number of hours
+        days: Number of days
+
+    Returns:
+        Number of seconds corresponding to the time duration
+    """
+    total_seconds = seconds + minutes * 60 + hours * 3600 + days * 86400
+    return total_seconds
+
+
+def to_blocks(seconds: int = 0, minutes: int = 0, hours: int = 0, days: int = 0) -> int:
+    """
+    Convert a time duration to number of blocks.
+
+    Args:
+        seconds: Number of seconds
+        minutes: Number of minutes
+        hours: Number of hours
+        days: Number of days
+
+    Returns:
+        Number of blocks corresponding to the time duration
+    """
+    # Import here to avoid circular dependency
+    from arkiv.module_base import ArkivModuleBase
+
+    total_seconds = ArkivModuleBase.to_seconds(
+        seconds=seconds, minutes=minutes, hours=hours, days=days
+    )
+    return total_seconds // ArkivModuleBase.BLOCK_TIME_SECONDS
 
 
 def to_entity_key(entity_key_int: int) -> EntityKey:
@@ -129,11 +168,17 @@ def check_and_set_entity_op_defaults(
 ) -> tuple[bytes, str, Attributes, int]:
     """Check and set defaults for entity management arguments."""
     if expires_in is None:
-        expires_in = EXPIRES_IN_DEFAULT
+        # Import here to avoid circular dependency
+        from arkiv.module_base import ArkivModuleBase
+
+        expires_in = ArkivModuleBase.EXPIRES_IN_DEFAULT
     if not payload:
         payload = b""
     if not content_type:
-        content_type = CONTENT_TYPE_DEFAULT
+        # Import here to avoid circular dependency
+        from arkiv.module_base import ArkivModuleBase
+
+        content_type = ArkivModuleBase.CONTENT_TYPE_DEFAULT
     if not attributes:
         attributes = Attributes({})
 
@@ -710,7 +755,7 @@ def rlp_encode_transaction(tx: Operations) -> bytes:
         # Create
         [
             [
-                element.expires_in,
+                to_blocks(seconds=element.expires_in),
                 element.content_type,
                 element.payload,
                 *split_attributes(element.attributes),
@@ -722,7 +767,7 @@ def rlp_encode_transaction(tx: Operations) -> bytes:
             [
                 entity_key_to_bytes(element.key),
                 element.content_type,
-                element.expires_in,
+                to_blocks(seconds=element.expires_in),
                 element.payload,
                 *split_attributes(element.attributes),
             ]

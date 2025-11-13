@@ -21,8 +21,10 @@ from arkiv.types import (
     EntityKey,
     QueryOptions,
 )
+from arkiv.utils import to_blocks
 
-EXPIRES_IN = 100
+EXPIRES_IN = 100  # In seconds
+EXPIRES_IN_BLOCKS = to_blocks(seconds=EXPIRES_IN)  # Convert to blocks
 CONTENT_TYPE_VALUE = "text/plain"
 
 
@@ -193,7 +195,7 @@ class TestQuerySelect:
             expected_created_at + 1 if expected_created_at else None
         )
         expected_expires_at = (
-            expected_last_modified_at + EXPIRES_IN
+            expected_last_modified_at + EXPIRES_IN_BLOCKS
             if expected_last_modified_at
             else None
         )

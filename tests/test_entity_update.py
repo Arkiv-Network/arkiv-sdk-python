@@ -373,11 +373,13 @@ class TestEntityUpdate:
 
         # Get initial expiration
         entity_before = arkiv_client_http.arkiv.get_entity(entity_key)
-        initial_expiration = entity_before.expires_at_block
-        assert initial_expiration is not None, "Entity should have expiration block"
-        logger.info(f"Initial expiration block: {initial_expiration}")
+        initial_expiration_block = entity_before.expires_at_block
+        assert initial_expiration_block is not None, (
+            "Entity should have expiration block"
+        )
+        logger.info(f"Initial expiration block: {initial_expiration_block}")
 
-        # Update with higher expires_in
+        # Update with higher expires_in (in seconds)
         new_expires_in = 200
         update_tx_hash = arkiv_client_http.arkiv.update_entity(
             entity_key,
@@ -387,25 +389,20 @@ class TestEntityUpdate:
         )
         check_tx_hash("update_expires_in", update_tx_hash)
 
-        # Verify new expiration (expiration extension calculation)
-        assert entity_before.expires_at_block is not None
-        expected = replace(
-            entity_before,
-            expires_at_block=entity_before.expires_at_block
-            - initial_expiration
-            + new_expires_in,
-        )
-        check_entity("update_expires_in", arkiv_client_http, expected)
+        # Get updated entity
+        entity_after = arkiv_client_http.arkiv.get_entity(entity_key)
 
-        # Verify expiration was extended (should be roughly initial + new_expires_in)
-        # Note: exact value depends on block advancement during the update
-        assert expected.expires_at_block is not None
-        assert expected.expires_at_block > initial_expiration, (
-            "Expiration should increase with higher expires_in"
+        # Verify new expiration was extended
+        # The new expiration should be: current_block + to_blocks(new_expires_in)
+        # Since we don't know the exact current block, we verify it's greater than initial
+        assert entity_after.expires_at_block is not None
+        assert entity_after.expires_at_block > initial_expiration_block, (
+            f"Expiration should increase with higher expires_in: "
+            f"{initial_expiration_block} -> {entity_after.expires_at_block}"
         )
 
         logger.info(
-            f"Expiration extension successful: {initial_expiration} -> {expected.expires_at_block}"
+            f"Expiration extension successful: {initial_expiration_block} -> {entity_after.expires_at_block}"
         )
 
     def test_update_entity_both_payload_and_attributes(

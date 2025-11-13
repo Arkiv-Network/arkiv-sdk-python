@@ -76,6 +76,9 @@ class ArkivModuleBase(Generic[ClientT]):
     EXPIRES_IN_DEFAULT = (
         1000  # Default expiration time for created entities (~30 mins with 2s blocks)
     )
+    CONTENT_TYPE_DEFAULT = (
+        "application/octet-stream"  # Default content type for payloads
+    )
 
     def __init__(
         self, client: ClientT, expires_in_default: int = EXPIRES_IN_DEFAULT
@@ -453,14 +456,34 @@ class ArkivModuleBase(Generic[ClientT]):
         """
         raise NotImplementedError("Subclasses must implement query_entities()")
 
+    @staticmethod
+    def to_seconds(
+        seconds: int = 0, minutes: int = 0, hours: int = 0, days: int = 0
+    ) -> int:
+        """
+        Convert a time duration to number of seconds.
+
+        Useful for calculating expires_in parameters based on desired entity lifetime.
+
+        Args:
+            seconds: Number of seconds
+            minutes: Number of minutes
+            hours: Number of hours
+            days: Number of days
+
+        Returns:
+            Total number of seconds corresponding to the time duration
+        """
+        from arkiv.utils import to_seconds as _to_seconds
+
+        return _to_seconds(seconds, minutes, hours, days)
+
+    @staticmethod
     def to_blocks(
-        self, seconds: int = 0, minutes: int = 0, hours: int = 0, days: int = 0
+        seconds: int = 0, minutes: int = 0, hours: int = 0, days: int = 0
     ) -> int:
         """
         Convert a time duration to number of blocks.
-
-        Useful for calculating expires_in parameters based on
-        desired entity lifetime.
 
         Args:
             seconds: Number of seconds
@@ -471,8 +494,9 @@ class ArkivModuleBase(Generic[ClientT]):
         Returns:
             Number of blocks corresponding to the time duration
         """
-        total_seconds = seconds + minutes * 60 + hours * 3600 + days * 86400
-        return total_seconds // self.BLOCK_TIME_SECONDS
+        from arkiv.utils import to_blocks as _to_blocks
+
+        return _to_blocks(seconds=seconds, minutes=minutes, hours=hours, days=days)
 
     # NOTE: Other public API methods (iterate_entities, watch_entity_*, etc.) could also
     # be defined here, but they have more significant differences between sync/async

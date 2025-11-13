@@ -44,12 +44,9 @@ entity_key, receipt = client.arkiv.create_entity(
     expires_in=1000
 )
 
-# Check and print entity key
-exists = client.arkiv.entity_exists(entity_key)
-print(f"Created entity: {entity_key} (exists={exists}), creation TX: {receipt.tx_hash}")
-
 # Get individual entity and print its details
 entity = client.arkiv.get_entity(entity_key)
+print(f"Creation TX: {receipt.tx_hash}")
 print(f"Entity: {entity}")
 
 # Clean up - delete entity
@@ -148,9 +145,9 @@ provider = ProviderBuilder().kaolin().build()
 client = Arkiv(provider, account=bob)
 
 # Additional builder examples
+provider_custom = ProviderBuilder().custom("https://mendoza.hoodi.arkiv.network/rpc").build()
 provider_container = ProviderBuilder().node().build()
 provider_kaolin_ws = ProviderBuilder().kaolin().ws().build()
-provider_custom = ProviderBuilder().custom("https://my-rpc.io").build()
 ```
 
 ### Query Iterator

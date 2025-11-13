@@ -7,6 +7,7 @@ import pytest
 from arkiv import Arkiv
 from arkiv.account import NamedAccount
 from arkiv.module import ArkivModule
+from arkiv.module_base import ArkivModuleBase
 
 logger = logging.getLogger(__name__)
 
@@ -131,3 +132,42 @@ def test_arkiv_transfer_eth_address(
     )
 
     logger.info("Arkiv ETH transfer between accounts succeeded (to: checksum address)")
+
+
+def test_arkiv_module_base_to_seconds() -> None:
+    """Test ArkivModuleBase.to_seconds static method."""
+    # Test individual units
+    assert ArkivModuleBase.to_seconds(seconds=120) == 120
+    assert ArkivModuleBase.to_seconds(minutes=2) == 120
+    assert ArkivModuleBase.to_seconds(hours=1) == 3600
+    assert ArkivModuleBase.to_seconds(days=1) == 86400
+
+    # Test mixed units
+    result = ArkivModuleBase.to_seconds(days=1, hours=2, minutes=30, seconds=60)
+    assert result == 95460  # 86400 + 7200 + 1800 + 60
+
+    # Test default (no arguments)
+    assert ArkivModuleBase.to_seconds() == 0
+
+    logger.info("ArkivModuleBase.to_seconds() works correctly")
+
+
+def test_arkiv_module_base_to_blocks() -> None:
+    """Test ArkivModuleBase.to_blocks static method."""
+    # Test individual units (with 2 second block time)
+    assert ArkivModuleBase.to_blocks(seconds=120) == 60
+    assert ArkivModuleBase.to_blocks(minutes=2) == 60
+    assert ArkivModuleBase.to_blocks(hours=1) == 1800
+    assert ArkivModuleBase.to_blocks(days=1) == 43200
+
+    # Test mixed units
+    result = ArkivModuleBase.to_blocks(days=1, hours=2, minutes=30, seconds=60)
+    assert result == 47730  # 95460 seconds / 2 = 47730 blocks
+
+    # Test default (no arguments)
+    assert ArkivModuleBase.to_blocks() == 0
+
+    # Test rounding down
+    assert ArkivModuleBase.to_blocks(seconds=125) == 62  # 125 / 2 = 62.5 -> 62
+
+    logger.info("ArkivModuleBase.to_blocks() works correctly")
