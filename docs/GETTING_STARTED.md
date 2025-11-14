@@ -130,3 +130,12 @@ seconds = 2000
 receipt = client.arkiv.extend_entity(proposal_key, extend_by=seconds)
 print("Proposal extension receipt:", receipt.extensions)
 ```
+
+## Setup
+
+Requirements
+- Python: Version 3.10 or higher
+- Install:
+    - `pip install --pre arkiv-sdk`
+    - `pip install testcontainers websockets`
+- RPC: `https://mendoza.hoodi.arkiv.network/rpc`
