@@ -42,9 +42,11 @@ class TestWatchEntityExtended:
 
         try:
             # Extend the entity - this should trigger the callback
+            seconds = 50
+            extension_blocks = arkiv_client_http.arkiv.to_blocks(seconds=seconds)
             receipt = arkiv_client_http.arkiv.extend_entity(
                 entity_key=entity_key,
-                number_of_blocks=50,
+                extend_by=seconds,
             )
 
             # Wait for callback (with timeout)
@@ -60,7 +62,7 @@ class TestWatchEntityExtended:
             assert event.key == entity_key
             assert event.old_expiration_block == initial_expiration
             assert event.new_expiration_block > event.old_expiration_block
-            assert event.new_expiration_block == initial_expiration + 50
+            assert event.new_expiration_block == initial_expiration + extension_blocks
             assert event_tx_hash == receipt.tx_hash
 
         finally:
@@ -96,10 +98,12 @@ class TestWatchEntityExtended:
         try:
             # Extend all entities
             extend_hashes = []
+            seconds = 70
+            extension_blocks = arkiv_client_http.arkiv.to_blocks(seconds=seconds)
             for entity_key in entity_keys:
                 tx_hash = arkiv_client_http.arkiv.extend_entity(
                     entity_key=entity_key,
-                    number_of_blocks=75,
+                    extend_by=seconds,
                 )
                 extend_hashes.append(tx_hash)
 
@@ -118,7 +122,10 @@ class TestWatchEntityExtended:
 
             # Verify all events have correct expiration block difference
             for event, _ in received_events:
-                assert event.new_expiration_block == event.old_expiration_block + 75
+                assert (
+                    event.new_expiration_block
+                    == event.old_expiration_block + extension_blocks
+                )
 
         finally:
             event_filter.uninstall()
@@ -146,9 +153,7 @@ class TestWatchEntityExtended:
             assert not event_filter.is_running
 
             # Extend entity - should NOT trigger callback (filter not started)
-            arkiv_client_http.arkiv.extend_entity(
-                entity_key=entity_key, number_of_blocks=25
-            )
+            arkiv_client_http.arkiv.extend_entity(entity_key=entity_key, extend_by=50)
             time.sleep(2)  # Wait a bit
             assert len(received_events) == 0
 
@@ -157,9 +162,7 @@ class TestWatchEntityExtended:
             assert event_filter.is_running
 
             # Extend again - SHOULD trigger callback
-            arkiv_client_http.arkiv.extend_entity(
-                entity_key=entity_key, number_of_blocks=30
-            )
+            arkiv_client_http.arkiv.extend_entity(entity_key=entity_key, extend_by=30)
             time.sleep(3)  # Wait for polling
             assert len(received_events) == 1
 
@@ -169,9 +172,7 @@ class TestWatchEntityExtended:
 
             # Extend again - should NOT trigger callback
             count_after_stopping = len(received_events)
-            arkiv_client_http.arkiv.extend_entity(
-                entity_key=entity_key, number_of_blocks=35
-            )
+            arkiv_client_http.arkiv.extend_entity(entity_key=entity_key, extend_by=30)
             time.sleep(2)
             assert len(received_events) == count_after_stopping
 
@@ -188,9 +189,7 @@ class TestWatchEntityExtended:
         received_events: list[tuple[ExtendEvent, TxHash]] = []
 
         # Extend BEFORE starting the watcher
-        arkiv_client_http.arkiv.extend_entity(
-            entity_key=entity_key, number_of_blocks=20
-        )
+        arkiv_client_http.arkiv.extend_entity(entity_key=entity_key, extend_by=20)
 
         def on_extend(event: ExtendEvent, tx_hash: TxHash) -> None:
             """Callback for extend events."""
@@ -209,9 +208,7 @@ class TestWatchEntityExtended:
             assert len(received_events) == 0
 
             # Extend again after filter started
-            arkiv_client_http.arkiv.extend_entity(
-                entity_key=entity_key, number_of_blocks=40
-            )
+            arkiv_client_http.arkiv.extend_entity(entity_key=entity_key, extend_by=40)
             time.sleep(3)  # Wait for polling
 
             # The new extension should be received
@@ -249,9 +246,9 @@ class TestWatchEntityExtended:
         try:
             # Extend 3 entities in a single bulk transaction
             extend_ops = [
-                ExtendOp(key=entity_keys[0], number_of_blocks=60),
-                ExtendOp(key=entity_keys[1], number_of_blocks=70),
-                ExtendOp(key=entity_keys[2], number_of_blocks=80),
+                ExtendOp(key=entity_keys[0], extend_by=60),
+                ExtendOp(key=entity_keys[1], extend_by=70),
+                ExtendOp(key=entity_keys[2], extend_by=80),
             ]
             receipt = bulk_extend_entities(
                 arkiv_client_http, extend_ops, label="test_bulk_extend"
@@ -280,7 +277,10 @@ class TestWatchEntityExtended:
             # Verify each entity has the correct extension
             for event, _ in received_events:
                 idx = entity_keys.index(event.key)
-                expected_blocks = [60, 70, 80][idx]
+                expected_seconds = [60, 70, 80][idx]
+                expected_blocks = arkiv_client_http.arkiv.to_blocks(
+                    seconds=expected_seconds
+                )
                 assert (
                     event.new_expiration_block
                     == event.old_expiration_block + expected_blocks
@@ -321,7 +321,7 @@ class TestWatchEntityExtended:
 
             # Extend the entity - SHOULD trigger callback
             receipt = arkiv_client_http.arkiv.extend_entity(
-                entity_key=entity_key, number_of_blocks=50
+                entity_key=entity_key, extend_by=50
             )
             time.sleep(3)  # Wait for callback
             assert len(received_events) == 1
@@ -369,12 +369,12 @@ class TestWatchEntityExtended:
         try:
             # Extend the same entity 3 times with different block counts
             extensions = [25, 40, 55]
-            for blocks in extensions:
+            for seconds in extensions:
                 arkiv_client_http.arkiv.extend_entity(
-                    entity_key=entity_key, number_of_blocks=blocks
+                    entity_key=entity_key, extend_by=seconds
                 )
                 # Update current_expiration for next iteration
-                current_expiration += blocks
+                current_expiration += seconds
 
             # Wait for all callbacks
             assert callback_triggered.wait(timeout=15.0), (
@@ -391,7 +391,8 @@ class TestWatchEntityExtended:
                 assert event.old_expiration_block == expected_old
                 assert (
                     event.new_expiration_block
-                    == event.old_expiration_block + extensions[i]
+                    == event.old_expiration_block
+                    + arkiv_client_http.arkiv.to_blocks(seconds=extensions[i])
                 )
                 # Update expected_old for next event
                 expected_old = event.new_expiration_block
@@ -424,10 +425,10 @@ class TestWatchEntityExtended:
         )
 
         try:
-            # Extend by a specific number of blocks
-            extension_blocks = 100
+            # Extend by a specific number of seconds
+            extension_seconds = 100
             arkiv_client_http.arkiv.extend_entity(
-                entity_key=entity_key, number_of_blocks=extension_blocks
+                entity_key=entity_key, extend_by=extension_seconds
             )
 
             # Wait for callback
@@ -439,6 +440,9 @@ class TestWatchEntityExtended:
             assert len(received_events) == 1
             event, _ = received_events[0]
 
+            extension_blocks = arkiv_client_http.arkiv.to_blocks(
+                seconds=extension_seconds
+            )
             assert event.old_expiration_block == initial_expiration
             assert event.new_expiration_block == initial_expiration + extension_blocks
             assert (

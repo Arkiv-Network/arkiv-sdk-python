@@ -36,14 +36,15 @@ class TestAsyncEntityExtend:
         initial_expiration = entity_before.expires_at_block
         assert initial_expiration is not None, "Entity should have expiration block"
 
-        # Extend the entity by 50 blocks
-        number_of_blocks = 50
+        # Extend the entity by 50 seconds
+        seconds = 50
+        number_of_blocks = async_arkiv_client_http.arkiv.to_blocks(seconds=seconds)
         receipt = await async_arkiv_client_http.arkiv.extend_entity(
-            entity_key, number_of_blocks
+            entity_key, extend_by=seconds
         )
 
         check_tx_hash("test_async_extend_entity_basic_extend", receipt)
-        logger.info(f"Extended entity {entity_key} by {number_of_blocks} blocks")
+        logger.info(f"Extended entity {entity_key} by {seconds} seconds")
 
         # Verify expiration increased
         entity_after = await async_arkiv_client_http.arkiv.get_entity(entity_key)
@@ -76,10 +77,11 @@ class TestAsyncEntityExtend:
             assert expiration is not None, f"Entity {i} should have an expiration block"
 
         # Extend all entities sequentially
-        number_of_blocks = 50
+        seconds = 50
+        number_of_blocks = async_arkiv_client_http.arkiv.to_blocks(seconds=seconds)
         for i, entity_key in enumerate(entity_keys):
             receipt = await async_arkiv_client_http.arkiv.extend_entity(
-                entity_key, number_of_blocks
+                entity_key, extend_by=seconds
             )
             check_entity_key(entity_key, f"test_async_extend_entities_sequentially_{i}")
             check_tx_hash(f"test_async_extend_entities_sequentially_{i}", receipt)

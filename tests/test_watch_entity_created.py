@@ -275,7 +275,7 @@ class TestWatchEntityCreated:
 
             # Extend the entity - should NOT trigger callback
             _ = arkiv_client_http.arkiv.extend_entity(
-                entity_key=entity_key, number_of_blocks=50
+                entity_key=entity_key, extend_by=50
             )
             time.sleep(3)  # Wait to ensure no callback
             assert len(received_events) == 1  # Still only 1 event

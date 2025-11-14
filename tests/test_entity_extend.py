@@ -42,23 +42,24 @@ class TestEntityExtend:
         logger.info(f"Initial expiration block: {initial_expiration}")
 
         # Extend the entity by 50 blocks
-        number_of_blocks = 50
+        seconds = 50
         extend_tx_hash = arkiv_client_http.arkiv.extend_entity(
-            entity_key, number_of_blocks
+            entity_key, extend_by=seconds
         )
 
         label = "extend_entity"
         check_tx_hash(label, extend_tx_hash)
         logger.info(
-            f"{label}: Extended entity {entity_key} by {number_of_blocks} blocks, tx_hash: {extend_tx_hash}"
+            f"{label}: Extended entity {entity_key} by {seconds} seconds, tx_hash: {extend_tx_hash}"
         )
 
         # Verify the entity still exists and expiration increased
         entity_after = arkiv_client_http.arkiv.get_entity(entity_key)
         logger.info(f"Entity after extension: {entity_after}")
-        assert entity_after.expires_at_block == initial_expiration + number_of_blocks, (
-            f"Expiration should increase by {number_of_blocks} blocks"
-        )
+        assert (
+            entity_after.expires_at_block
+            == initial_expiration + arkiv_client_http.arkiv.to_blocks(seconds)
+        ), f"Expiration should increase by {seconds} seconds"
 
         logger.info(
             f"{label}: Entity expiration increased from {initial_expiration} to {entity_after.expires_at_block}"
@@ -85,7 +86,9 @@ class TestEntityExtend:
 
         # Verify final expiration
         entity_final = arkiv_client_http.arkiv.get_entity(entity_key)
-        expected_expiration = initial_expiration + sum(extensions)
+        expected_expiration = initial_expiration + arkiv_client_http.arkiv.to_blocks(
+            sum(extensions)
+        )
         assert entity_final.expires_at_block == expected_expiration, (
             f"Expiration should be {expected_expiration}"
         )
@@ -121,10 +124,8 @@ class TestEntityExtend:
             initial_expirations[entity_key] = expires_at
 
         # Bulk extend
-        number_of_blocks = 200
-        extend_ops = [
-            ExtendOp(key=key, number_of_blocks=number_of_blocks) for key in entity_keys
-        ]
+        seconds = 200
+        extend_ops = [ExtendOp(key=key, extend_by=seconds) for key in entity_keys]
         operations = Operations(extensions=extend_ops)
         receipt = arkiv_client_http.arkiv.execute(operations)
 
@@ -140,7 +141,11 @@ class TestEntityExtend:
         # Verify all expirations increased
         for entity_key in entity_keys:
             entity = arkiv_client_http.arkiv.get_entity(entity_key)
-            expected_expiration = initial_expirations[entity_key] + number_of_blocks
+            expected_expiration = (
+                initial_expirations[entity_key]
+                + arkiv_client_http.arkiv.to_blocks(seconds)
+                # + seconds / ArkivModuleBase.BLOCK_TIME_SECONDS
+            )
             assert entity.expires_at_block == expected_expiration, (
                 f"Entity {entity_key} expiration should be {expected_expiration}"
             )
@@ -222,7 +227,7 @@ class TestEntityExtend:
         )
 
         # Extend by just 1 block
-        extend_tx_hash = arkiv_client_http.arkiv.extend_entity(entity_key, 1)
+        extend_tx_hash = arkiv_client_http.arkiv.extend_entity(entity_key, extend_by=2)
         check_tx_hash("extend_minimal", extend_tx_hash)
 
         # Verify expiration increased by 1

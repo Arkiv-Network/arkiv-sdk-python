@@ -234,7 +234,7 @@ class ExtendOp:
     """Class to represent a entity lifetime extend operation."""
 
     key: EntityKey
-    number_of_blocks: int
+    extend_by: int
 
 
 @dataclass(frozen=True)

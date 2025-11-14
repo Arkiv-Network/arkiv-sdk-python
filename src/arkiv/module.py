@@ -125,12 +125,12 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
     def extend_entity(
         self,
         entity_key: EntityKey,
-        number_of_blocks: int,
+        extend_by: int,
         tx_params: TxParams | None = None,
     ) -> TransactionReceipt:
         # Docstring inherited from ArkivModuleBase.extend_entity
         # Create the extend operation and execute TX
-        extend_op = ExtendOp(key=entity_key, number_of_blocks=number_of_blocks)
+        extend_op = ExtendOp(key=entity_key, extend_by=extend_by)
         operations = Operations(extensions=[extend_op])
         receipt = self.execute(operations, tx_params)
 

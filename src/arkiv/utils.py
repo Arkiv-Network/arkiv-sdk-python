@@ -779,7 +779,7 @@ def rlp_encode_transaction(tx: Operations) -> bytes:
         [
             [
                 entity_key_to_bytes(element.key),
-                element.number_of_blocks,
+                to_blocks(seconds=element.extend_by),
             ]
             for element in tx.extensions
         ],

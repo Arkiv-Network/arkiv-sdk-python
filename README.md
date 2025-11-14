@@ -528,5 +528,3 @@ Pre-commit hooks run automatically on `git commit` and will:
 function gl { git log --format="%C(green)%ad%C(reset) %C(yellow)%h%C(reset)%C(auto)%d%C(reset) %s" --date=format:"%Y-%m-%d_%H:%M:%S" -n ${1:-10}; }
 alias gs='git status'
 ```
-
-

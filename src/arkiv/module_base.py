@@ -289,7 +289,7 @@ class ArkivModuleBase(Generic[ClientT]):
     def extend_entity(
         self,
         entity_key: EntityKey,
-        number_of_blocks: int,
+        extend_by: int,
         tx_params: TxParams | None = None,
     ) -> TransactionReceipt:
         """

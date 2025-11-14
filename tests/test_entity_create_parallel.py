@@ -101,17 +101,17 @@ def client_creation_task(
             entity_index = tx_no * batch_size + entity_no
             payload = random_payload()
             attributes = random_attributes(client_idx, entity_index)
-            btl = random_expires_in()
-            entities_in_batch.append((payload, attributes, btl))
+            expires_in = random_expires_in()
+            entities_in_batch.append((payload, attributes, expires_in))
 
         # Create entity/entities based on batch_size
         try:
             if batch_size == 1:
                 # Single entity creation
-                payload, attributes, btl = entities_in_batch[0]
+                payload, attributes, expires_in = entities_in_batch[0]
                 try:
                     entity_key, tx_hash = client.arkiv.create_entity(
-                        payload=payload, attributes=attributes, expires_in=btl
+                        payload=payload, attributes=attributes, expires_in=expires_in
                     )
                     logger.info(
                         f"Entity creation TX[{client_idx}][{tx_no}]: {tx_hash} (1 entity)"
@@ -135,7 +135,7 @@ def client_creation_task(
                     )
                     # Store all created entities with their expected data
                     for i, entity_key in enumerate(entity_keys):
-                        payload, attributes, btl = entities_in_batch[i]
+                        payload, attributes, expires_in = entities_in_batch[i]
                         created_entities.append((entity_key, payload, attributes))
                 except HTTPError as e:
                     logger.error(f"Error creating entities[{client_idx}][{tx_no}]: {e}")

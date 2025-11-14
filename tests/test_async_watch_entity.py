@@ -140,7 +140,7 @@ class TestAsyncWatchEntityExtended:
             )
 
             receipt = await async_arkiv_client_http.arkiv.extend_entity(
-                entity_key, number_of_blocks=100
+                entity_key, extend_by=100
             )
 
             # Wait for event

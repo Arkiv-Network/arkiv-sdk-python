@@ -347,7 +347,7 @@ class TestRlpEncodeTransaction:
         entity_key = EntityKey(
             HexStr("0xfedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321")
         )
-        extend_op = ExtendOp(key=entity_key, number_of_blocks=500)
+        extend_op = ExtendOp(key=entity_key, extend_by=500)
         operations = Operations(extensions=[extend_op])
 
         encoded = rlp_encode_transaction(operations)
@@ -376,7 +376,7 @@ class TestRlpEncodeTransaction:
         )
 
         delete_op = DeleteOp(key=entity_key_obj)
-        extend_op = ExtendOp(key=entity_key_obj, number_of_blocks=1000)
+        extend_op = ExtendOp(key=entity_key_obj, extend_by=1000)
 
         operations = Operations(
             creates=[create_op],
