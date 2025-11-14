@@ -217,13 +217,6 @@ git tag -a v1.0.0a5 -m "v1.0.0a5"
 git push origin v1.0.0a5
 ```
 
-# 11. Create GitHub release
-gh release create v1.0.0a2 \
-  --title "Arkiv SDK v1.0.0a2" \
-  --notes-file CHANGELOG.md \
-  dist/*
-```
-
 ### Alternative: Manual Publishing (Advanced)
 
 If you prefer manual control or need to customize the process:
@@ -259,11 +252,6 @@ python -c "from arkiv import Arkiv; print(Arkiv.__version__)"
 # 9. If all good, publish to PyPI
 uv publish --token $PYPI_TOKEN
 
-# 10. Create GitHub release
-gh release create v1.0.0a1 \
-  --title "Arkiv SDK v1.0.0a1" \
-  --notes "Initial alpha release - see CHANGELOG.md" \
-  dist/*
 ```
 
 ### Environment Setup for Publishing

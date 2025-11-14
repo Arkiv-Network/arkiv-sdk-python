@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0a8] - 2025-11-14
+
+### Changes
+- Breaking: rename extend_entity parameter number_of_blocks to extend_by (in seconds).
+
 ## [1.0.0a7] - 2025-11-13
 
 ### Added Features

@@ -126,6 +126,7 @@ filter_extended = client.arkiv.watch_entity_extended(on_extended, from_block="la
 ## Extend Proposal Lifetime
 
 ```python
-receipt = client.arkiv.extend_entity(proposal_key, number_of_blocks=2000)
+seconds = 2000
+receipt = client.arkiv.extend_entity(proposal_key, extend_by=seconds)
 print("Proposal extension receipt:", receipt.extensions)
 ```
