@@ -59,6 +59,9 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
         self, operations: Operations, tx_params: TxParams | None = None
     ) -> TransactionReceipt:
         # Docstring inherited from ArkivModuleBase.execute
+
+        # TODO Check if client has an account attached. if not raise exception
+
         # Convert to transaction parameters and send
         tx_params = to_tx_params(operations, tx_params)
 
