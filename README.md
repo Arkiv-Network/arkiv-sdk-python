@@ -85,7 +85,7 @@ asyncio.run(main())
 ### Web3 Standard Support
 ```python
 from web3 import HTTPProvider
-provider = HTTPProvider('https://kaolin.hoodi.arkiv.network/rpc')
+provider = HTTPProvider('https://mendoza.hoodi.arkiv.network/rpc')
 
 # Arkiv 'is a' Web3 client
 client = Arkiv(provider)
@@ -115,6 +115,15 @@ entity_key, tx_hash = client.arkiv.create_entity(
 entity = client.arkiv.get_entity(entity_key)
 exists = client.arkiv.exists(entity_key)
   ```
+
+## Setup
+
+Requirements
+- Python: Version 3.10 or higher
+- Install:
+    - `pip install --pre arkiv-sdk`
+    - `pip install testcontainers websockets`
+- RPC: `https://mendoza.hoodi.arkiv.network/rpc`
 
 ## Advanced Features
 

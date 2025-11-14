@@ -10,7 +10,7 @@
 Traditional blockchain applications face a fundamental challenge:
 
 ```
-        Decentralized
+            Web3
              /\
             /  \
            /    \
@@ -23,10 +23,10 @@ Traditional blockchain applications face a fundamental challenge:
 Affordable          Queryable
 ```
 
-**Without Arkiv**, you pick 2:
+**Without Arkiv**, you loose at least one:
 - **Ethereum Storage**: Decentralized + Queryable, but $1000s per MB
-- **IPFS + Centralized DB**: Affordable + Queryable, but centralized
 - **Pure IPFS**: Decentralized + Affordable, but no queries
+- **Web2 DB**: Affordable + Queryable, but centralized
 
 **With Arkiv**: All three! 🎯
 
@@ -51,18 +51,16 @@ Entity:
   - key: EntityKey           # Unique 256-bit identifier (auto-generated)
   - payload: bytes           # Binary data (up to MBs)
   - content_type: str        # MIME type (e.g., "application/json")
-  - attributes: dict         # Queryable metadata
-    - string_attrs: {str: str}    # Text values
-    - numeric_attrs: {str: int}   # Integer values (>= 0)
+  - attributes: dict         # Queryable attrs, text and ints >= 0
   - owner: Address           # Ethereum address with control
-  - expiration: int          # Block number when entity expires
+  - expires_at: int          # Block number when entity expires
   - created_at: int          # Block number of creation
   - last_modified_at: int    # Block number of last update
 ```
 
 #### 3. **Storage Economics**
 
-- **Cost Model**: Pay for storage duration, not just write
+- **Cost Model**: Pay for storage size and duration
 - **Expiration**: Entities automatically expire after specified time
 - **Extension**: Owners can extend lifetime before expiration
 - **Deletion**: Manual deletion possible, may offer gas refunds
@@ -71,14 +69,13 @@ Entity:
 
 ### Arkiv vs Alternatives: Technical Comparison
 
-| Aspect | Ethereum | IPFS | Arweave | **Arkiv** |
-|--------|----------|------|---------|-----------|
-| Storage Cost (1MB/day) | $10-100 | ~Free | $0.005 (permanent) | ~$0.001 |
-| Query Support | Events only | No | No | SQL-like |
-| Mutable Data | Yes | No | No | Yes |
-| Expiration | Manual | No | No | Built-in |
-| Real-time Events | Yes | No | No | Yes |
-| EVM Compatible | Yes | No | No | Yes |
+
+| Feature | **Arkiv** | Ethereum | IPFS | Web2 DB |
+|---------|-----------|----------|------|---------|
+| Web3 Data | ✅ | ✅ | ✅ | ❌ |
+| Affordable | ✅ | ❌ | ✅ | ✅ |
+| SQL-like Queries | ✅ | ❌ | ❌ | ✅ |
+| Real-time Events | ✅ | ✅ | ❌ | ✅ |
 
 ---
 
@@ -86,9 +83,9 @@ Entity:
 
 ### Design Philosophy
 
-**"Web3.py + Entities"**
+**"Web3 Library + Entities"**
 
-The Arkiv SDK is built on Web3.py and feels like a natural extension:
+Python: Arkiv SDK is built on Web3.py with an "arkiv" extensino:
 
 ```python
 from arkiv import Arkiv
@@ -96,6 +93,7 @@ from arkiv import Arkiv
 client = Arkiv()
 
 # Standard Web3.py functionality
+account = client.eth.default_account
 balance = client.eth.get_balance(address)
 block = client.eth.get_block('latest')
 tx = client.eth.send_transaction({...})
@@ -114,6 +112,7 @@ results = client.arkiv.query_entities(query)
 ```bash
 # Install SDK
 pip install arkiv-sdk
+pip install testcontainers, websockets
 
 # Run with auto-managed local node (requires Docker)
 from arkiv import Arkiv
@@ -126,20 +125,20 @@ from arkiv import Arkiv
 from arkiv.provider import ProviderBuilder
 from arkiv.account import NamedAccount
 
-# Load your account
+MENDOZA_RPC = "https://mendoza.hoodi.arkiv.network/rpc"
+
+# Load your account from wallet
 with open('wallet.json', 'r') as f:
     wallet = f.read()
-account = NamedAccount.from_wallet('MyAccount', wallet, 'password')
+account = NamedAccount.from_wallet('alice', wallet, 'password')
 
+# Load your account from private key
+account = NamedAccount.from_private_key("alice", "0x...")
+
+# Lock
 # Connect to Kaolin testnet
-provider = ProviderBuilder().kaolin().build()
-client = Arkiv(provider, account=account)
-```
-
-#### Option 3: Custom Network
-```python
-provider = ProviderBuilder().custom("https://your-arkiv-node.com/rpc").build()
-client = Arkiv(provider, account=account)
+provider = ProviderBuilder().custom(MENDOZA_RPC).build()
+client = Arkiv(provider, account)
 ```
 
 ---
@@ -168,21 +167,6 @@ bob = NamedAccount.from_key('Bob', private_key)
 client = Arkiv(provider, account=alice)
 ```
 
-#### Multi-Account Workflows
-```python
-alice = NamedAccount.from_wallet('Alice', alice_wallet, 'pass1')
-bob = NamedAccount.from_wallet('Bob', bob_wallet, 'pass2')
-
-client = Arkiv(provider, account=alice)
-
-# Switch accounts dynamically
-client.switch_to(bob)
-entity_key, _ = client.arkiv.create_entity(...)  # Created by Bob
-
-client.switch_to(alice)
-# Now operating as Alice
-```
-
 ---
 
 ## Part 3: Core Entity Operations (10 minutes)
@@ -192,14 +176,14 @@ client.switch_to(alice)
 #### Basic Creation
 ```python
 entity_key, receipt = client.arkiv.create_entity(
-    payload=b"Hello, Arkiv!",
-    content_type="text/plain",
-    attributes={
+    payload = b"Hello, Arkiv!",
+    content_type = "text/plain",
+    attributes = {
         "type": "greeting",
         "language": "en",
         "version": 1
     },
-    expires_in=86400  # 24 hours in seconds
+    expires_in = client.arkiv.to_seconds(hours=24)
 )
 
 print(f"Entity created: {entity_key}")
@@ -221,14 +205,14 @@ data = {
 }
 
 entity_key, _ = client.arkiv.create_entity(
-    payload=json.dumps(data).encode(),
-    content_type="application/json",
-    attributes={
+    payload = json.dumps(data).encode(),
+    content_type = "application/json",
+    attributes = {
         "type": "user_profile",
         "user_id": "alice",
         "verified": 1  # Use 1 for true, 0 for false
     },
-    expires_in=client.arkiv.to_seconds(days=30)  # 30 days
+    expires_in = client.arkiv.to_seconds(days=30)  # 30 days
 )
 ```
 
@@ -239,14 +223,14 @@ with open('avatar.png', 'rb') as f:
     image_data = f.read()
 
 entity_key, _ = client.arkiv.create_entity(
-    payload=image_data,
-    content_type="image/png",
+    payload = image_data,
+    content_type = "image/png",
     attributes={
         "type": "avatar",
         "user": "alice",
         "size": len(image_data)
     },
-    expires_in=client.arkiv.to_seconds(days=365)  # 1 year
+    expires_in = client.arkiv.to_seconds(days=365)  # 1 year
 )
 ```
 
@@ -261,7 +245,7 @@ entity = client.arkiv.get_entity(entity_key)
 print(entity.payload)
 print(entity.attributes)
 print(entity.owner)
-print(entity.expiration)
+print(entity.expires_at_block)
 ```
 
 #### Selective Field Loading
@@ -292,6 +276,7 @@ else:
 receipt = client.arkiv.update_entity(
     entity_key,
     payload=b"Updated content",
+    content_type = "text/plain",
     attributes={
         "type": "greeting",
         "language": "en",
