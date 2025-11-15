@@ -59,6 +59,7 @@ class TestAsyncEntityUpdate:
             entity_key, _tx_hash = await async_arkiv_client_http.arkiv.create_entity(
                 payload=f"Entity {i}".encode(),
                 attributes=Attributes({"index": i, "version": 1}),
+                expires_in=1000,
             )
             entity_keys.append(entity_key)
 
@@ -68,6 +69,7 @@ class TestAsyncEntityUpdate:
                 entity_key=entity_key,
                 payload=f"Updated entity {i}".encode(),
                 attributes=Attributes({"index": i, "version": 2}),
+                expires_in=1500,
             )
             # Verify individual entity_key and tx_hash formats
             check_entity_key(entity_key, f"test_async_update_entities_sequentially_{i}")

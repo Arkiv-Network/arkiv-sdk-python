@@ -35,7 +35,9 @@ class TestAsyncWatchEntityCreated:
         try:
             # Create an entity
             entity_key, receipt = await async_arkiv_client_http.arkiv.create_entity(
-                payload=b"async test", attributes={"test": "async_created"}
+                payload=b"async test",
+                attributes={"test": "async_created"},
+                expires_in=1000,
             )
 
             # Wait for event to be processed
@@ -68,7 +70,8 @@ class TestAsyncWatchEntityCreated:
         try:
             # Create entity
             entity_key, _ = await async_arkiv_client_http.arkiv.create_entity(
-                payload=b"test await"
+                payload=b"test await",
+                expires_in=1000,
             )
 
             # Wait for callback to start
@@ -101,11 +104,15 @@ class TestAsyncWatchEntityUpdated:
         try:
             # Create then update an entity
             entity_key, _ = await async_arkiv_client_http.arkiv.create_entity(
-                payload=b"original"
+                payload=b"original",
+                expires_in=1000,
             )
 
             receipt = await async_arkiv_client_http.arkiv.update_entity(
-                entity_key, payload=b"updated", attributes={"status": "updated"}
+                entity_key,
+                payload=b"updated",
+                attributes={"status": "updated"},
+                expires_in=1000,
             )
 
             # Wait for event
@@ -136,7 +143,8 @@ class TestAsyncWatchEntityExtended:
         try:
             # Create then extend an entity
             entity_key, _ = await async_arkiv_client_http.arkiv.create_entity(
-                payload=b"test extend"
+                payload=b"test extend",
+                expires_in=1000,
             )
 
             receipt = await async_arkiv_client_http.arkiv.extend_entity(
@@ -171,7 +179,8 @@ class TestAsyncWatchEntityDeleted:
         try:
             # Create then delete an entity
             entity_key, _ = await async_arkiv_client_http.arkiv.create_entity(
-                payload=b"to delete"
+                payload=b"to delete",
+                expires_in=1000,
             )
 
             receipt = await async_arkiv_client_http.arkiv.delete_entity(entity_key)
@@ -210,7 +219,8 @@ class TestAsyncWatchOwnerChanged:
         try:
             # Create an entity
             entity_key, _ = await async_arkiv_client_http.arkiv.create_entity(
-                payload=b"test owner change"
+                payload=b"test owner change",
+                expires_in=1000,
             )
 
             # Get the entity to verify current owner
@@ -260,8 +270,12 @@ class TestAsyncWatchConcurrentFilters:
 
         try:
             # Create entities
-            entity1, _ = await async_arkiv_client_http.arkiv.create_entity(b"entity1")
-            entity2, _ = await async_arkiv_client_http.arkiv.create_entity(b"entity2")
+            entity1, _ = await async_arkiv_client_http.arkiv.create_entity(
+                b"entity1", expires_in=1000
+            )
+            entity2, _ = await async_arkiv_client_http.arkiv.create_entity(
+                b"entity2", expires_in=1000
+            )
 
             # Wait for events to be processed
             await asyncio.sleep(3)
@@ -314,10 +328,11 @@ class TestAsyncWatchConcurrentFilters:
         try:
             # Trigger different event types
             entity_key, _ = await async_arkiv_client_http.arkiv.create_entity(
-                b"test concurrent"
+                b"test concurrent",
+                expires_in=1000,
             )
             await async_arkiv_client_http.arkiv.update_entity(
-                entity_key, payload=b"updated"
+                entity_key, payload=b"updated", expires_in=1000
             )
             await async_arkiv_client_http.arkiv.delete_entity(entity_key)
 
@@ -366,11 +381,17 @@ class TestAsyncWatchErrorHandling:
 
         try:
             # Create first entity (will trigger exception)
-            await async_arkiv_client_http.arkiv.create_entity(b"entity1")
+            await async_arkiv_client_http.arkiv.create_entity(
+                b"entity1",
+                expires_in=1000,
+            )
             await asyncio.sleep(2)
 
             # Create second entity (should be processed normally)
-            entity2, _ = await async_arkiv_client_http.arkiv.create_entity(b"entity2")
+            entity2, _ = await async_arkiv_client_http.arkiv.create_entity(
+                b"entity2",
+                expires_in=1000,
+            )
             await asyncio.sleep(2)
 
             # Filter should still be running and process second event
@@ -403,7 +424,10 @@ class TestAsyncWatchFilterLifecycle:
             assert not filter.is_running
 
             # Create entity while filter is stopped
-            _ = await async_arkiv_client_http.arkiv.create_entity(b"stopped")
+            _ = await async_arkiv_client_http.arkiv.create_entity(
+                b"stopped",
+                expires_in=1000,
+            )
             await asyncio.sleep(1)
 
             # No events received
@@ -414,7 +438,10 @@ class TestAsyncWatchFilterLifecycle:
             assert filter.is_running
 
             # Create entity while filter is running
-            entity2, _ = await async_arkiv_client_http.arkiv.create_entity(b"running")
+            entity2, _ = await async_arkiv_client_http.arkiv.create_entity(
+                b"running",
+                expires_in=1000,
+            )
             await asyncio.sleep(2)
 
             # Only second entity received
@@ -426,7 +453,10 @@ class TestAsyncWatchFilterLifecycle:
             assert not filter.is_running
 
             # Create entity while stopped again
-            await async_arkiv_client_http.arkiv.create_entity(b"stopped again")
+            await async_arkiv_client_http.arkiv.create_entity(
+                b"stopped again",
+                expires_in=1000,
+            )
             await asyncio.sleep(1)
 
             # Still only one event
@@ -481,7 +511,10 @@ class TestAsyncWatchFilterLifecycle:
         assert not filter.is_running
 
         # Create entity after uninstall
-        await async_arkiv_client_http.arkiv.create_entity(b"after uninstall")
+        await async_arkiv_client_http.arkiv.create_entity(
+            b"after uninstall",
+            expires_in=1000,
+        )
         await asyncio.sleep(1)
 
         # No events should be received

@@ -146,7 +146,7 @@ class TestAsyncEntityGet:
         # Create an entity
         payload = b"Entity existence check"
         entity_key, _tx_hash = await async_arkiv_client_http.arkiv.create_entity(
-            payload=payload
+            payload=payload, expires_in=1000
         )
 
         # Check that created entity exists
@@ -168,7 +168,7 @@ async def create_entity(
     payload = b"Test entity data"
     content_type = "text/plain"
     attributes = Attributes({"type": "test", "version": 1})
-    expires_in = 100
+    expires_in = 1000
 
     entity_key, _ = await arkiv_client_http.arkiv.create_entity(
         payload=payload,

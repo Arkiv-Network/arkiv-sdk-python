@@ -168,17 +168,17 @@ def check_and_set_entity_op_defaults(
 ) -> tuple[bytes, str, Attributes, int]:
     """Check and set defaults for entity management arguments."""
     if expires_in is None:
-        # Import here to avoid circular dependency
-        from arkiv.module_base import ArkivModuleBase
+        raise ValueError("expires_in must be provided")
 
-        expires_in = ArkivModuleBase.EXPIRES_IN_DEFAULT
     if not payload:
         payload = b""
+
     if not content_type:
         # Import here to avoid circular dependency
         from arkiv.module_base import ArkivModuleBase
 
         content_type = ArkivModuleBase.CONTENT_TYPE_DEFAULT
+
     if not attributes:
         attributes = Attributes({})
 

@@ -73,24 +73,17 @@ class ArkivModuleBase(Generic[ClientT]):
     """
 
     BLOCK_TIME_SECONDS = 2  # Block time in seconds
-    EXPIRES_IN_DEFAULT = (
-        1000  # Default expiration time for created entities (~30 mins with 2s blocks)
-    )
     CONTENT_TYPE_DEFAULT = (
         "application/octet-stream"  # Default content type for payloads
     )
 
-    def __init__(
-        self, client: ClientT, expires_in_default: int = EXPIRES_IN_DEFAULT
-    ) -> None:
+    def __init__(self, client: ClientT) -> None:
         """Initialize Arkiv module with client reference.
 
         Args:
             client: Arkiv or AsyncArkiv client instance
-            expires_in_default: Default expiration time for created entities
         """
         self.client = client
-        self.expires_in_default = expires_in_default
 
         # Attach custom Arkiv RPC methods to the eth object
         # Type checking: client has 'eth' attribute from Web3/AsyncWeb3
@@ -181,7 +174,7 @@ class ArkivModuleBase(Generic[ClientT]):
             payload: Optional data payload for the entity (default: empty bytes)
             content_type: Optional content type for the payload (default: "application/octet-stream")
             attributes: Optional key-value attributes as metadata
-            expires_in: Entity lifetime in seconds (default: self.expires_in_default)
+            expires_in: Entity lifetime in seconds
             tx_params: Optional transaction parameters (gas, gasPrice, etc.)
 
         Returns:
@@ -228,7 +221,7 @@ class ArkivModuleBase(Generic[ClientT]):
             payload: Optional new data payload (default: empty bytes)
             content_type: Optional new content type (default: "application/octet-stream")
             attributes: Optional new attributes (default: empty dict)
-            expires_in: New expiration time in seconds (default: self.expires_in_default)
+            expires_in: New expiration time in seconds
             tx_params: Optional transaction parameters
 
         Returns:

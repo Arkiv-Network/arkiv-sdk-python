@@ -23,7 +23,8 @@ class TestAsyncEntityCreate:
         # Create entity with simple payload
         payload = b"Test async entity"
         entity_key, receipt = await async_arkiv_client_http.arkiv.create_entity(
-            payload=payload
+            payload=payload,
+            expires_in=1000,
         )
 
         # Verify entity_key and tx_hash formats
@@ -43,6 +44,7 @@ class TestAsyncEntityCreate:
             entity_key, receipt = await async_arkiv_client_http.arkiv.create_entity(
                 payload=f"Async entity {i}".encode(),
                 attributes=Attributes({"index": i}),
+                expires_in=1000,
             )
 
             # Verify individual entity_key and tx_hash formats

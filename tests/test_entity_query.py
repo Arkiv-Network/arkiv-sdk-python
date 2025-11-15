@@ -41,8 +41,7 @@ class TestQueryEntitiesParameterValidation:
         """Test that query_entities accepts all parameters."""
         # Should not raise ValueError
         arkiv_client_http.arkiv.create_entity(
-            payload=b"Some payload",
-            content_type="text/plain",
+            payload=b"Some payload", content_type="text/plain", expires_in=1000
         )
         # Query will execute (returns empty result since no matching entities exist)
         query = '$owner = "0x0000000000000000000000000000000000000000"'
@@ -72,7 +71,7 @@ class TestQueryEntitiesBasic:
                 payload=f"Entity {i}".encode(),
                 content_type="text/plain",
                 attributes=Attributes({"id": shared_id}),
-                expires_in=100,  # Set blocks to live (required by Arkiv node)
+                expires_in=1000,
             )
             entity_keys.append(entity_key)
 
