@@ -263,7 +263,9 @@ class AsyncArkiv(ArkivBase, AsyncWeb3):
         exc_tb: Any,
     ) -> None:
         """Exit async context manager."""
-        # Note: Event filter cleanup not yet implemented (needs async ArkivModule)
+        # Cleanup event filters first
+        logger.debug("Cleaning up event filters...")
+        await self.arkiv.cleanup_filters()
 
         # Disconnect provider if it has disconnect method
         if hasattr(self.provider, "disconnect"):
