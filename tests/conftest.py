@@ -195,3 +195,22 @@ async def async_arkiv_client_http(
 
     # Cleanup happens automatically when exiting the async context manager
     logger.info("AsyncArkiv client closed")
+
+
+@pytest.fixture(scope="session")
+def provider(arkiv_node: ArkivNode):
+    """Provide a Web3 provider for testing."""
+    return ProviderBuilder().node(arkiv_node).build()
+
+
+@pytest.fixture(scope="session")
+def async_provider(arkiv_node: ArkivNode):
+    """Provide a Web3 async provider for testing."""
+    return ProviderBuilder().node(arkiv_node).async_mode().build()
+
+
+@pytest.fixture(scope="session")
+def unfunded_account() -> NamedAccount:
+    """Provide an unfunded account (zero balance) for testing validation."""
+    # Create a fresh account that has never been funded
+    return create_account(999, "unfunded_test_account")

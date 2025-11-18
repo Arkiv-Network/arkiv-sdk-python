@@ -3,6 +3,7 @@
 import logging
 
 import pytest
+from web3.exceptions import Web3RPCError
 
 from arkiv import AsyncArkiv
 from arkiv.types import Attributes
@@ -57,3 +58,25 @@ class TestAsyncEntityCreate:
         # Verify all succeeded and are unique
         assert len(entity_keys) == 3
         assert len(set(entity_keys)) == 3, "All entity keys should be unique"
+
+
+class TestAsyncEntityCreateValidation:
+    """Test cases for async entity creation validation and error handling."""
+
+    @pytest.mark.asyncio
+    async def test_async_create_entity_without_account(self, async_provider) -> None:
+        """Test that async create_entity raises error when no account is configured."""
+        # Create async client without an account
+        async with AsyncArkiv(async_provider) as client:
+            with pytest.raises(ValueError, match="No account configured"):
+                await client.arkiv.create_entity(payload=b"test", expires_in=1000)
+
+    @pytest.mark.asyncio
+    async def test_async_create_entity_with_zero_balance_account(
+        self, async_provider, unfunded_account
+    ) -> None:
+        """Test that async create_entity raises error when account has zero balance."""
+        # Create async client with unfunded account (zero balance)
+        async with AsyncArkiv(async_provider, account=unfunded_account) as client:
+            with pytest.raises(Web3RPCError, match="insufficient funds"):
+                await client.arkiv.create_entity(payload=b"test", expires_in=1000)

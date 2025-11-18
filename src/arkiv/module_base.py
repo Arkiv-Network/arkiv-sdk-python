@@ -504,6 +504,32 @@ class ArkivModuleBase(Generic[ClientT]):
                 f"Expected {expected_count} '{operation_name}' operations but got {len(operations)}"
             )
 
+    def _check_has_account(self) -> None:
+        """
+        Check if client has a default account configured.
+
+        Raises:
+            ValueError: If no default account is set on the client
+
+        Note:
+            This check is performed before sending transactions to ensure
+            the client has proper credentials to sign transactions.
+        """
+        # Access eth.default_account through type-ignored attribute access
+        # since we know both Arkiv and AsyncArkiv have this via Web3/AsyncWeb3
+        default_account = getattr(self.client.eth, "default_account", None)  # type: ignore[attr-defined]
+
+        # Log account information
+        logger.debug(f"Default account: {default_account}")
+
+        # Check if account is None or Empty (web3.py's Empty object evaluates to False)
+        # We use 'not default_account' which works for both None and Empty
+        if not default_account:
+            raise ValueError(
+                "No account configured. A funded account is necessary to execute transactions. "
+                "Please provide an account when creating Arkiv clients."
+            )
+
     def _check_tx_and_get_receipt(
         self, tx_hash: TxHash, tx_receipt: TxReceipt
     ) -> TransactionReceipt:

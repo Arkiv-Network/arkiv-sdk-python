@@ -57,7 +57,8 @@ class AsyncArkivModule(ArkivModuleBase["AsyncArkiv"]):
     ) -> TransactionReceipt:
         # Docstring inherited from ArkivModuleBase.execute
 
-        # TODO Check if client has an account attached. if not raise exception
+        # Check that client has a funded account configured
+        self._check_has_account()
 
         # Convert to transaction parameters and send
         tx_params = to_tx_params(operations, tx_params)

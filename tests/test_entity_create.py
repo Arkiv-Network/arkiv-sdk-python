@@ -4,6 +4,7 @@ import logging
 
 import pytest
 from hexbytes import HexBytes
+from web3.exceptions import Web3RPCError
 from web3.types import TxReceipt
 
 from arkiv.client import Arkiv
@@ -228,8 +229,6 @@ class TestEntityCreate:
         )
         logger.info(f"{label}: Entity creation and retrieval successful")
 
-    # TODO re-enable test once arkiv node supports empty payloads
-    @pytest.mark.skip(reason="Empty payload not currently supported")
     def test_create_entity_attributes_only(self, arkiv_client_http: Arkiv) -> None:
         """Test create_entity."""
         pl: bytes | None = b""
@@ -270,3 +269,25 @@ class TestEntityCreate:
             f"{label}: Entity expiration block should be in the future"
         )
         logger.info(f"{label}: Entity creation and retrieval successful")
+
+
+class TestEntityCreateValidation:
+    """Test cases for entity creation validation and error handling."""
+
+    def test_create_entity_without_account(self, provider) -> None:
+        """Test that create_entity raises error when no account is configured."""
+        # Create client without an account
+        client = Arkiv(provider)
+
+        with pytest.raises(ValueError, match="No account configured"):
+            client.arkiv.create_entity(payload=b"test", expires_in=1000)
+
+    def test_create_entity_with_zero_balance_account(
+        self, provider, unfunded_account
+    ) -> None:
+        """Test that create_entity raises error when account has zero balance."""
+        # Create client with unfunded account (zero balance)
+        client = Arkiv(provider, account=unfunded_account)
+
+        with pytest.raises(Web3RPCError, match="insufficient funds"):
+            client.arkiv.create_entity(payload=b"test", expires_in=1000)
