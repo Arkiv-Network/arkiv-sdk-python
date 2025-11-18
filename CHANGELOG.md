@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0a9] - 2025-11-18
+
+### Changes
+- Check for existence of default accountin (Async)Arkiv before attempting to execute a transaction"
+- Add active filter cleanup for AsyncArkiv
+
 ## [1.0.0a8] - 2025-11-14
 
 ### Changes
