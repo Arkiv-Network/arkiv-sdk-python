@@ -7,7 +7,7 @@ import pytest
 from arkiv import AsyncArkiv
 from arkiv.types import ATTRIBUTES, KEY, Attributes, CreateOp, Operations, QueryOptions
 
-BTL = 100
+EXPIRES_IN = 100
 CONTENT_TYPE = "text/plain"
 
 
@@ -36,7 +36,7 @@ async def create_test_entities(client: AsyncArkiv, n: int) -> tuple[str, list[st
             payload=payload,
             content_type=CONTENT_TYPE,
             attributes=attributes,
-            expires_in=BTL,
+            expires_in=EXPIRES_IN,
         )
         create_ops.append(create_op)
 

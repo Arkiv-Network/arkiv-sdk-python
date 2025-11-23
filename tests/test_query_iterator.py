@@ -5,7 +5,7 @@ import uuid
 from arkiv import Arkiv
 from arkiv.types import ATTRIBUTES, KEY, Attributes, CreateOp, Operations, QueryOptions
 
-BTL = 100
+EXPIRES_IN = 100
 CONTENT_TYPE = "text/plain"
 
 
@@ -34,7 +34,7 @@ def create_test_entities(client: Arkiv, n: int) -> tuple[str, list[str]]:
             payload=payload,
             content_type=CONTENT_TYPE,
             attributes=attributes,
-            expires_in=BTL,
+            expires_in=EXPIRES_IN,
         )
         create_ops.append(create_op)
 

@@ -4,6 +4,7 @@ import logging
 
 import pytest
 
+from arkiv.account import NamedAccount
 from arkiv.client import Arkiv
 from arkiv.types import Attributes, CreateOp, DeleteOp, Operations
 
@@ -202,4 +203,44 @@ class TestEntityDelete:
 
         logger.info(
             f"Second delete of same entity correctly raised {type(exc_info.value).__name__}"
+        )
+
+    def test_delete_entity_after_owner_change(
+        self, arkiv_client_http: Arkiv, account_2: NamedAccount
+    ) -> None:
+        """Test that deleting the same entity twice raises an exception."""
+
+        # Create an entity
+        entity_key, _ = arkiv_client_http.arkiv.create_entity(
+            payload=b"Entity to delete after owner change", expires_in=100
+        )
+
+        entity_before = arkiv_client_http.arkiv.get_entity(entity_key)
+        assert entity_before.owner == arkiv_client_http.eth.default_account, (
+            "Unexpected initial owner"
+        )
+        assert entity_before.owner != account_2.address, (
+            "Account 2 address does not differ from client address"
+        )
+
+        change_owner_receipt = arkiv_client_http.arkiv.change_owner(
+            entity_key, account_2.address
+        )
+        logger.info(f"Change owner receipt: {change_owner_receipt}")
+
+        # Check owner change
+        entity_after = arkiv_client_http.arkiv.get_entity(entity_key)
+        assert entity_after.owner == account_2.address, "Unexpected owner after change"
+
+        # Add account 2 to act with right private key
+        arkiv_client_http.accounts[account_2.name] = account_2
+        arkiv_client_http.switch_to(account_2.name)
+
+        # First deletion
+        delete_tx_hash_1 = arkiv_client_http.arkiv.delete_entity(entity_key)
+        check_tx_hash("delete_after_owner_chnage", delete_tx_hash_1)
+
+        # Verify it's deleted
+        assert not arkiv_client_http.arkiv.entity_exists(entity_key), (
+            "Entity should be deleted after first deletion"
         )
