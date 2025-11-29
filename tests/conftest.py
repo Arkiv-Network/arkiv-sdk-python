@@ -4,8 +4,12 @@ Pytest configuration and fixtures for blockchain testing.
 Provides either external node connections (via env vars) or containerized test nodes.
 """
 
+import json
 import logging
 import os
+import socketserver
+import threading
+import time
 from collections.abc import AsyncGenerator, Generator
 from pathlib import Path
 
@@ -26,6 +30,10 @@ WS_URL_ENV = "WS_URL"
 # Environment variable names for external wallet configuration
 WALLET_FILE_ENV_PREFIX = "WALLET_FILE"
 WALLET_PASSWORD_ENV_PREFIX = "WALLET_PASSWORD"
+
+SLOW_LOCAL_SERVER_HOST = "127.0.0.1"
+SLOW_LOCAL_SERVER_PORT = 9876
+SLOW_LOCAL_SERVER_TIMEOUT = 5
 
 ALICE = "alice"
 BOB = "bob"
@@ -48,6 +56,40 @@ def _load_env_if_available() -> None:
 
 # Load environment on import
 _load_env_if_available()
+
+
+@pytest.fixture(scope="session")
+def delayed_rpc_server():
+    class DelayedHandler(socketserver.BaseRequestHandler):
+        def handle(self):
+            time.sleep(SLOW_LOCAL_SERVER_TIMEOUT)  # Delay > timeout
+            self.request.sendall(
+                json.dumps({"jsonrpc": "2.0", "id": 1, "result": 42}).encode()
+            )
+
+    httpd = socketserver.TCPServer(
+        (SLOW_LOCAL_SERVER_HOST, SLOW_LOCAL_SERVER_PORT), DelayedHandler
+    )
+
+    httpd.allow_reuse_address = True
+
+    server_thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    server_thread.start()
+
+    # Wait & verify server is listening
+    time.sleep(1.0)
+    import socket
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    assert sock.connect_ex((SLOW_LOCAL_SERVER_HOST, SLOW_LOCAL_SERVER_PORT)) == 0, (
+        "Server not listening"
+    )
+    sock.close()
+
+    yield f"http://{SLOW_LOCAL_SERVER_HOST}:{SLOW_LOCAL_SERVER_PORT}"
+
+    httpd.shutdown()
+    httpd.server_close()
 
 
 @pytest.fixture(scope="session")

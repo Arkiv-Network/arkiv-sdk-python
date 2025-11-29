@@ -247,14 +247,30 @@ class AsyncArkiv(ArkivBase, AsyncWeb3):
 
     async def __aenter__(self) -> AsyncArkiv:
         """Enter async context manager."""
-        # Initialize pending account if provided
-        if self._pending_account:
-            await self._initialize_account_async(self._pending_account)
-            self._pending_account = None
+        try:
+            # Initialize pending account if provided
+            if self._pending_account:
+                await self._initialize_account_async(self._pending_account)
+                self._pending_account = None
 
-        # Populate connection cache
-        await self.is_connected()
-        return self
+            # Populate connection cache
+            await self.is_connected()
+            return self
+        except Exception:
+            # Best-effort cleanup if entering the context fails
+            logger.debug(
+                "AsyncArkiv.__aenter__ failed, attempting cleanup before re-raising"
+            )
+            try:
+                await self.arkiv.cleanup_filters()
+            except Exception:
+                logger.exception(
+                    "Error while cleaning up filters after __aenter__ failure"
+                )
+
+            await self._disconnect_provider()
+            self._cached_connected = False
+            raise
 
     async def __aexit__(
         self,
@@ -267,9 +283,8 @@ class AsyncArkiv(ArkivBase, AsyncWeb3):
         logger.debug("Cleaning up event filters...")
         await self.arkiv.cleanup_filters()
 
-        # Disconnect provider if it has disconnect method
-        if hasattr(self.provider, "disconnect"):
-            await self.provider.disconnect()
+        # Disconnect provider and close underlying resources
+        await self._disconnect_provider()
 
         # Then stop the node if managed and update cache
         self._cleanup_node()
@@ -298,6 +313,18 @@ class AsyncArkiv(ArkivBase, AsyncWeb3):
         logger.info(
             f"Account balance for {account.name} ({account.address}): {balance_eth} ETH"
         )
+
+    async def _disconnect_provider(self) -> None:
+        """Best-effort async disconnect of the underlying provider, if supported."""
+        provider = self.provider
+        if provider is None:
+            return
+
+        if hasattr(provider, "disconnect"):
+            try:
+                await provider.disconnect()  # type: ignore[func-returns-value]
+            except Exception:
+                logger.exception("Error while disconnecting async provider")
 
     def _cleanup_node(self) -> None:
         """Cleanup node and update connection cache."""

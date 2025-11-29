@@ -1,10 +1,15 @@
 """Tests for provider builder functionality."""
 
+import logging
+import time
+
+import aiohttp
 import pytest
 from web3.providers import AsyncHTTPProvider, HTTPProvider, WebSocketProvider
 from web3.providers.async_base import AsyncBaseProvider
 from web3.providers.base import BaseProvider
 
+from arkiv.client import Arkiv, AsyncArkiv
 from arkiv.node import ArkivNode
 from arkiv.provider import (
     DEFAULT_PORT,
@@ -16,6 +21,8 @@ from arkiv.provider import (
     ProviderBuilder,
     TransportType,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def get_expected_default_url(transport: TransportType, port: int = DEFAULT_PORT) -> str:
@@ -226,6 +233,20 @@ class TestProviderBuilderCustom:
 
         assert builder._network is None
 
+    def test_provider_custom_unresolvable_url_with_arkiv_client(self) -> None:
+        """Arkiv client with an unresolvable custom URL should fail on request."""
+        import requests
+
+        # Use an invalid TLD / domain to avoid accidental resolution
+        bad_url = "https://nonexistent.rpc-node.local"
+
+        provider = ProviderBuilder().custom(bad_url).build()
+        client = Arkiv(provider=provider)
+
+        # Sync HTTP stack (requests/urllib3) surfaces DNS failures as ConnectionError.
+        with pytest.raises(requests.exceptions.ConnectionError):
+            _ = client.eth.block_number
+
 
 class TestProviderBuilderNode:
     """Test ArkivNode integration."""
@@ -283,7 +304,7 @@ class TestProviderBuilderNode:
 class TestProviderBuilderTransportSwitching:
     """Test switching between transports."""
 
-    def test_switch_from_http_to_ws(self) -> None:
+    def test_provider_switch_from_http_to_ws(self) -> None:
         """Test switching from HTTP to WebSocket."""
         provider = ProviderBuilder().localhost().http().ws().build()
         assert_provider(
@@ -293,7 +314,7 @@ class TestProviderBuilderTransportSwitching:
             "test_switch_from_http_to_ws",
         )
 
-    def test_switch_from_ws_to_http(self) -> None:
+    def test_provider_switch_from_ws_to_http(self) -> None:
         """Test switching from WebSocket to HTTP."""
         provider = ProviderBuilder().localhost().ws().http().build()
         assert_provider(
@@ -307,7 +328,7 @@ class TestProviderBuilderTransportSwitching:
 class TestProviderBuilderErrorHandling:
     """Test error handling and validation."""
 
-    def test_port_on_non_localhost_raises_error(self) -> None:
+    def test_provider_port_on_non_localhost_raises_error(self) -> None:
         """Test that setting port for non-localhost network raises error."""
         # This is tricky since port is only set by localhost()
         # But we can test the internal logic by manipulating state
@@ -318,7 +339,7 @@ class TestProviderBuilderErrorHandling:
         with pytest.raises(ValueError, match="Port can only be set for localhost"):
             builder.build()
 
-    def test_unknown_network_raises_error(self) -> None:
+    def test_provider_unknown_network_raises_error(self) -> None:
         """Test that unknown network raises error."""
         builder = ProviderBuilder()
         builder._network = "unknown_network"
@@ -326,7 +347,7 @@ class TestProviderBuilderErrorHandling:
         with pytest.raises(ValueError, match="Unknown network"):
             builder.build()
 
-    def test_transport_not_available_raises_error(self) -> None:
+    def test_provider_transport_not_available_raises_error(self) -> None:
         """Test appropriate error when transport isn't available."""
         # All networks currently support both transports, so we need to
         # manipulate the network URLs to test this
@@ -341,7 +362,7 @@ class TestProviderBuilderErrorHandling:
 class TestProviderBuilderStateMangement:
     """Test internal state management."""
 
-    def test_localhost_sets_correct_state(self) -> None:
+    def test_provider_localhost_sets_correct_state(self) -> None:
         """Test localhost() sets correct internal state."""
         builder = ProviderBuilder().localhost(9000)
 
@@ -349,7 +370,7 @@ class TestProviderBuilderStateMangement:
         assert builder._port == 9000
         assert builder._url is None
 
-    def test_kaolin_sets_correct_state(self) -> None:
+    def test_provider_kaolin_sets_correct_state(self) -> None:
         """Test kaolin() sets correct internal state."""
         builder = ProviderBuilder().kaolin()
 
@@ -366,13 +387,13 @@ class TestProviderBuilderStateMangement:
         assert builder._url == custom_url
         assert builder._port is None
 
-    def test_http_sets_correct_state(self) -> None:
+    def test_provider_http_sets_correct_state(self) -> None:
         """Test http() sets correct transport."""
         builder = ProviderBuilder().ws().http()
 
         assert builder._transport == HTTP
 
-    def test_ws_sets_correct_state(self) -> None:
+    def test_provider_ws_sets_correct_state(self) -> None:
         """Test ws() sets correct transport."""
         builder = ProviderBuilder().http().ws()
 
@@ -382,25 +403,25 @@ class TestProviderBuilderStateMangement:
 class TestProviderBuilderAsyncMode:
     """Test async mode functionality."""
 
-    def test_async_mode_sets_correct_state_for_default(self) -> None:
+    def test_async_provider_sets_correct_state_for_default(self) -> None:
         """Test async_mode() sets internal flag."""
         builder = ProviderBuilder().async_mode()
 
         assert builder._is_async is True
 
-    def test_async_mode_sets_correct_state_for_false(self) -> None:
+    def test_async_provider_sets_correct_state_for_false(self) -> None:
         """Test async_mode() sets internal flag."""
         builder = ProviderBuilder().async_mode(False)
 
         assert builder._is_async is False
 
-    def test_default_is_sync_mode(self) -> None:
+    def test_provider_default_is_sync_mode(self) -> None:
         """Test default mode is sync (not async)."""
         builder = ProviderBuilder()
 
         assert builder._is_async is False
 
-    def test_async_mode_with_http_creates_async_http_provider(self) -> None:
+    def test_async_provider_with_http_creates_async_http_provider(self) -> None:
         """Test async_mode() with HTTP creates AsyncHTTPProvider."""
         provider = ProviderBuilder().localhost().async_mode().build()
 
@@ -408,7 +429,7 @@ class TestProviderBuilderAsyncMode:
         assert isinstance(provider, AsyncBaseProvider)
         assert provider.endpoint_uri == get_expected_default_url(HTTP)
 
-    def test_async_mode_with_ws_creates_websocket_provider(self) -> None:
+    def test_async_provider_with_ws_creates_websocket_provider(self) -> None:
         """Test async_mode() with WebSocket creates WebSocketProvider (always async)."""
         provider = ProviderBuilder().localhost().ws().async_mode().build()
 
@@ -416,7 +437,7 @@ class TestProviderBuilderAsyncMode:
         assert isinstance(provider, AsyncBaseProvider)
         assert provider.endpoint_uri == get_expected_default_url(WS)
 
-    def test_sync_mode_with_http_creates_http_provider(self) -> None:
+    def test_provider_sync_mode_with_http_creates_http_provider(self) -> None:
         """Test default (sync) mode with HTTP creates HTTPProvider."""
         provider = ProviderBuilder().localhost().build()
 
@@ -425,7 +446,7 @@ class TestProviderBuilderAsyncMode:
         assert not isinstance(provider, AsyncBaseProvider)
         assert provider.endpoint_uri == get_expected_default_url(HTTP)
 
-    def test_sync_mode_with_ws_creates_websocket_provider(self) -> None:
+    def test_provider_sync_mode_with_ws_creates_websocket_provider(self) -> None:
         """Test sync mode with WebSocket still creates WebSocketProvider (always async)."""
         provider = ProviderBuilder().localhost().ws().build()
 
@@ -434,21 +455,21 @@ class TestProviderBuilderAsyncMode:
         assert isinstance(provider, AsyncBaseProvider)
         assert provider.endpoint_uri == get_expected_default_url(WS)
 
-    def test_async_mode_with_kaolin_http(self) -> None:
+    def test_async_provider_with_kaolin_http(self) -> None:
         """Test async_mode() with Kaolin HTTP."""
         provider = ProviderBuilder().kaolin().async_mode().build()
 
         assert isinstance(provider, AsyncHTTPProvider)
         assert provider.endpoint_uri == get_expected_kaolin_url(HTTP)
 
-    def test_async_mode_with_kaolin_ws(self) -> None:
+    def test_async_provider_with_kaolin_ws(self) -> None:
         """Test async_mode() with Kaolin WebSocket."""
         provider = ProviderBuilder().kaolin().ws().async_mode().build()
 
         assert isinstance(provider, WebSocketProvider)
         assert provider.endpoint_uri == get_expected_kaolin_url(WS)
 
-    def test_async_mode_with_custom_url(self) -> None:
+    def test_async_provider_with_custom_url(self) -> None:
         """Test async_mode() with custom URL."""
         custom_url = "https://my-async-rpc.io"
         provider = ProviderBuilder().custom(custom_url).async_mode().build()
@@ -456,7 +477,7 @@ class TestProviderBuilderAsyncMode:
         assert isinstance(provider, AsyncHTTPProvider)
         assert provider.endpoint_uri == custom_url
 
-    def test_async_mode_chaining(self) -> None:
+    def test_async_provider_chaining(self) -> None:
         """Test async_mode() can be chained in different positions."""
         # async_mode() before transport
         provider1 = ProviderBuilder().localhost().async_mode().http().build()
@@ -470,7 +491,7 @@ class TestProviderBuilderAsyncMode:
         provider3 = ProviderBuilder().async_mode().localhost().http().build()
         assert isinstance(provider3, AsyncHTTPProvider)
 
-    def test_async_mode_with_node(self) -> None:
+    def test_async_provider_with_node(self) -> None:
         """Test async_mode() works with node() configuration."""
         with ArkivNode() as node:
             # Async HTTP
@@ -483,7 +504,7 @@ class TestProviderBuilderAsyncMode:
             assert isinstance(provider_ws, WebSocketProvider)
             assert provider_ws.endpoint_uri == node.ws_url
 
-    def test_async_mode_return_type_attribute(self) -> None:
+    def test_async_provider_return_type_attribute(self) -> None:
         """Test that async providers are correctly typed."""
         # This test mainly validates type attributes work correctly
         sync_provider: BaseProvider = ProviderBuilder().localhost().build()
@@ -494,3 +515,91 @@ class TestProviderBuilderAsyncMode:
         # Runtime validation
         assert isinstance(sync_provider, BaseProvider)
         assert isinstance(async_provider, AsyncBaseProvider)
+
+    def test_provider_custom_url_timeout(self, delayed_rpc_server) -> None:
+        """Test sync timeout() causes a ReadTimeout when server is too slow."""
+        import requests
+
+        custom_url = delayed_rpc_server
+        seconds = 1
+
+        provider = ProviderBuilder().custom(custom_url).timeout(seconds).build()
+        assert isinstance(provider, HTTPProvider)
+        assert provider.endpoint_uri == custom_url
+
+        # HTTPProvider stores a numeric timeout in its request kwargs (requests library)
+        client = Arkiv(provider=provider)
+        actual_provider = client.provider  # type: ignore[attr-defined]
+        assert isinstance(actual_provider, HTTPProvider)
+        request_kwargs = dict(actual_provider.get_request_kwargs())
+        actual_timeout = request_kwargs.get("timeout")
+
+        assert isinstance(actual_timeout, (int, float))
+        assert actual_timeout == seconds, "Timeout should match the configured value"
+
+        # The delayed server sleeps longer than our timeout, so Web3/requests
+        # should eventually raise a ReadTimeout while trying to fetch a block.
+        start = time.monotonic()
+        logger.info(
+            f"Starting block number fetch with timeout {seconds}s at {start:.2f}s"
+        )
+
+        with pytest.raises(requests.exceptions.ReadTimeout):
+            _ = client.eth.block_number
+
+        end = time.monotonic()
+        duration = end - start
+        logger.info(f"Finished block number fetch in {duration:.2f}s at {end:.2f}s")
+
+    async def test_async_provider_with_custom_url_timeout(
+        self, delayed_rpc_server
+    ) -> None:
+        """Async provider honors timeout() and times out on slow server."""
+        import asyncio
+
+        seconds = 1
+        provider = (
+            ProviderBuilder()
+            .custom(delayed_rpc_server)
+            .timeout(seconds)
+            .async_mode()
+            .build()
+        )
+
+        assert isinstance(provider, AsyncHTTPProvider)
+
+        # Verify timeout wiring on the provider directly
+        request_kwargs = dict(provider.get_request_kwargs())
+        actual_timeout = request_kwargs.get("timeout")
+        assert isinstance(actual_timeout, aiohttp.ClientTimeout)
+        assert actual_timeout.total == seconds
+
+        start = time.monotonic()
+        logger.info(
+            f"Starting async Arkiv context enter with timeout {seconds}s at {start:.2f}s"
+        )
+
+        # AsyncArkiv.__aenter__ calls is_connected(), which will hit the slow
+        # server and respect our timeout, so the timeout-style exception is
+        # raised when entering the context.
+        with pytest.raises((asyncio.TimeoutError, aiohttp.ClientError)):
+            async with AsyncArkiv(provider):
+                # We do not expect to reach this block on a slow server
+                pass
+
+        end = time.monotonic()
+        duration = end - start
+        logger.info(
+            f"Finished async Arkiv context enter in {duration:.2f}s at {end:.2f}s"
+        )
+
+    async def test_async_provider_with_unresolvable_url(self) -> None:
+        """Async provider with an unresolvable URL should fail fast on request."""
+
+        # Use an invalid TLD / domain to avoid accidental resolution
+        bad_url = "https://nonexistent.rpc-node.local"
+        provider = ProviderBuilder().custom(bad_url).async_mode().build()
+
+        async with AsyncArkiv(provider) as client:
+            with pytest.raises(aiohttp.ClientConnectorDNSError):
+                await client.eth.block_number

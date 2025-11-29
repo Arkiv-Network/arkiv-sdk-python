@@ -73,6 +73,7 @@ class ProviderBuilder:
         self._transport: TransportType = cast(TransportType, TRANSPORT_DEFAULT)
         self._port: int | None = DEFAULT_PORT  # Set default port for localhost
         self._url: str | None = None
+        self._timeout_in: int | None = None  # timeout in seconds
         self._node: ArkivNode | None = None
         self._is_async: bool = False  # Default to sync providers
 
@@ -103,7 +104,7 @@ class ProviderBuilder:
         self._port = None
         return self
 
-    def custom(self, url: str) -> ProviderBuilder:
+    def custom(self, url: str, fallback_url: str | None = None) -> ProviderBuilder:
         """
         Configure with custom RPC URL.
 
@@ -184,6 +185,16 @@ class ProviderBuilder:
             Self for method chaining
         """
         self._transport = cast(TransportType, WS)
+        return self
+
+    def timeout(self, seconds: int) -> ProviderBuilder:
+        """
+        Sets the request timeout for the provider.
+
+        Args:
+            seconds: Timeout duration in seconds
+        """
+        self._timeout_in = seconds
         return self
 
     def async_mode(self, async_provider: bool = True) -> ProviderBuilder:
@@ -276,9 +287,32 @@ class ProviderBuilder:
         if self._transport == HTTP:
             # Consider async mode
             if self._is_async:
-                return AsyncHTTPProvider(url)
+                if self._timeout_in is not None:
+                    import aiohttp
+
+                    timeout = aiohttp.ClientTimeout(total=self._timeout_in)
+                    return AsyncHTTPProvider(url, request_kwargs={"timeout": timeout})
+                else:
+                    return AsyncHTTPProvider(url)
             else:
-                return HTTPProvider(url)
+                if self._timeout_in is not None:
+                    return HTTPProvider(
+                        url, request_kwargs={"timeout": self._timeout_in}
+                    )
+                else:
+                    return HTTPProvider(url)
         # Web socket transport (always async)
         else:
+            if self._timeout_in is not None:
+                return cast(
+                    AsyncBaseProvider,
+                    WebSocketProvider(
+                        url,
+                        request_timeout=self._timeout_in,
+                        # websocket_kwargs={
+                        #     "ping_interval": self._timeout_in,
+                        #     "ping_timeout": self._timeout_in * 2,
+                        # },
+                    ),
+                )
             return cast(AsyncBaseProvider, WebSocketProvider(url))
