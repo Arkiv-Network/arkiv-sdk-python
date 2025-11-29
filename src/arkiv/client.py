@@ -322,7 +322,7 @@ class AsyncArkiv(ArkivBase, AsyncWeb3):
 
         if hasattr(provider, "disconnect"):
             try:
-                await provider.disconnect()  # type: ignore[func-returns-value]
+                await provider.disconnect()
             except Exception:
                 logger.exception("Error while disconnecting async provider")
 
