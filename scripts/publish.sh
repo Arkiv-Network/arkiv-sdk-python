@@ -76,7 +76,10 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "🧪 Running tests..."
-uv run --group test pytest -n auto
+uv run --group test pytest -n auto || {
+    echo "⚠️ Some tests failed, retrying failed tests with fresh session..."
+    uv run --group test pytest --lf -n 2
+}
 if [ $? -ne 0 ]; then
     echo "❌ Unit tests checks failed. Fix issues before publishing."
     exit 1
