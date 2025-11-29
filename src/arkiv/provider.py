@@ -46,13 +46,14 @@ class ProviderBuilder:
     Fluent builder for Web3 providers with Arkiv presets.
 
     Examples:
-      - ProviderBuilder().localhost().build()                 # http://127.0.0.1:8545 (HTTPProvider)
-      - ProviderBuilder().localhost(9000).ws().build()        # ws://127.0.0.1:9000 (WebSocketProvider, async)
-      - ProviderBuilder().localhost().async_mode().build()    # http://127.0.0.1:8545 (AsyncHTTPProvider)
-      - ProviderBuilder().kaolin().build()                    # https://kaolin.hoodi.arkiv.network/rpc
-      - ProviderBuilder().custom("https://my-rpc.io").build() # https://my-rpc.io
-      - ProviderBuilder().node().build()                      # Auto-creates and starts ArkivNode
-      - ProviderBuilder().node(my_node).ws().build()          # Use existing node with WebSocket (async)
+      - ProviderBuilder().localhost().build()                      # http://127.0.0.1:8545 (HTTPProvider)
+      - ProviderBuilder().localhost(9000).ws().build()             # ws://127.0.0.1:9000 (WebSocketProvider, async)
+      - ProviderBuilder().localhost().async_mode().build()         # http://127.0.0.1:8545 (AsyncHTTPProvider)
+      - ProviderBuilder().kaolin().build()                         # https://kaolin.hoodi.arkiv.network/rpc
+      - ProviderBuilder().kaolin().timeout(5).async_mode().build() # as above, but AsyncHTTPProvider with 5 second timeout
+      - ProviderBuilder().custom("https://my-rpc.io").build()      # https://my-rpc.io
+      - ProviderBuilder().node().build()                           # Auto-creates and starts ArkivNode
+      - ProviderBuilder().node(my_node).ws().build()               # Use existing node with WebSocket (async)
 
     Note:
       For best practice, call async_mode() at the end of your builder chain, just before build():
