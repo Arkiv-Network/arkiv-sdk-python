@@ -6,9 +6,9 @@ A type-safe, fluent query builder API inspired by JOOQ that provides an intuitiv
 
 ## Design Goals
 
-1. **Simplicity**: WHERE clauses are plain SQL-like strings - no magic, no operator overloading
+1. **Simplicity**: WHERE clauses can be plain SQL-like strings OR composable expressions
 2. **SQL Familiarity**: Follow SQL query patterns (SELECT, WHERE, ORDER BY, etc.)
-3. **Type Safety**: Use `Attribute()` objects for ORDER BY to specify type and direction
+3. **Type Safety**: Use typed attribute classes for ORDER BY and optional WHERE expressions
 4. **Readability**: Clear, self-documenting code that matches SQL structure
 5. **Backward Compatibility**: Coexist with existing string-based query API
 6. **Transparency**: Query strings are passed directly to Arkiv node
@@ -17,7 +17,7 @@ A type-safe, fluent query builder API inspired by JOOQ that provides an intuitiv
 
 Parts and descriptions
 - `.select(...)` **(mandatory)** starts the query chain; feeds into "fields" bitmask of QueryOptions. Empty `.select()` means "all fields"
-- `.where(...)` feeds into "query" parameter of query_entities
+- `.where(...)` feeds into "query" parameter of query_entities (accepts string OR expression)
 - `.order_by(...)` (optional) feeds into "order_by" field of QueryOptions of query_entities
 - `.at_block(...)` (optional) feeds into "at_block" field of QueryOptions of query_entities
 - `.fetch()` returns the QueryIterator from query_entities
@@ -37,8 +37,7 @@ The `.select()` method accepts a list of these field constants:
 ### Basic Query Structure
 
 ```python
-from arkiv import Arkiv
-from arkiv.query import IntAttribute, StrAttribute
+from arkiv import Arkiv, IntSort, StrSort
 from arkiv.types import KEY, OWNER, ATTRIBUTES, PAYLOAD, CONTENT_TYPE
 
 client = Arkiv()
@@ -87,21 +86,20 @@ count = client.arkiv \
 - `.where()` takes a plain string with SQL-like syntax that is passed directly to the Arkiv node
 - Arkiv returns all user-defined attributes or none - cannot select specific attributes like `type` or `age`
 - Field groups: `KEY`, `OWNER`, `ATTRIBUTES`, `PAYLOAD`, `CONTENT_TYPE`, etc.
-- For sorting: use `IntAttribute` for numeric fields, `StrAttribute` for string fields
+- For sorting: use `IntSort` for numeric fields, `StrSort` for string fields
 
 ### Sorting
 
-Sorting uses type-specific attribute classes (`IntAttribute` for numeric, `StrAttribute` for string):
+Sorting uses type-specific sort classes (`IntSort` for numeric, `StrSort` for string):
 
 ```python
-from arkiv.query import IntAttribute, StrAttribute
-from arkiv import ASC, DESC
+from arkiv import IntSort, StrSort, ASC, DESC
 
 # Single field sorting
 results = client.arkiv \
     .select() \
     .where('type = "user"') \
-    .order_by(IntAttribute('age', DESC)) \
+    .order_by(IntSort('age', DESC)) \
     .fetch()
 
 # Multiple field sorting - no brackets needed
@@ -109,8 +107,8 @@ results = client.arkiv \
     .select() \
     .where('type = "user"') \
     .order_by(
-        StrAttribute('status'),          # String, ascending (default)
-        IntAttribute('age', DESC)        # Numeric, descending
+        StrSort('status'),          # String, ascending (default)
+        IntSort('age', DESC)        # Numeric, descending
     ) \
     .fetch()
 
@@ -119,8 +117,8 @@ results = client.arkiv \
     .select() \
     .where('status = "active"') \
     .order_by(
-        IntAttribute('priority', DESC),  # Descending - explicit
-        StrAttribute('name')             # Ascending - default
+        IntSort('priority', DESC),  # Descending - explicit
+        StrSort('name')             # Ascending - default
     ) \
     .fetch()
 
@@ -129,18 +127,276 @@ results = client.arkiv \
     .select() \
     .where('type = "user"') \
     .order_by(
-        StrAttribute('status').asc(),
-        IntAttribute('age').desc()
+        StrSort('status').asc(),
+        IntSort('age').desc()
     ) \
     .fetch()
 ```
 
 **Why type-specific classes are valuable:**
-- **Explicit type**: `IntAttribute` vs `StrAttribute` - immediately clear from class name
+- **Explicit type**: `IntSort` vs `StrSort` - immediately clear from class name
 - **Required for sorting**: Arkiv needs to know if attribute is string or numeric
 - **IDE support**: Type system knows what's available for each class
 - **Prevents errors**: Can't accidentally use wrong type
 - **Default direction**: ASC is default, only specify DESC when needed
+
+## Expression Builder (Type-Safe WHERE Clauses)
+
+While string-based WHERE clauses are simple and familiar, the SDK also provides an **expression builder** for type-safe, composable filter expressions. This is useful when:
+- Building queries programmatically from user input
+- Wanting compile-time/runtime type checking
+- Composing complex conditions from reusable parts
+
+### Expression Classes
+
+Two attribute classes for building WHERE expressions:
+
+```python
+from arkiv.query_builder import IntAttr, StrAttr
+```
+
+- `IntAttr(name)` - For integer/numeric attributes
+- `StrAttr(name)` - For string attributes
+
+### Comparison Operators
+
+Both classes support standard comparison operators that return `Expr` objects:
+
+```python
+# Integer comparisons
+IntAttr("age") == 18        # age = 18
+IntAttr("age") != 18        # age != 18
+IntAttr("age") > 18         # age > 18
+IntAttr("age") >= 18        # age >= 18
+IntAttr("age") < 65         # age < 65
+IntAttr("age") <= 65        # age <= 65
+
+# String comparisons
+StrAttr("status") == "active"    # status = "active"
+StrAttr("status") != "banned"    # status != "banned"
+StrAttr("name") > "A"            # name > "A" (lexicographic)
+StrAttr("name") >= "A"           # name >= "A"
+StrAttr("name") < "Z"            # name < "Z"
+StrAttr("name") <= "Z"           # name <= "Z"
+```
+
+### Type Safety
+
+The expression builder provides **runtime type checking** to catch errors early:
+
+```python
+# ✓ Correct - comparing int attribute to int value
+IntAttr("age") >= 18
+
+# ✗ TypeError - comparing int attribute to string value
+IntAttr("age") == "18"  # Raises TypeError: IntAttr 'age' requires int, got str
+
+# ✓ Correct - comparing string attribute to string value
+StrAttr("status") == "active"
+
+# ✗ TypeError - comparing string attribute to int value
+StrAttr("status") == 1  # Raises TypeError: StrAttr 'status' requires str, got int
+```
+
+### Combining Expressions with `&`, `|`, and `~`
+
+Expressions can be combined using `&` (AND), `|` (OR), and `~` (NOT) operators:
+
+```python
+from arkiv.query_builder import IntAttr, StrAttr
+
+age = IntAttr("age")
+status = StrAttr("status")
+role = StrAttr("role")
+
+# AND conditions
+expr = (age >= 18) & (status == "active")
+# Generates: age >= 18 AND status = "active"
+
+# OR conditions
+expr = (role == "admin") | (role == "moderator")
+# Generates: role = "admin" OR role = "moderator"
+
+# NOT conditions
+expr = ~(status == "banned")
+# Generates: NOT (status = "banned")
+
+expr = ~(role == "guest")
+# Generates: NOT (role = "guest")
+
+# Complex nested conditions
+expr = ((role == "admin") | (role == "moderator")) & (status == "active")
+# Generates: (role = "admin" OR role = "moderator") AND status = "active"
+
+# NOT with AND/OR
+expr = (age >= 18) & ~(status == "banned")
+# Generates: age >= 18 AND NOT (status = "banned")
+
+expr = ~((role == "guest") | (status == "inactive"))
+# Generates: NOT (role = "guest" OR status = "inactive")
+
+# Mixed with multiple attributes
+expr = (age >= 18) & (age < 65) & (status != "banned")
+# Generates: age >= 18 AND age < 65 AND status != "banned"
+```
+
+### Operator Precedence
+
+The operators follow Python's precedence rules (tightest to loosest):
+
+| Precedence | Operator | Meaning |
+|------------|----------|---------|
+| 1 (tightest) | `~` | NOT |
+| 2 | `&` | AND |
+| 3 (loosest) | `|` | OR |
+
+This matches standard logical operator precedence:
+
+```python
+# This expression:
+~a & b | c
+
+# Is parsed by Python as:
+((~a) & b) | c
+
+# Which generates:
+(NOT a AND b) OR c
+```
+
+**Important**: Comparison operators (`==`, `>=`, etc.) have **lower** precedence than `&`, `|`, `~`. Always use parentheses around comparisons:
+
+```python
+# ✗ Wrong - Python parses this incorrectly
+age >= 18 & status == "active"  # Parsed as: age >= (18 & status) == "active"
+
+# ✓ Correct - parentheses required
+(age >= 18) & (status == "active")
+```
+
+### Using Expressions in Queries
+
+Pass expressions directly to `.where()`:
+
+```python
+from arkiv import Arkiv, IntSort
+from arkiv.query_builder import IntAttr, StrAttr
+
+client = Arkiv()
+
+# Define reusable attribute references
+age = IntAttr("age")
+status = StrAttr("status")
+role = StrAttr("role")
+
+# Simple expression
+results = client.arkiv \
+    .select() \
+    .where(status == "active") \
+    .fetch()
+
+# Combined expression
+results = client.arkiv \
+    .select() \
+    .where((age >= 18) & (status == "active")) \
+    .order_by(IntSort("age", DESC)) \
+    .fetch()
+
+# Complex expression with OR
+admin_or_mod = (role == "admin") | (role == "moderator")
+active_staff = admin_or_mod & (status == "active")
+
+results = client.arkiv \
+    .select() \
+    .where(active_staff) \
+    .fetch()
+```
+
+### Programmatic Query Building
+
+The expression builder shines when building queries dynamically:
+
+```python
+from arkiv.query_builder import IntAttr, StrAttr, Expr
+
+def build_user_filter(
+    min_age: int | None = None,
+    max_age: int | None = None,
+    status: str | None = None,
+    roles: list[str] | None = None,
+) -> Expr | None:
+    """Build a filter expression from optional criteria."""
+    conditions: list[Expr] = []
+
+    age = IntAttr("age")
+    if min_age is not None:
+        conditions.append(age >= min_age)
+    if max_age is not None:
+        conditions.append(age <= max_age)
+
+    if status is not None:
+        conditions.append(StrAttr("status") == status)
+
+    if roles:
+        role_attr = StrAttr("role")
+        role_conditions = [role_attr == r for r in roles]
+        # Combine with OR: role = "admin" OR role = "mod" OR ...
+        role_expr = role_conditions[0]
+        for rc in role_conditions[1:]:
+            role_expr = role_expr | rc
+        conditions.append(role_expr)
+
+    if not conditions:
+        return None
+
+    # Combine all conditions with AND
+    result = conditions[0]
+    for c in conditions[1:]:
+        result = result & c
+    return result
+
+# Usage
+expr = build_user_filter(min_age=18, status="active", roles=["admin", "mod"])
+results = client.arkiv.select().where(expr).fetch()
+```
+
+### String vs Expression: When to Use Each
+
+| Use Case | Recommended Approach |
+|----------|---------------------|
+| Static, simple queries | String: `'type = "user"'` |
+| Complex static queries | String: `'(a OR b) AND c'` |
+| Dynamic query building | Expression builder |
+| User input filtering | Expression builder (type-safe) |
+| Reusable query components | Expression builder |
+| Quick prototyping | String |
+
+Both approaches can be mixed - use what's clearest for your use case.
+
+## Class Summary
+
+| Class | Purpose | Example |
+|-------|---------|---------|
+| `IntSort` | ORDER BY for integer attributes | `IntSort("age", DESC)` |
+| `StrSort` | ORDER BY for string attributes | `StrSort("name")` |
+| `IntAttr` | WHERE expressions for integers | `IntAttr("age") >= 18` |
+| `StrAttr` | WHERE expressions for strings | `StrAttr("status") == "active"` |
+| `Expr` | Combined expression (returned by operators) | `(a >= 1) & (b == "x")`, `~(a == 1)` |
+
+**Operators on `Expr`**:
+- `&` - AND: `(a >= 1) & (b == "x")`
+- `|` - OR: `(a == 1) | (a == 2)`
+- `~` - NOT: `~(a == 1)`
+
+**Methods on `Expr`**:
+- `to_sql()` - Returns the SQL string representation of the expression
+
+```python
+expr = (IntAttr("age") >= 18) & (StrAttr("status") == "active")
+expr.to_sql()  # Returns: 'age >= 18 AND status = "active"'
+
+expr = ~(StrAttr("role") == "guest")
+expr.to_sql()  # Returns: 'NOT (role = "guest")'
+```
 
 ## Implementation Architecture
 
@@ -149,10 +405,14 @@ results = client.arkiv \
 
 ## Migration Strategy
 
-The fluent API would coexist with the existing string-based API:
+The fluent API coexists with the existing string-based API:
 
 ```python
+from arkiv import Arkiv, IntSort, StrSort, DESC
+from arkiv.query_builder import IntAttr, StrAttr
 from arkiv.types import KEY, ATTRIBUTES
+
+client = Arkiv()
 
 # Existing API - still supported
 results = list(client.arkiv.query_entities('type = "user" AND age >= 18'))
@@ -169,16 +429,24 @@ results = client.arkiv \
     .where('type = "user"') \
     .fetch()
 
-# With sorting (new capability made easy)
-from arkiv.query import IntAttribute, StrAttribute
-
+# With sorting
 results = client.arkiv \
     .select(KEY, ATTRIBUTES) \
     .where('type = "user" AND age >= 18') \
     .order_by(
-        StrAttribute('status'),
-        IntAttribute('age', DESC)
+        StrSort('status'),
+        IntSort('age', DESC)
     ) \
+    .fetch()
+
+# With expression builder instead of string
+age = IntAttr("age")
+status = StrAttr("status")
+
+results = client.arkiv \
+    .select(KEY, ATTRIBUTES) \
+    .where((age >= 18) & (status == "active")) \
+    .order_by(IntSort('age', DESC)) \
     .fetch()
 
 # With block pinning
@@ -197,26 +465,26 @@ count = client.arkiv \
 
 **Key differences**: The fluent API provides a cleaner interface for:
 - **Field selection**: `.select(KEY, ATTRIBUTES)` instead of bitmask `KEY | ATTRIBUTES`
-- **Sorting**: `.order_by()` with type-specific classes `IntAttribute`, `StrAttribute`
+- **Sorting**: `.order_by()` with type-specific classes `IntSort`, `StrSort`
+- **Type-safe filters**: Expression builder with `IntAttr`, `StrAttr` (optional)
 - **Block pinning**: `.at_block()` for historical queries
 - **Counting**: `.count()` convenience method
 - **Iteration**: Returns same iterator, but building the query is more readable
 
-While keeping the WHERE clause simple and familiar (plain SQL-like strings).
-
 **Note**: Both `.select()` and `.order_by()` use Python's `*args` so no brackets needed:
 - `.select(KEY, ATTRIBUTES)` not `.select([KEY, ATTRIBUTES])`
-- `.order_by(StrAttribute('name'), IntAttribute('age', DESC))` not `.order_by([...])`
+- `.order_by(StrSort('name'), IntSort('age', DESC))` not `.order_by([...])`
 
 ## Benefits
 
-1. **Simplicity**: WHERE clauses use familiar SQL syntax - no learning curve
+1. **Simplicity**: WHERE clauses can use familiar SQL syntax OR type-safe expressions
 2. **Readability**: Self-documenting code that reads like SQL
-3. **Type Safety**: `Attribute()` for ORDER BY provides IDE autocomplete and type checking
-4. **Composability**: Build queries programmatically with method chaining
-5. **Transparency**: Query strings are passed directly to node - what you see is what you get
-6. **Flexibility**: List-based field selection is clearer than bitmask operations
-7. **Testability**: Easy to test query building separately from execution
+3. **Type Safety**: `IntSort`/`StrSort` for ORDER BY, `IntAttr`/`StrAttr` for WHERE
+4. **Runtime Checking**: Expression builder catches type mismatches (e.g., `IntAttr("age") == "18"`)
+5. **Composability**: Build queries programmatically with method chaining and `&`/`|` operators
+6. **Transparency**: Query strings are passed directly to node - what you see is what you get
+7. **Flexibility**: Choose string or expression approach based on use case
+8. **Testability**: Easy to test query building separately from execution
 
 ## Open Questions
 
