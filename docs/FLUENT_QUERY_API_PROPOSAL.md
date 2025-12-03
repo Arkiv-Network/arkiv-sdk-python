@@ -16,12 +16,14 @@ A type-safe, fluent query builder API inspired by JOOQ that provides an intuitiv
 ## Core API Design
 
 Parts and descriptions
-- `.select(...)` feeds into "fields" bitmask of QueryOptions of query_entities
+- `.select(...)` **(mandatory)** starts the query chain; feeds into "fields" bitmask of QueryOptions. Empty `.select()` means "all fields"
 - `.where(...)` feeds into "query" parameter of query_entities
 - `.order_by(...)` (optional) feeds into "order_by" field of QueryOptions of query_entities
 - `.at_block(...)` (optional) feeds into "at_block" field of QueryOptions of query_entities
 - `.fetch()` returns the QueryIterator from query_entities
 - `.count()` optimized to retrieve only entity keys, count them, and return an int
+
+**Note**: `.select()` is always required to start a query chain, similar to SQL requiring `SELECT`.
 
 ### Field Selection
 
@@ -48,7 +50,7 @@ results = client.arkiv \
     .where('type = "user"') \
     .fetch()
 
-# Select all fields ( .select() defaults to all fields)
+# Select all fields - empty select() means "all fields"
 results = client.arkiv \
     .select() \
     .where('type = "user" AND age >= 18') \
@@ -68,18 +70,21 @@ results = client.arkiv \
 
 # Complex conditions with OR and parentheses
 results = client.arkiv \
+    .select() \
     .where('(type = "user" OR type = "admin") AND status != "banned"') \
     .fetch()
 
-# Count matching entities (ignores .select())
+# Count matching entities (select() required but fields ignored)
 count = client.arkiv \
+    .select() \
     .where('type = "user"') \
     .count()
 ```
 
 **Key Points**:
+- `.select()` is **mandatory** to start a query chain (like SQL's `SELECT`)
+- `.select()` with no arguments means "all fields"
 - `.where()` takes a plain string with SQL-like syntax that is passed directly to the Arkiv node
-- `.select()` accepts field group constants as arguments (not individual attribute names)
 - Arkiv returns all user-defined attributes or none - cannot select specific attributes like `type` or `age`
 - Field groups: `KEY`, `OWNER`, `ATTRIBUTES`, `PAYLOAD`, `CONTENT_TYPE`, etc.
 - For sorting: use `IntAttribute` for numeric fields, `StrAttribute` for string fields
@@ -152,8 +157,9 @@ from arkiv.types import KEY, ATTRIBUTES
 # Existing API - still supported
 results = list(client.arkiv.query_entities('type = "user" AND age >= 18'))
 
-# New fluent API - same query string, cleaner interface
+# New fluent API - select() is mandatory entry point
 results = client.arkiv \
+    .select() \
     .where('type = "user" AND age >= 18') \
     .fetch()
 
@@ -182,8 +188,9 @@ results = client.arkiv \
     .at_block(12345) \
     .fetch()
 
-# Quick count
+# Quick count (select() required, but fields ignored)
 count = client.arkiv \
+    .select() \
     .where('type = "user"') \
     .count()
 ```

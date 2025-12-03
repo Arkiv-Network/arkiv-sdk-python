@@ -71,10 +71,21 @@ Before any commit:
 ./scripts/check-all.sh
 ```
 
+**IMPORTANT**: Before running the quality check script, ensure no `.env` file exists in the project root. The `.env` file can override the RPC endpoint and cause tests to run against a remote node instead of the local test container, leading to flaky tests, timeouts, or incorrect test behavior.
+
+```bash
+# Check for .env file before running tests
+if [ -f .env ]; then
+    echo "WARNING: .env file found - remove it before running tests"
+    exit 1
+fi
+./scripts/check-all.sh
+```
+
 This runs:
 1. `pre-commit run --all-files` – linting, formatting, trailing whitespace
 2. `mypy --strict src/` – type checking
-3. `pytest -n auto` – all tests in parallel
+3. `pytest -n auto` – all tests in parallel (against local testcontainer node)
 
 ## Workflow for Changes
 

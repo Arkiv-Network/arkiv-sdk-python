@@ -105,7 +105,7 @@ class ProviderBuilder:
         self._port = None
         return self
 
-    def custom(self, url: str, fallback_url: str | None = None) -> ProviderBuilder:
+    def custom(self, url: str) -> ProviderBuilder:
         """
         Configure with custom RPC URL.
 
@@ -258,7 +258,7 @@ class ProviderBuilder:
         # 2nd priority: Custom URL overrides network constant
         elif self._url is not None:
             url = self._url
-        # Fallback: Get URL from network constants
+        # last "resort": Get URL from network constants
         elif self._network is not None:
             network_urls = NETWORK_URL.get(self._network)
             if network_urls is None:

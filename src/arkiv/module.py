@@ -13,7 +13,8 @@ from arkiv.account import NamedAccount
 
 from .events import EventFilter
 from .module_base import ArkivModuleBase
-from .query import QueryIterator
+from .query_builder import QueryBuilder
+from .query_iterator import QueryIterator
 from .types import (
     ALL,
     NONE,
@@ -294,6 +295,49 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
             query=query,
             options=options,
         )
+
+    def select(self, *fields: int) -> QueryBuilder:
+        """
+        Start building a fluent query with optional field selection.
+
+        This is the entry point for the fluent query API. All queries
+        must start with select(), similar to SQL's SELECT statement.
+
+        Args:
+            *fields: Field bitmask values to include in results
+                     (KEY, ATTRIBUTES, PAYLOAD, CONTENT_TYPE, etc.)
+                     If no fields provided, all fields are selected.
+
+        Returns:
+            QueryBuilder for method chaining.
+
+        Examples:
+            >>> from arkiv.types import KEY, ATTRIBUTES, PAYLOAD
+            >>> from arkiv.query_builder import IntSort, StrSort
+
+            >>> # Select all fields, corresponds to "SELECT *"
+            >>> results = client.arkiv.select() \\
+            ...     .where('type = "user"') \\
+            ...     .fetch()
+
+            >>> # Count entities, corresponds to "SELECT COUNT(*)"
+            >>> count = client.arkiv.select() \\
+            ...     .where('type = "user"') \\
+            ...     .count()
+
+            >>> # Select specific fields
+            >>> results = client.arkiv.select(KEY, ATTRIBUTES) \\
+            ...     .where('status = "active"') \\
+            ...     .fetch()
+
+            >>> # With sorting
+            >>> results = client.arkiv.select(KEY, ATTRIBUTES) \\
+            ...     .where('type = "user"') \\
+            ...     .order_by(IntSort("age", DESC), StrSort("name")) \\
+            ...     .fetch()
+
+        """
+        return QueryBuilder(self.client, *fields)
 
     def watch_entity_created(
         self,

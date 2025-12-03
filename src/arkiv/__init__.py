@@ -7,7 +7,8 @@ from .client import Arkiv, AsyncArkiv
 from .events import EventFilter
 from .events_async import AsyncEventFilter
 from .node import ArkivNode
-from .query import QueryIterator
+from .query_builder import AsyncQueryBuilder, IntSort, QueryBuilder, StrSort
+from .query_iterator import QueryIterator
 from .types import (
     ASC,
     DESC,
@@ -36,13 +37,17 @@ __all__ = [
     "ArkivNode",
     "AsyncArkiv",
     "AsyncEventFilter",
+    "AsyncQueryBuilder",
     "CreateEvent",
     "DeleteEvent",
     "EventFilter",
     "ExtendEvent",
+    "IntSort",
     "NamedAccount",
     "OrderByAttribute",
+    "QueryBuilder",
     "QueryIterator",
+    "StrSort",
     "TransactionReceipt",
     "UpdateEvent",
 ]

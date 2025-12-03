@@ -8,10 +8,11 @@ from typing import TYPE_CHECKING, Any
 from eth_typing import ChecksumAddress, HexStr
 from web3.types import TxParams, TxReceipt
 
-from arkiv.query import AsyncQueryIterator
+from arkiv.query_iterator import AsyncQueryIterator
 
 from .events_async import AsyncEventFilter
 from .module_base import ArkivModuleBase
+from .query_builder import AsyncQueryBuilder
 from .types import (
     ALL,
     NONE,
@@ -257,6 +258,50 @@ class AsyncArkivModule(ArkivModuleBase["AsyncArkiv"]):
             query=query,
             options=options,
         )
+
+    def select(self, *fields: int) -> AsyncQueryBuilder:
+        """
+        Start building a fluent query with optional field selection.
+
+        This is the entry point for the fluent query API. All queries
+        must start with select(), similar to SQL's SELECT statement.
+
+        Args:
+            *fields: Field bitmask values to include in results
+                     (KEY, ATTRIBUTES, PAYLOAD, CONTENT_TYPE, etc.)
+                     If no fields provided, all fields are selected.
+
+        Returns:
+            AsyncQueryBuilder for method chaining.
+
+        Examples:
+            >>> from arkiv.types import KEY, ATTRIBUTES, PAYLOAD
+            >>> from arkiv.query_builder import IntSort, StrSort
+
+            >>> # Select all fields
+            >>> results = client.arkiv.select() \\
+            ...     .where('type = "user"') \\
+            ...     .fetch()
+            >>> async for entity in results:
+            ...     print(entity.key)
+
+            >>> # Select specific fields
+            >>> results = client.arkiv.select(KEY, ATTRIBUTES) \\
+            ...     .where('status = "active"') \\
+            ...     .fetch()
+
+            >>> # With sorting
+            >>> results = client.arkiv.select(KEY, ATTRIBUTES) \\
+            ...     .where('type = "user"') \\
+            ...     .order_by(IntSort("age", DESC)) \\
+            ...     .fetch()
+
+            >>> # Count entities
+            >>> count = await client.arkiv.select() \\
+            ...     .where('type = "user"') \\
+            ...     .count()
+        """
+        return AsyncQueryBuilder(self.client, *fields)
 
     async def watch_entity_created(
         self,
