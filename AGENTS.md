@@ -81,7 +81,9 @@ This runs:
 ### Test Naming
 
 - Sync tests: `test_provider_*`, `test_create_entity_*`, etc.
-- Async tests: `test_async_provider_*`, `test_async_create_entity_*`, etc.
+- Async tests: **always use `test_async_` prefix** – e.g., `test_async_create_entity_*`
+
+This convention is required for consistency across the test suite.
 
 ## Project Overview
 
@@ -121,6 +123,71 @@ The SDK is built on top of [Web3.py](https://github.com/ethereum/web3.py) and sh
 - Async timeout: expect `asyncio.TimeoutError` or `aiohttp.ClientError`
 - Sync DNS failure: expect `requests.exceptions.ConnectionError`
 - Async DNS failure: expect `aiohttp.ClientConnectorDNSError`
+
+## Test Fixtures & Utilities
+
+### Main Fixtures (`tests/conftest.py`)
+
+| Fixture | Scope | Description |
+|---------|-------|-------------|
+| `arkiv_client_http` | session | Sync `Arkiv` client with funded account, connected via HTTP |
+| `async_arkiv_client_http` | function | Async `AsyncArkiv` client with funded account (use `async with`) |
+| `arkiv_node` | session | `ArkivNode` – containerized or external node based on env vars |
+| `account_1` | session | First funded `NamedAccount` (alice) |
+| `account_2` | session | Second funded `NamedAccount` (bob) |
+| `unfunded_account` | session | Account with zero balance for validation tests |
+| `delayed_rpc_server` | session | Local server with 5s delay for timeout tests |
+
+**Usage examples:**
+```python
+# Sync test
+def test_create_entity(arkiv_client_http):
+    key, receipt = arkiv_client_http.arkiv.create_entity(
+        payload=b"test", expires_in=3600
+    )
+    assert key is not None
+
+# Async test
+@pytest.mark.asyncio
+async def test_async_create_entity(async_arkiv_client_http):
+    async with async_arkiv_client_http as client:
+        key, receipt = await client.arkiv.create_entity(
+            payload=b"test", expires_in=3600
+        )
+        assert key is not None
+```
+
+### Test Utilities (`tests/utils.py`)
+
+| Function | Purpose |
+|----------|---------|
+| `to_create(payload, ...)` | Build a `CreateOp` with defaults (`expires_in=100`) |
+| `create_account(index, name)` | Load or generate a `NamedAccount` |
+| `check_tx_hash(label, receipt)` | Assert transaction hash is valid |
+| `check_entity_key(label, key)` | Assert entity key format is valid |
+| `check_entity(label, client, expected)` | Fetch entity and compare all fields |
+| `create_entities(client, ops)` | Bulk create entities, return keys |
+| `bulk_create_entities(client, ops)` | Bulk create with validation |
+
+**Constants:**
+- `EXPIRES_IN = 100` – Default expiration for test entities
+- `CONTENT_TYPE = "text/plain"` – Default content type
+
+### Important: `expires_in` is Required
+
+**`expires_in` is a mandatory parameter** for `create_entity()` and `update_entity()`. There is no default value. Tests will fail with `ValueError: expires_in must be provided` if omitted.
+
+```python
+# ✅ Correct
+client.arkiv.create_entity(payload=b"test", expires_in=3600)
+batch.create_entity(payload=b"test", expires_in=3600)
+
+# ❌ Wrong - will raise ValueError
+client.arkiv.create_entity(payload=b"test")
+batch.create_entity(payload=b"test")
+```
+
+When using test utilities, `to_create()` provides a default `expires_in=100`, but direct SDK calls do not.
 
 ## Known Issues
 
