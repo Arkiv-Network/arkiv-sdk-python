@@ -93,73 +93,7 @@ balance = client.eth.get_balance(client.eth.default_account)
 tx = client.eth.get_transaction(tx_hash)
 ```
 
-### Arkiv Module Extension
-```python
-from arkiv import Arkiv
-
-# Simple local setup
-client = Arkiv()
-
-# Or with custom provider and account
-from arkiv.account import NamedAccount
-account = NamedAccount.from_wallet('Alice', wallet, 's3cret')
-client = Arkiv(provider, account=account)
-
-entity_key, tx_hash = client.arkiv.create_entity(
-    payload = b"Hello World!",
-    content_type = "text/plain",
-    attributes = {"type": "greeting", "version": 1},
-    expires_in = client.arkiv.to_seconds(hours=2)
-)
-
-entity = client.arkiv.get_entity(entity_key)
-exists = client.arkiv.exists(entity_key)
-  ```
-
-## Setup
-
-Requirements
-- Python: Version 3.10 or higher
-- Install:
-    - `pip install --pre arkiv-sdk`
-    - `pip install testcontainers websockets`
-- RPC: `https://mendoza.hoodi.arkiv.network/rpc`
-
 ## Advanced Features
-
-### Provider Builder
-
-The snippet below demonstrates the creation of various nodes to connect to using the `ProviderBuilder`.
-
-```python
-from arkiv import Arkiv
-from arkiv.account import NamedAccount
-from arkiv.provider import ProviderBuilder
-
-### Provider Builder
-
-The snippet below demonstrates the creation of various nodes to connect to using the `ProviderBuilder`.
-
-```python
-from arkiv import Arkiv
-from arkiv.account import NamedAccount
-from arkiv.provider import ProviderBuilder
-
-# Create account from wallet json
-with open ('wallet_bob.json', 'r') as f:
-    wallet = f.read()
-
-bob = NamedAccount.from_wallet('Bob', wallet, 's3cret')
-
-# Initialize Arkiv client connected to Kaolin (Akriv testnet)
-provider = ProviderBuilder().kaolin().build()
-client = Arkiv(provider, account=bob)
-
-# Additional builder examples
-provider_custom = ProviderBuilder().custom("https://mendoza.hoodi.arkiv.network/rpc").build()
-provider_container = ProviderBuilder().node().build()
-provider_kaolin_ws = ProviderBuilder().kaolin().ws().build()
-```
 
 ### Query Builder
 
@@ -264,28 +198,68 @@ results = client.arkiv.select() \
     .fetch()
 ```
 
-### Query Iterator
+#### Limiting Results
 
-The `query_entities` method returns an iterator that automatically handles pagination, making it easy to work with large result sets. This is the lower-level API that the fluent query builder wraps:
+Use `.limit()` to restrict the total number of results and `.max_page_size()` to control pagination:
 
 ```python
-from arkiv import Arkiv
-from arkiv.types import QueryOptions, KEY, ATTRIBUTES
+from arkiv import Arkiv, IntSort, StrAttr, DESC
 
 client = Arkiv()
 
-# Query entities with automatic pagination
-query = 'type = "user" AND age > 18'
-options = QueryOptions(fields=KEY | ATTRIBUTES, max_results_per_page=100)
+# Define typed attribute
+entity_type = StrAttr("type")
 
-# Iterate over all matching entities
-# Pagination is handled automatically by the iterator
-for entity in client.arkiv.query_entities(query=query, options=options):
-    print(f"Entity {entity.key}: {entity.attributes}")
+# Get first 10 matching entities
+results = client.arkiv.select() \
+    .where(entity_type == "user") \
+    .limit(10) \
+    .fetch()
 
-# Or collect all results into a list
-entities = list(client.arkiv.query_entities(query=query, options=options))
-print(f"Found {len(entities)} entities")
+# Top 5 users by age
+results = client.arkiv.select() \
+    .where(entity_type == "user") \
+    .order_by(IntSort("age", DESC)) \
+    .limit(5) \
+    .fetch()
+
+# Control page size for large entities (smaller pages = less memory per request)
+results = client.arkiv.select() \
+    .where(entity_type == "document") \
+    .max_page_size(10) \
+    .fetch()
+
+# Combine limit and page size
+results = client.arkiv.select() \
+    .where(entity_type == "user") \
+    .limit(100) \
+    .max_page_size(25) \
+    .fetch()
+```
+
+### Provider Builder
+
+The `ProviderBuilder` provides a fluent API for creating providers to connect to various Arkiv networks:
+
+```python
+from arkiv import Arkiv
+from arkiv.account import NamedAccount
+from arkiv.provider import ProviderBuilder
+
+# Create account from wallet json
+with open('wallet_bob.json', 'r') as f:
+    wallet = f.read()
+
+bob = NamedAccount.from_wallet('Bob', wallet, 's3cret')
+
+# Initialize Arkiv client connected to Kaolin (Arkiv testnet)
+provider = ProviderBuilder().kaolin().build()
+client = Arkiv(provider, account=bob)
+
+# Additional builder examples
+provider_custom = ProviderBuilder().custom("https://mendoza.hoodi.arkiv.network/rpc").build()
+provider_container = ProviderBuilder().node().build()
+provider_kaolin_ws = ProviderBuilder().kaolin().ws().build()
 ```
 
 ### Query Language
@@ -352,78 +326,6 @@ query = 'email GLOB "*@example.com"'  # Emails ending with @example.com
 
 **Note:** String values in queries must be enclosed in double quotes (`"`). Numeric values do not require quotes. The `GLOB` operator supports pattern matching using `*` as a wildcard character.
 Note that the GLOB operator might be replace by a SQL standard LIKE operator in the future.
-
-### Sorting
-
-Query results can be sorted by one or more attribute fields in ascending or descending order. Sorting supports both string and numeric attributes, with multi-field sorting following priority order (first field has highest priority).
-
-#### Using the Query Builder (Recommended)
-
-The query builder provides a cleaner API for sorting with `IntSort` and `StrSort`:
-
-```python
-from arkiv import Arkiv, IntSort, StrSort, StrAttr, DESC
-
-client = Arkiv()
-
-# Define typed attribute
-entity_type = StrAttr("type")
-
-# Sort by name ascending (default)
-results = client.arkiv.select().where(entity_type == "user").order_by(StrSort("name")).fetch()
-
-# Sort by age descending
-results = client.arkiv.select().where(entity_type == "user").order_by(IntSort("age", DESC)).fetch()
-
-# Multi-field sorting: status ascending, then age descending
-results = client.arkiv.select() \
-    .where(entity_type == "user") \
-    .order_by(StrSort("status"), IntSort("age", DESC)) \
-    .fetch()
-```
-
-#### Using QueryOptions (Lower-Level API)
-
-For more control, use `OrderByAttribute` with `QueryOptions`:
-
-```python
-from arkiv import Arkiv, ASC, DESC, STR, INT, OrderByAttribute, QueryOptions
-
-client = Arkiv()
-
-# Sort by string attribute (default sorting: ascending)
-order_by = [OrderByAttribute(attribute="name", type=STR)]
-options = QueryOptions(order_by=order_by)
-entities = list(client.arkiv.query_entities('type = "user"', options=options))
-
-# Sort by numeric attribute (descending, needs to be set explicitly)
-order_by = [OrderByAttribute(attribute="age", type=INT, direction=DESC)]
-options = QueryOptions(order_by=order_by)
-entities = list(client.arkiv.query_entities('type = "user"', options=options))
-```
-
-#### Multi-Attribute Sorting
-
-When sorting by multiple attributes, the first attribute has the highest priority, with subsequent attributes acting as tie-breakers:
-
-```python
-# Sort by status (ascending), then by age (descending)
-order_by = [
-    OrderByAttribute(attribute="status", type=STR, direction=ASC),
-    OrderByAttribute(attribute="age", type=INT, direction=DESC),
-]
-options = QueryOptions(order_by=order_by)
-entities = list(client.arkiv.query_entities('type = "user"', options=options))
-
-# Three-level sorting: type, then priority, then name
-order_by = [
-    OrderByAttribute(attribute="type", type=STR),
-    OrderByAttribute(attribute="priority", type=INT, direction=DESC),
-    OrderByAttribute(attribute="name", type=STR),
-]
-options = QueryOptions(order_by=order_by)
-entities = list(client.arkiv.query_entities('status = "active"', options=options))
-```
 
 ### Watch Entity Events
 
@@ -534,39 +436,16 @@ client.arkiv.cleanup_filters()
 
 **Note:** Event watching requires polling the node for new events. The SDK handles this automatically in the background.
 
-## Arkiv Topics/Features
-
-### Other Features
-
-- **Creation Flags**: Entities should support creation-time flags with meaningful defaults.
-Flags can only be set at creation and define entity behavior:
-  - **Read-only**: Once created, entity data cannot be changed by anyone (immutable)
-  - **Unpermissioned extension**: Entity lifetime can be extended by anyone, not just the owner
-  ```python
-  # Proposed API
-  client.arkiv.create_entity(
-      payload=b"data",
-      attributes={"type": "public"},
-      expires_at_block=future_block,
-      flags=EntityFlags.READ_ONLY | EntityFlags.PUBLIC_EXTENSION
-  )
-  ```
-
-- **ETH Transfers**: Arkiv chains should support ETH (or native token like GLM) transfers for gas fees and value transfer.
-  ```python
-  # Already supported via Web3.py compatibility
-  tx_hash = client.eth.send_transaction({
-      'to': recipient_address,
-      'value': client.to_wei(1, 'ether'),
-      'gas': 21000
-  })
-  ```
-
-- **Offline Entity Verification**: Provide cryptographic verification of entity data without querying the chain.
-  - Currently not supported
-  - Proposal: Store entity keys (and block number) in smart contracts and work with an optimistic oracle approach (challenger may take entity key and checks claimed data against the data of an Arkiv archival node)
-
 ## Development Guide
+
+### Setup
+
+Requirements
+- Python: Version 3.10 or higher
+- Install:
+    - `pip install --pre arkiv-sdk`
+    - `pip install testcontainers websockets`
+- RPC: `https://mendoza.hoodi.arkiv.network/rpc`
 
 ### Branches, Versions, Changes
 
@@ -608,7 +487,7 @@ Account wallets for such tests can be created via the command shown below.
 The provided example creates the wallet file `wallet_alice.json` using the password provided during the execution of the command.
 
 ```bash
-uv run python uv run python -m arkiv.account alice
+uv run python -m arkiv.account alice
 ```
 
 ### Code Quality
@@ -656,7 +535,7 @@ Pre-commit hooks run automatically on `git commit` and will:
 #### Ruff Configuration
 
 - Use 88 character line length (Black-compatible)
-- Target Python 3.12+ features
+- Target Python 3.10+ features
 - Enable comprehensive rule sets (pycodestyle, pyflakes, isort, etc.)
 - Auto-fix issues where possible
 - Format with double quotes and trailing commas
