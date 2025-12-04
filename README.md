@@ -161,9 +161,112 @@ provider_container = ProviderBuilder().node().build()
 provider_kaolin_ws = ProviderBuilder().kaolin().ws().build()
 ```
 
+### Query Builder
+
+The query builder provides a clean, chainable API for querying entities. It wraps the lower-level `query_entities` method with a SQL-like interface.
+
+#### Basic Usage
+
+```python
+from arkiv import Arkiv, StrAttr
+from arkiv.types import KEY, ATTRIBUTES
+
+client = Arkiv()
+
+# Define typed attributes
+entity_type = StrAttr("type")
+status = StrAttr("status")
+
+# Simple query - select all fields
+results = client.arkiv.select().where(entity_type == "user").fetch()
+for entity in results:
+    print(f"Entity: {entity.key}")
+
+# Select specific fields
+results = client.arkiv.select(KEY, ATTRIBUTES).where(status == "active").fetch()
+
+# Count matching entities
+count = client.arkiv.select().where(entity_type == "user").count()
+print(f"Found {count} users")
+```
+
+#### Expressions with IntAttr/StrAttr
+
+The expression builder generates SQL-like query strings under the hood, providing a type-safe Python API for constructing filter conditions. The `.where()` method accepts either an `Expr` object from the expression builder or a raw SQL-like query string (see [Query Language](#query-language) below).
+
+For dynamic query building with runtime type checking, use the expression builder:
+
+```python
+from arkiv import Arkiv, IntAttr, StrAttr, IntSort, DESC
+
+client = Arkiv()
+
+# Define typed attributes
+age = IntAttr("age")
+status = StrAttr("status")
+role = StrAttr("role")
+
+# Build expressions with operators
+results = client.arkiv.select() \
+    .where((age >= 18) & (status == "active")) \
+    .order_by(IntSort("age", DESC)) \
+    .fetch()
+
+# Complex expressions with OR and AND
+results = client.arkiv.select() \
+    .where((role == "admin") | (role == "moderator") & (status == "active")) \
+    .fetch()
+
+# NOT operator
+results = client.arkiv.select() \
+    .where((age >= 18) & ~(status == "banned")) \
+    .fetch()
+
+# Type checking catches errors early
+age == "18"  # TypeError: IntAttr 'age' requires int, got str
+status == 1  # TypeError: StrAttr 'status' requires str, got int
+```
+
+**Expression Operators:**
+- `&` - AND
+- `|` - OR
+- `~` - NOT
+
+**Note:** Always use parentheses around comparisons when combining with `&`, `|`, or `~` due to Python operator precedence.
+
+#### Sorting with IntSort/StrSort
+
+Use type-specific sort classes for ORDER BY clauses:
+
+```python
+from arkiv import Arkiv, IntSort, StrSort, StrAttr, DESC
+
+client = Arkiv()
+
+# Define typed attributes
+entity_type = StrAttr("type")
+status = StrAttr("status")
+
+# Define sorting_criteria
+status_asc = StrSort("status")
+age_desc = IntSort("age", DESC)
+
+# Sort by age descending
+results = client.arkiv.select() \
+    .where(entity_type == "user") \
+    .order_by(age_desc) \
+    .fetch()
+
+# Multi-field sorting: status ascending, then age descending
+results = client.arkiv.select() \
+    .where(status == "active") \
+    .order_by(status_asc, age_desc) \
+    .fetch()
+```
+
 ### Query Iterator
 
-The `query_entities` method returns an iterator that automatically handles pagination, making it easy to work with large result sets:
+The `query_entities` method returns an iterator that automatically handles pagination, making it easy to work with large result sets. This is the lower-level API that the fluent query builder wraps:
 
 ```python
 from arkiv import Arkiv
@@ -254,7 +357,34 @@ Note that the GLOB operator might be replace by a SQL standard LIKE operator in 
 
 Query results can be sorted by one or more attribute fields in ascending or descending order. Sorting supports both string and numeric attributes, with multi-field sorting following priority order (first field has highest priority).
 
-#### Basic Sorting
+#### Using the Query Builder (Recommended)
+
+The query builder provides a cleaner API for sorting with `IntSort` and `StrSort`:
+
+```python
+from arkiv import Arkiv, IntSort, StrSort, StrAttr, DESC
+
+client = Arkiv()
+
+# Define typed attribute
+entity_type = StrAttr("type")
+
+# Sort by name ascending (default)
+results = client.arkiv.select().where(entity_type == "user").order_by(StrSort("name")).fetch()
+
+# Sort by age descending
+results = client.arkiv.select().where(entity_type == "user").order_by(IntSort("age", DESC)).fetch()
+
+# Multi-field sorting: status ascending, then age descending
+results = client.arkiv.select() \
+    .where(entity_type == "user") \
+    .order_by(StrSort("status"), IntSort("age", DESC)) \
+    .fetch()
+```
+
+#### Using QueryOptions (Lower-Level API)
+
+For more control, use `OrderByAttribute` with `QueryOptions`:
 
 ```python
 from arkiv import Arkiv, ASC, DESC, STR, INT, OrderByAttribute, QueryOptions

@@ -18,6 +18,242 @@ if TYPE_CHECKING:
     from .query_iterator import AsyncQueryIterator, QueryIterator
 
 
+# =============================================================================
+# Expression Builder Classes (for type-safe WHERE clauses)
+# =============================================================================
+
+
+class Expr:
+    """
+    A composable SQL expression for WHERE clauses.
+
+    Expr objects are created by comparison operators on IntAttr/StrAttr
+    and can be combined using logical operators:
+    - `&` (AND)
+    - `|` (OR)
+    - `~` (NOT)
+
+    Operator precedence (tightest to loosest): ~ > & > |
+
+    Examples:
+        >>> age = IntAttr("age")
+        >>> status = StrAttr("status")
+
+        >>> expr = (age >= 18) & (status == "active")
+        >>> expr.to_sql()
+        'age >= 18 AND status = "active"'
+
+        >>> expr = ~(status == "banned")
+        >>> expr.to_sql()
+        'NOT (status = "banned")'
+    """
+
+    def __init__(self, sql: str) -> None:
+        """
+        Initialize an expression with its SQL representation.
+
+        Args:
+            sql: The SQL string for this expression.
+        """
+        self._sql = sql
+
+    def to_sql(self) -> str:
+        """
+        Return the SQL string representation of this expression.
+
+        Returns:
+            The SQL WHERE clause string.
+        """
+        return self._sql
+
+    def __and__(self, other: Expr) -> Expr:
+        """
+        Combine with another expression using AND.
+
+        Args:
+            other: The expression to AND with.
+
+        Returns:
+            A new Expr representing (self AND other).
+        """
+        return Expr(f"{self._sql} AND {other._sql}")
+
+    def __or__(self, other: Expr) -> Expr:
+        """
+        Combine with another expression using OR.
+
+        Args:
+            other: The expression to OR with.
+
+        Returns:
+            A new Expr representing (self OR other), wrapped in parentheses.
+        """
+        # Wrap in parentheses since OR has lower precedence
+        return Expr(f"({self._sql} OR {other._sql})")
+
+    def __invert__(self) -> Expr:
+        """
+        Negate this expression using NOT.
+
+        Returns:
+            A new Expr representing NOT (self).
+        """
+        return Expr(f"NOT ({self._sql})")
+
+    def __repr__(self) -> str:
+        """Return a string representation for debugging."""
+        return f"Expr({self._sql!r})"
+
+
+class IntAttr:
+    """
+    Integer attribute for building type-safe WHERE expressions.
+
+    Provides comparison operators that return Expr objects and
+    perform runtime type checking to ensure values are integers.
+
+    Args:
+        name: The attribute name.
+
+    Examples:
+        >>> age = IntAttr("age")
+        >>> expr = age >= 18
+        >>> expr.to_sql()
+        'age >= 18'
+
+        >>> # Type checking
+        >>> age == "18"  # Raises TypeError
+    """
+
+    def __init__(self, name: str) -> None:
+        """
+        Initialize an integer attribute.
+
+        Args:
+            name: The attribute name.
+        """
+        self.name = name
+
+    def _check_type(self, value: object) -> int:
+        """Check that value is an int and return it."""
+        if not isinstance(value, int) or isinstance(value, bool):
+            raise TypeError(
+                f"IntAttr '{self.name}' requires int, got {type(value).__name__}"
+            )
+        return value
+
+    def __eq__(self, value: object) -> Expr:  # type: ignore[override]
+        """Return an equality expression."""
+        v = self._check_type(value)
+        return Expr(f"{self.name} = {v}")
+
+    def __ne__(self, value: object) -> Expr:  # type: ignore[override]
+        """Return an inequality expression."""
+        v = self._check_type(value)
+        return Expr(f"{self.name} != {v}")
+
+    def __gt__(self, value: object) -> Expr:
+        """Return a greater-than expression."""
+        v = self._check_type(value)
+        return Expr(f"{self.name} > {v}")
+
+    def __ge__(self, value: object) -> Expr:
+        """Return a greater-than-or-equal expression."""
+        v = self._check_type(value)
+        return Expr(f"{self.name} >= {v}")
+
+    def __lt__(self, value: object) -> Expr:
+        """Return a less-than expression."""
+        v = self._check_type(value)
+        return Expr(f"{self.name} < {v}")
+
+    def __le__(self, value: object) -> Expr:
+        """Return a less-than-or-equal expression."""
+        v = self._check_type(value)
+        return Expr(f"{self.name} <= {v}")
+
+    def __repr__(self) -> str:
+        """Return a string representation for debugging."""
+        return f"IntAttr({self.name!r})"
+
+
+class StrAttr:
+    """
+    String attribute for building type-safe WHERE expressions.
+
+    Provides comparison operators that return Expr objects and
+    perform runtime type checking to ensure values are strings.
+
+    Args:
+        name: The attribute name.
+
+    Examples:
+        >>> status = StrAttr("status")
+        >>> expr = status == "active"
+        >>> expr.to_sql()
+        'status = "active"'
+
+        >>> # Type checking
+        >>> status == 1  # Raises TypeError
+    """
+
+    def __init__(self, name: str) -> None:
+        """
+        Initialize a string attribute.
+
+        Args:
+            name: The attribute name.
+        """
+        self.name = name
+
+    def _check_type(self, value: object) -> str:
+        """Check that value is a str and return it."""
+        if not isinstance(value, str):
+            raise TypeError(
+                f"StrAttr '{self.name}' requires str, got {type(value).__name__}"
+            )
+        return value
+
+    def __eq__(self, value: object) -> Expr:  # type: ignore[override]
+        """Return an equality expression."""
+        v = self._check_type(value)
+        return Expr(f'{self.name} = "{v}"')
+
+    def __ne__(self, value: object) -> Expr:  # type: ignore[override]
+        """Return an inequality expression."""
+        v = self._check_type(value)
+        return Expr(f'{self.name} != "{v}"')
+
+    def __gt__(self, value: object) -> Expr:
+        """Return a greater-than expression."""
+        v = self._check_type(value)
+        return Expr(f'{self.name} > "{v}"')
+
+    def __ge__(self, value: object) -> Expr:
+        """Return a greater-than-or-equal expression."""
+        v = self._check_type(value)
+        return Expr(f'{self.name} >= "{v}"')
+
+    def __lt__(self, value: object) -> Expr:
+        """Return a less-than expression."""
+        v = self._check_type(value)
+        return Expr(f'{self.name} < "{v}"')
+
+    def __le__(self, value: object) -> Expr:
+        """Return a less-than-or-equal expression."""
+        v = self._check_type(value)
+        return Expr(f'{self.name} <= "{v}"')
+
+    def __repr__(self) -> str:
+        """Return a string representation for debugging."""
+        return f"StrAttr({self.name!r})"
+
+
+# =============================================================================
+# Sort Classes (for ORDER BY)
+# =============================================================================
+
+
 @dataclass(frozen=True)
 class IntSort:
     """
@@ -150,23 +386,31 @@ class QueryBuilderBase(Generic[ClientT]):
             result |= field
         return result
 
-    def where(self: SelfT, condition: str) -> SelfT:
+    def where(self: SelfT, condition: str | Expr) -> SelfT:
         """
         Set the WHERE clause for the query.
 
         Args:
-            condition: SQL-like filter condition string.
-                       This is passed directly to the Arkiv node.
+            condition: SQL-like filter condition. Can be either:
+                       - A string passed directly to the Arkiv node
+                       - An Expr object built with IntAttr/StrAttr
 
         Returns:
             Self for method chaining.
 
         Examples:
+            >>> # String condition
             >>> builder.where('type = "user"')
             >>> builder.where('age >= 18 AND status = "active"')
-            >>> builder.where('(type = "user" OR type = "admin") AND active = 1')
+
+            >>> # Expression condition
+            >>> builder.where(IntAttr("age") >= 18)
+            >>> builder.where((IntAttr("age") >= 18) & (StrAttr("status") == "active"))
         """
-        self._query = condition
+        if isinstance(condition, Expr):
+            self._query = condition.to_sql()
+        else:
+            self._query = condition
         return self
 
     def order_by(self: SelfT, *attributes: IntSort | StrSort) -> SelfT:

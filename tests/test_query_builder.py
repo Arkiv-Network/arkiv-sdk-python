@@ -9,7 +9,10 @@ from arkiv import (
     DESC,
     Arkiv,
     AsyncArkiv,
+    Expr,
+    IntAttr,
     IntSort,
+    StrAttr,
     StrSort,
 )
 from arkiv.types import ATTRIBUTES, KEY, Attributes, CreateOp, Operations
@@ -153,6 +156,217 @@ class TestStrSort:
         assert order_by.direction == "desc"
 
 
+# =============================================================================
+# Expression Builder Tests
+# =============================================================================
+
+
+class TestExpr:
+    """Tests for Expr class."""
+
+    def test_to_sql(self) -> None:
+        """Test to_sql() returns the SQL string."""
+        expr = Expr("age >= 18")
+        assert expr.to_sql() == "age >= 18"
+
+    def test_and_operator(self) -> None:
+        """Test & operator combines expressions with AND."""
+        expr1 = Expr("age >= 18")
+        expr2 = Expr('status = "active"')
+        result = expr1 & expr2
+        assert result.to_sql() == 'age >= 18 AND status = "active"'
+
+    def test_or_operator(self) -> None:
+        """Test | operator combines expressions with OR (wrapped in parens)."""
+        expr1 = Expr('role = "admin"')
+        expr2 = Expr('role = "moderator"')
+        result = expr1 | expr2
+        assert result.to_sql() == '(role = "admin" OR role = "moderator")'
+
+    def test_not_operator(self) -> None:
+        """Test ~ operator negates expression with NOT."""
+        expr = Expr('status = "banned"')
+        result = ~expr
+        assert result.to_sql() == 'NOT (status = "banned")'
+
+    def test_complex_combination(self) -> None:
+        """Test combining multiple operators."""
+        a = Expr("age >= 18")
+        b = Expr('status = "active"')
+        c = Expr('role = "guest"')
+
+        # (a AND b) OR c
+        result = (a & b) | c
+        assert result.to_sql() == '(age >= 18 AND status = "active" OR role = "guest")'
+
+        # a AND (b OR c)
+        result = a & (b | c)
+        assert result.to_sql() == 'age >= 18 AND (status = "active" OR role = "guest")'
+
+        # NOT (a AND b)
+        result = ~(a & b)
+        assert result.to_sql() == 'NOT (age >= 18 AND status = "active")'
+
+    def test_repr(self) -> None:
+        """Test __repr__ for debugging."""
+        expr = Expr("age >= 18")
+        assert repr(expr) == "Expr('age >= 18')"
+
+
+class TestIntAttr:
+    """Tests for IntAttr expression builder."""
+
+    def test_eq(self) -> None:
+        """Test == operator."""
+        expr = IntAttr("age") == 18
+        assert expr.to_sql() == "age = 18"
+
+    def test_ne(self) -> None:
+        """Test != operator."""
+        expr = IntAttr("age") != 18
+        assert expr.to_sql() == "age != 18"
+
+    def test_gt(self) -> None:
+        """Test > operator."""
+        expr = IntAttr("age") > 18
+        assert expr.to_sql() == "age > 18"
+
+    def test_ge(self) -> None:
+        """Test >= operator."""
+        expr = IntAttr("age") >= 18
+        assert expr.to_sql() == "age >= 18"
+
+    def test_lt(self) -> None:
+        """Test < operator."""
+        expr = IntAttr("age") < 65
+        assert expr.to_sql() == "age < 65"
+
+    def test_le(self) -> None:
+        """Test <= operator."""
+        expr = IntAttr("age") <= 65
+        assert expr.to_sql() == "age <= 65"
+
+    def test_type_error_on_string(self) -> None:
+        """Test TypeError raised when comparing to string."""
+        with pytest.raises(TypeError, match="IntAttr 'age' requires int, got str"):
+            _ = IntAttr("age") == "18"
+
+    def test_type_error_on_float(self) -> None:
+        """Test TypeError raised when comparing to float."""
+        with pytest.raises(TypeError, match="IntAttr 'age' requires int, got float"):
+            _ = IntAttr("age") >= 18.5
+
+    def test_type_error_on_bool(self) -> None:
+        """Test TypeError raised when comparing to bool (bool is subclass of int)."""
+        with pytest.raises(TypeError, match="IntAttr 'active' requires int, got bool"):
+            _ = IntAttr("active") == True  # noqa: E712
+
+    def test_repr(self) -> None:
+        """Test __repr__ for debugging."""
+        attr = IntAttr("age")
+        assert repr(attr) == "IntAttr('age')"
+
+    def test_combining_with_and(self) -> None:
+        """Test combining IntAttr expressions with &."""
+        age = IntAttr("age")
+        expr = (age >= 18) & (age < 65)
+        assert expr.to_sql() == "age >= 18 AND age < 65"
+
+
+class TestStrAttr:
+    """Tests for StrAttr expression builder."""
+
+    def test_eq(self) -> None:
+        """Test == operator."""
+        expr = StrAttr("status") == "active"
+        assert expr.to_sql() == 'status = "active"'
+
+    def test_ne(self) -> None:
+        """Test != operator."""
+        expr = StrAttr("status") != "banned"
+        assert expr.to_sql() == 'status != "banned"'
+
+    def test_gt(self) -> None:
+        """Test > operator."""
+        expr = StrAttr("name") > "A"
+        assert expr.to_sql() == 'name > "A"'
+
+    def test_ge(self) -> None:
+        """Test >= operator."""
+        expr = StrAttr("name") >= "A"
+        assert expr.to_sql() == 'name >= "A"'
+
+    def test_lt(self) -> None:
+        """Test < operator."""
+        expr = StrAttr("name") < "Z"
+        assert expr.to_sql() == 'name < "Z"'
+
+    def test_le(self) -> None:
+        """Test <= operator."""
+        expr = StrAttr("name") <= "Z"
+        assert expr.to_sql() == 'name <= "Z"'
+
+    def test_type_error_on_int(self) -> None:
+        """Test TypeError raised when comparing to int."""
+        with pytest.raises(TypeError, match="StrAttr 'status' requires str, got int"):
+            _ = StrAttr("status") == 1
+
+    def test_type_error_on_none(self) -> None:
+        """Test TypeError raised when comparing to None."""
+        with pytest.raises(
+            TypeError, match="StrAttr 'status' requires str, got NoneType"
+        ):
+            _ = StrAttr("status") == None  # noqa: E711
+
+    def test_repr(self) -> None:
+        """Test __repr__ for debugging."""
+        attr = StrAttr("status")
+        assert repr(attr) == "StrAttr('status')"
+
+    def test_combining_with_or(self) -> None:
+        """Test combining StrAttr expressions with |."""
+        role = StrAttr("role")
+        expr = (role == "admin") | (role == "moderator")
+        assert expr.to_sql() == '(role = "admin" OR role = "moderator")'
+
+
+class TestExpressionBuilderIntegration:
+    """Tests for expression builder combined usage."""
+
+    def test_mixed_int_and_str_attrs(self) -> None:
+        """Test combining IntAttr and StrAttr expressions."""
+        age = IntAttr("age")
+        status = StrAttr("status")
+
+        expr = (age >= 18) & (status == "active")
+        assert expr.to_sql() == 'age >= 18 AND status = "active"'
+
+    def test_complex_expression(self) -> None:
+        """Test complex expression with multiple operators."""
+        age = IntAttr("age")
+        status = StrAttr("status")
+        role = StrAttr("role")
+
+        # (admin OR moderator) AND active AND age >= 18
+        expr = (
+            ((role == "admin") | (role == "moderator"))
+            & (status == "active")
+            & (age >= 18)
+        )
+        assert (
+            expr.to_sql()
+            == '(role = "admin" OR role = "moderator") AND status = "active" AND age >= 18'
+        )
+
+    def test_not_with_combined_expression(self) -> None:
+        """Test NOT with a combined expression."""
+        role = StrAttr("role")
+        status = StrAttr("status")
+
+        expr = ~((role == "guest") | (status == "inactive"))
+        assert expr.to_sql() == 'NOT ((role = "guest" OR status = "inactive"))'
+
+
 class TestQueryBuilder:
     """Tests for sync QueryBuilder fluent API."""
 
@@ -203,6 +417,194 @@ class TestQueryBuilder:
         for result in results:
             assert result.attributes is not None
             assert result.attributes["sequence"] == 3
+
+    def test_where_with_expr(self, arkiv_client_http: Arkiv) -> None:
+        """Test .where() with Expr expression builder."""
+        batch_id, _ = create_test_entities(arkiv_client_http, 2)  # 2 names x 3 seq = 6
+
+        # Build expression using IntAttr/StrAttr
+        batch_attr = StrAttr("batch_id")
+        seq_attr = IntAttr("sequence")
+        expr = (batch_attr == batch_id) & (seq_attr == 3)
+
+        results = list(
+            arkiv_client_http.arkiv.select(KEY, ATTRIBUTES).where(expr).fetch()
+        )
+
+        assert len(results) == 2
+        for result in results:
+            assert result.attributes is not None
+            assert result.attributes["sequence"] == 3
+
+    def test_where_with_complex_expr(self, arkiv_client_http: Arkiv) -> None:
+        """Test .where() with complex Expr using OR and NOT."""
+        batch_id, _ = create_test_entities(arkiv_client_http, 3)  # 3 names x 3 seq = 9
+
+        # Query: batch_id AND (sequence = 1 OR sequence = 3)
+        batch_attr = StrAttr("batch_id")
+        seq_attr = IntAttr("sequence")
+        expr = (batch_attr == batch_id) & ((seq_attr == 1) | (seq_attr == 3))
+
+        results = list(
+            arkiv_client_http.arkiv.select(KEY, ATTRIBUTES).where(expr).fetch()
+        )
+
+        # Each name has seq 1 and 3 = 2 per name x 3 names = 6
+        assert len(results) == 6
+        for result in results:
+            assert result.attributes is not None
+            assert result.attributes["sequence"] in [1, 3]
+
+    def test_where_with_mixed_or_and_expr(self, arkiv_client_http: Arkiv) -> None:
+        """Test .where() with mixed OR and AND expression pattern from README.
+
+        Tests the pattern: (role == "admin") | (role == "moderator") & (status == "active")
+        This verifies the expression builder works with real queries against actual data.
+        """
+        batch_id = str(uuid.uuid4())
+
+        # Create entities with role and status attributes
+        create_ops = [
+            # admin + active
+            CreateOp(
+                payload=b"admin active",
+                content_type=CONTENT_TYPE,
+                attributes=Attributes(
+                    {"batch_id": batch_id, "role": "admin", "status": "active"}
+                ),
+                expires_in=EXPIRES_IN,
+            ),
+            # admin + inactive
+            CreateOp(
+                payload=b"admin inactive",
+                content_type=CONTENT_TYPE,
+                attributes=Attributes(
+                    {"batch_id": batch_id, "role": "admin", "status": "inactive"}
+                ),
+                expires_in=EXPIRES_IN,
+            ),
+            # moderator + active
+            CreateOp(
+                payload=b"moderator active",
+                content_type=CONTENT_TYPE,
+                attributes=Attributes(
+                    {"batch_id": batch_id, "role": "moderator", "status": "active"}
+                ),
+                expires_in=EXPIRES_IN,
+            ),
+            # moderator + inactive
+            CreateOp(
+                payload=b"moderator inactive",
+                content_type=CONTENT_TYPE,
+                attributes=Attributes(
+                    {"batch_id": batch_id, "role": "moderator", "status": "inactive"}
+                ),
+                expires_in=EXPIRES_IN,
+            ),
+            # user + active (should not match)
+            CreateOp(
+                payload=b"user active",
+                content_type=CONTENT_TYPE,
+                attributes=Attributes(
+                    {"batch_id": batch_id, "role": "user", "status": "active"}
+                ),
+                expires_in=EXPIRES_IN,
+            ),
+        ]
+        operations = Operations(creates=create_ops)
+        arkiv_client_http.arkiv.execute(operations)
+
+        # Build expression: (admin OR moderator) AND active
+        batch_attr = StrAttr("batch_id")
+        role = StrAttr("role")
+        status = StrAttr("status")
+
+        # Pattern from README: (role == "admin") | (role == "moderator") & (status == "active")
+        # With proper parentheses for intended meaning: ((admin OR mod) AND active)
+        expr = (
+            (batch_attr == batch_id)
+            & ((role == "admin") | (role == "moderator"))
+            & (status == "active")
+        )
+
+        results = list(
+            arkiv_client_http.arkiv.select(KEY, ATTRIBUTES).where(expr).fetch()
+        )
+
+        # Should match: admin+active, moderator+active (2 entities)
+        assert len(results) == 2
+        roles = {r.attributes["role"] for r in results if r.attributes}
+        assert roles == {"admin", "moderator"}
+        for result in results:
+            assert result.attributes is not None
+            assert result.attributes["status"] == "active"
+
+    def test_where_with_not_expr(self, arkiv_client_http: Arkiv) -> None:
+        """Test .where() with NOT expression pattern from README.
+
+        Tests the pattern: (age >= 18) & ~(status == "banned")
+        """
+        batch_id = str(uuid.uuid4())
+
+        # Create entities with age and status attributes
+        create_ops = [
+            # age 20, active (should match)
+            CreateOp(
+                payload=b"adult active",
+                content_type=CONTENT_TYPE,
+                attributes=Attributes(
+                    {"batch_id": batch_id, "age": 20, "status": "active"}
+                ),
+                expires_in=EXPIRES_IN,
+            ),
+            # age 25, banned (should NOT match - banned)
+            CreateOp(
+                payload=b"adult banned",
+                content_type=CONTENT_TYPE,
+                attributes=Attributes(
+                    {"batch_id": batch_id, "age": 25, "status": "banned"}
+                ),
+                expires_in=EXPIRES_IN,
+            ),
+            # age 15, active (should NOT match - under 18)
+            CreateOp(
+                payload=b"minor active",
+                content_type=CONTENT_TYPE,
+                attributes=Attributes(
+                    {"batch_id": batch_id, "age": 15, "status": "active"}
+                ),
+                expires_in=EXPIRES_IN,
+            ),
+            # age 30, pending (should match)
+            CreateOp(
+                payload=b"adult pending",
+                content_type=CONTENT_TYPE,
+                attributes=Attributes(
+                    {"batch_id": batch_id, "age": 30, "status": "pending"}
+                ),
+                expires_in=EXPIRES_IN,
+            ),
+        ]
+        operations = Operations(creates=create_ops)
+        arkiv_client_http.arkiv.execute(operations)
+
+        # Build expression from README: (age >= 18) & ~(status == "banned")
+        batch_attr = StrAttr("batch_id")
+        age = IntAttr("age")
+        status = StrAttr("status")
+
+        expr = (batch_attr == batch_id) & (age >= 18) & ~(status == "banned")
+
+        results = list(
+            arkiv_client_http.arkiv.select(KEY, ATTRIBUTES).where(expr).fetch()
+        )
+
+        # Should match: age 20 active, age 30 pending (2 entities)
+        assert len(results) == 2
+        for result in results:
+            assert result.attributes is not None
+            assert result.attributes["age"] >= 18
+            assert result.attributes["status"] != "banned"
 
     def test_order_by_int_asc(self, arkiv_client_http: Arkiv) -> None:
         """Test .order_by() with IntSort ascending."""
