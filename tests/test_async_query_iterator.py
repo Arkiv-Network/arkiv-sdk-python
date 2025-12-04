@@ -89,3 +89,54 @@ class TestAsyncQueryIterator:
         # Verify all entity keys are present and unique
         result_keys = [entity.key for entity in entities]
         assert set(result_keys) == set(expected_keys)
+
+    @pytest.mark.asyncio
+    async def test_async_iterate_entities_empty(
+        self, async_arkiv_client_http: AsyncArkiv
+    ) -> None:
+        """Test iteration over empty result set."""
+        # Create some entities (to ensure the query mechanism works)
+        num_entities = 5
+        await create_test_entities(async_arkiv_client_http, num_entities)
+
+        # Query for non-existent batch_id
+        query = 'batch_id = "does-not-exist"'
+        options = QueryOptions(attributes=KEY | ATTRIBUTES, max_results_per_page=10)
+
+        # Collect results - should be empty
+        entities = []
+        async for entity in async_arkiv_client_http.arkiv.query_entities(
+            query=query, options=options
+        ):
+            entities.append(entity)
+
+        assert len(entities) == 0
+
+    @pytest.mark.asyncio
+    async def test_async_iterate_entities_max_results_across_pages(
+        self, async_arkiv_client_http: AsyncArkiv
+    ) -> None:
+        """Test max_results limits iteration across multiple pages."""
+        # Create 10 entities
+        num_entities = 10
+        batch_id, _ = await create_test_entities(async_arkiv_client_http, num_entities)
+
+        # Query with max_results=7 and page size of 3
+        # Should iterate across 3 pages (3+3+1) and stop at 7
+        query = f'batch_id = "{batch_id}"'
+        options = QueryOptions(
+            attributes=KEY | ATTRIBUTES,
+            max_results=7,
+            max_results_per_page=3,
+        )
+
+        entities = []
+        async for entity in async_arkiv_client_http.arkiv.query_entities(
+            query=query, options=options
+        ):
+            entities.append(entity)
+
+        assert len(entities) == 7
+        for entity in entities:
+            assert entity.attributes is not None
+            assert entity.attributes["batch_id"] == batch_id

@@ -141,3 +141,149 @@ class TestQueryPaging:
         # Verify all entities are unique
         all_keys = [entity.key for entity in all_entities]
         assert len(all_keys) == len(set(all_keys))
+
+    def test_query_paging_empty_result(self, arkiv_client_http: Arkiv) -> None:
+        """Test pagination with no matching entities."""
+        # Query for a non-existent batch_id
+        query = 'batch_id = "non-existent-batch-id-12345"'
+        options = QueryOptions(attributes=KEY | ATTRIBUTES, max_results_per_page=10)
+        result = arkiv_client_http.arkiv.query_entities_page(
+            query=query, options=options
+        )
+
+        # Should get empty result with no more pages
+        assert len(result.entities) == 0
+        assert result.has_more() is False
+        assert result.cursor is None
+
+    def test_query_paging_exactly_one_page(self, arkiv_client_http: Arkiv) -> None:
+        """Test pagination when entities exactly fill one page."""
+        # Create exactly 5 entities
+        num_entities = 5
+        batch_id, entity_keys = create_test_entities(arkiv_client_http, num_entities)
+
+        # Query with max_results_per_page = num_entities (exactly one full page)
+        query = f'batch_id = "{batch_id}"'
+        options = QueryOptions(
+            attributes=KEY | ATTRIBUTES, max_results_per_page=num_entities
+        )
+        result = arkiv_client_http.arkiv.query_entities_page(
+            query=query, options=options
+        )
+
+        # Should get all 5 entities in the first page
+        assert len(result.entities) == num_entities
+
+        # Verify all entities are from our batch
+        for entity in result.entities:
+            assert entity.key in entity_keys
+
+        # Note: When the page is exactly full, the node may return has_more=True
+        # and a cursor since it doesn't know if there are more entities until
+        # the next page is fetched. If has_more is True, fetch the next page
+        # to confirm it's empty.
+        if result.has_more():
+            assert result.cursor is not None
+            options_page2 = QueryOptions(
+                cursor=result.cursor,
+                max_results_per_page=5,
+            )
+            page2 = arkiv_client_http.arkiv.query_entities_page(
+                query=query, options=options_page2
+            )
+            # Second page should be empty
+            assert len(page2.entities) == 0
+            assert page2.has_more() is False
+
+    def test_query_paging_max_results_smaller_than_page_size(
+        self, arkiv_client_http: Arkiv
+    ) -> None:
+        """Test that max_results limits total results when smaller than page size."""
+        # Create 10 entities
+        num_entities = 10
+        batch_id, _ = create_test_entities(arkiv_client_http, num_entities)
+
+        # Query with max_results=3 but max_results_per_page=100
+        # Should only get 3 entities (max_results caps it)
+        query = f'batch_id = "{batch_id}"'
+        options = QueryOptions(
+            attributes=KEY | ATTRIBUTES,
+            max_results=3,
+            max_results_per_page=100,
+        )
+
+        # Use iterator to verify max_results is respected
+        iterator = arkiv_client_http.arkiv.query_entities(query=query, options=options)
+        entities = list(iterator)
+
+        assert len(entities) == 3
+
+    def test_query_paging_max_results_spans_multiple_pages(
+        self, arkiv_client_http: Arkiv
+    ) -> None:
+        """Test that max_results limits total results across multiple pages."""
+        # Create 10 entities
+        num_entities = 10
+        batch_id, _ = create_test_entities(arkiv_client_http, num_entities)
+
+        # Query with max_results=7 and max_results_per_page=3
+        # Should get 7 entities across 3 pages (3+3+1)
+        query = f'batch_id = "{batch_id}"'
+        options = QueryOptions(
+            attributes=KEY | ATTRIBUTES,
+            max_results=7,
+            max_results_per_page=3,
+        )
+
+        # Use iterator to verify max_results is respected
+        iterator = arkiv_client_http.arkiv.query_entities(query=query, options=options)
+        entities = list(iterator)
+
+        assert len(entities) == 7
+
+    def test_query_paging_max_results_equals_total_entities(
+        self, arkiv_client_http: Arkiv
+    ) -> None:
+        """Test when max_results equals the total number of matching entities."""
+        # Create 5 entities
+        num_entities = 5
+        batch_id, entity_keys = create_test_entities(arkiv_client_http, num_entities)
+
+        # Query with max_results=5 (exactly matching total)
+        query = f'batch_id = "{batch_id}"'
+        options = QueryOptions(
+            attributes=KEY | ATTRIBUTES,
+            max_results=5,
+            max_results_per_page=10,
+        )
+
+        iterator = arkiv_client_http.arkiv.query_entities(query=query, options=options)
+        entities = list(iterator)
+
+        assert len(entities) == 5
+        for entity in entities:
+            assert entity.key in entity_keys
+
+    def test_query_paging_max_results_greater_than_total_entities(
+        self, arkiv_client_http: Arkiv
+    ) -> None:
+        """Test when max_results exceeds the total number of matching entities."""
+        # Create 25 entities
+        num_entities = 25
+        batch_id, entity_keys = create_test_entities(arkiv_client_http, num_entities)
+
+        # Query with max_results=100 (more than total)
+        query = f'batch_id = "{batch_id}"'
+        options = QueryOptions(
+            attributes=KEY | ATTRIBUTES,
+            max_results=100,
+            max_results_per_page=10,
+        )
+
+        iterator = arkiv_client_http.arkiv.query_entities(query=query, options=options)
+        entities = list(iterator)
+
+        # Should get all available entities (max_results doesn't artificially limit)
+        assert len(entities) == num_entities
+        for entity in entities:
+            assert entity.key in entity_keys

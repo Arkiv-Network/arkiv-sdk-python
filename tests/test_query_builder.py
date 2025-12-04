@@ -758,12 +758,91 @@ class TestQueryBuilder:
         builder4 = builder.at_block(12345)
         assert builder4 is builder
 
+    def test_limit(self, arkiv_client_http: Arkiv) -> None:
+        """Test .limit() restricts total results returned."""
+        batch_id, _ = create_test_entities(arkiv_client_http, 3)  # 3 names x 3 seq = 9
+
+        # Limit to 5 results
+        results = list(
+            arkiv_client_http.arkiv.select(KEY, ATTRIBUTES)
+            .where(f'batch_id = "{batch_id}"')
+            .limit(5)
+            .fetch()
+        )
+
+        assert len(results) == 5
+
+    def test_limit_with_order_by(self, arkiv_client_http: Arkiv) -> None:
+        """Test .limit() with ORDER BY returns top N sorted results."""
+        batch_id, _ = create_test_entities(arkiv_client_http, 3)  # 3 names x 3 seq = 9
+
+        # Get top 3 by sequence descending
+        results = list(
+            arkiv_client_http.arkiv.select(KEY, ATTRIBUTES)
+            .where(f'batch_id = "{batch_id}"')
+            .order_by(IntSort("sequence", DESC))
+            .limit(3)
+            .fetch()
+        )
+
+        assert len(results) == 3
+        # All should have sequence = 3 (highest)
+        for entity in results:
+            assert entity.attributes is not None
+            assert entity.attributes["sequence"] == 3
+
+    def test_limit_exceeds_total(self, arkiv_client_http: Arkiv) -> None:
+        """Test .limit() greater than total returns all results."""
+        batch_id, _ = create_test_entities(arkiv_client_http, 2)  # 2 names x 3 seq = 6
+
+        # Limit to 100 but only 6 exist
+        results = list(
+            arkiv_client_http.arkiv.select(KEY, ATTRIBUTES)
+            .where(f'batch_id = "{batch_id}"')
+            .limit(100)
+            .fetch()
+        )
+
+        assert len(results) == 6
+
+    def test_max_page_size(self, arkiv_client_http: Arkiv) -> None:
+        """Test .max_page_size() controls entities per page."""
+        batch_id, _ = create_test_entities(arkiv_client_http, 3)  # 3 names x 3 seq = 9
+
+        # Use small page size - should still get all results via pagination
+        results = list(
+            arkiv_client_http.arkiv.select(KEY, ATTRIBUTES)
+            .where(f'batch_id = "{batch_id}"')
+            .max_page_size(2)
+            .fetch()
+        )
+
+        # All 9 results should be returned despite small page size
+        assert len(results) == 9
+
+    def test_limit_and_max_page_size_combined(self, arkiv_client_http: Arkiv) -> None:
+        """Test .limit() and .max_page_size() work together correctly."""
+        batch_id, _ = create_test_entities(arkiv_client_http, 3)  # 3 names x 3 seq = 9
+
+        # Limit to 5, page size of 2 (should fetch 3 pages: 2+2+1)
+        results = list(
+            arkiv_client_http.arkiv.select(KEY, ATTRIBUTES)
+            .where(f'batch_id = "{batch_id}"')
+            .limit(5)
+            .max_page_size(2)
+            .fetch()
+        )
+
+        assert len(results) == 5
+
 
 class TestAsyncQueryBuilder:
     """Tests for async AsyncQueryBuilder fluent API."""
 
     @pytest.mark.asyncio
-    async def test_select_all_fields(self, async_arkiv_client_http: AsyncArkiv) -> None:
+    async def test_async_select_all_fields(
+        self, async_arkiv_client_http: AsyncArkiv
+    ) -> None:
         """Test async .select() with no args selects all fields."""
         # Create entities using sync client first (from fixture's underlying connection)
         # For async tests, we need to use the async client for everything
