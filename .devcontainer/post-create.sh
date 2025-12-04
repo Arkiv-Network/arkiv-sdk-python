@@ -5,6 +5,13 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "🔧 Setting up Arkiv SDK development environment..."
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
+# Clean up any existing .venv that may have wrong ownership (e.g., from root user)
+if [ -d ".venv" ]; then
+    echo ""
+    echo "🧹 Cleaning up existing .venv directory..."
+    sudo rm -rf .venv
+fi
+
 echo ""
 echo "📦 Installing Python dependencies with uv..."
 uv sync --all-groups

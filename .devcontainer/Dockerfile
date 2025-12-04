@@ -13,12 +13,21 @@ RUN apt-get update && apt-get install -y \
     nano \
     curl \
     iputils-ping \
-    ca-certificates
+    ca-certificates \
+    sudo \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install uv and add it to PATH
-ADD https://astral.sh/uv/install.sh /uv-installer.sh
-RUN sh /uv-installer.sh && rm /uv-installer.sh
-ENV PATH="/root/.local/bin/:$PATH"
+# Create vscode user and grant sudo privileges
+RUN useradd -m -s /bin/bash -u 1000 vscode && \
+    echo "vscode ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+# Switch to vscode user
+USER vscode
+
+# Install uv and add it to PATH (install for vscode user)
+ADD --chown=vscode:vscode https://astral.sh/uv/install.sh /tmp/uv-installer.sh
+RUN sh /tmp/uv-installer.sh && rm /tmp/uv-installer.sh
+ENV PATH="/home/vscode/.local/bin:$PATH"
 
 # Suppress UV hardlink warnings in dev containers
 ENV UV_LINK_MODE=copy
