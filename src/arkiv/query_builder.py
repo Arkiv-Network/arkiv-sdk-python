@@ -359,6 +359,8 @@ class QueryBuilderBase(Generic[ClientT]):
     - select() - specify which fields to return
     - where() - filter condition (SQL-like string)
     - order_by() - sort results
+    - limit() - limit total results
+    - max_page_size() - control entities per RPC call
     - at_block() - pin query to specific block
     - fetch() / count() - execute query
     """
@@ -377,6 +379,8 @@ class QueryBuilderBase(Generic[ClientT]):
         self._query: str | None = None
         self._order_by: list[OrderByAttribute] = []
         self._at_block: int | None = None
+        self._max_results: int | None = None
+        self._max_page_size: int | None = None
 
     @staticmethod
     def _combine_fields(fields: tuple[int, ...]) -> int:
@@ -453,12 +457,67 @@ class QueryBuilderBase(Generic[ClientT]):
         self._at_block = block_number
         return self
 
+    def limit(self: SelfT, max_results: int) -> SelfT:
+        """
+        Limit the total number of results returned.
+
+        This limits the total entities returned across all pages,
+        stopping iteration early once the limit is reached.
+
+        Args:
+            max_results: Maximum number of entities to return.
+
+        Returns:
+            Self for method chaining.
+
+        Examples:
+            >>> # Get first 10 matching entities
+            >>> builder.limit(10)
+
+            >>> # Top 5 users by age
+            >>> builder.where('type = "user"').order_by(IntSort("age", DESC)).limit(5)
+        """
+        self._max_results = max_results
+        return self
+
+    def max_page_size(self: SelfT, size: int) -> SelfT:
+        """
+        Set the maximum number of entities per page (per RPC call).
+
+        This controls how many entities are requested in each page of results.
+        Note that the actual number returned may be less if entities are large,
+        as the Arkiv node limits response size.
+
+        Args:
+            size: Maximum entities per page.
+
+        Returns:
+            Self for method chaining.
+
+        Examples:
+            >>> # Smaller pages for large entities
+            >>> builder.max_page_size(10)
+
+            >>> # Larger pages for small entities
+            >>> builder.where('type = "tag"').max_page_size(500).fetch()
+        """
+        self._max_page_size = size
+        return self
+
     def _build_options(self) -> QueryOptions:
         """Build QueryOptions from the builder state."""
+        from .types import MAX_RESULTS_PER_PAGE_DEFAULT
+
         return QueryOptions(
             attributes=self._fields,
             order_by=self._order_by if self._order_by else None,
             at_block=self._at_block,
+            max_results=self._max_results,
+            max_results_per_page=(
+                self._max_page_size
+                if self._max_page_size is not None
+                else MAX_RESULTS_PER_PAGE_DEFAULT
+            ),
         )
 
     def _get_query(self) -> str:

@@ -50,8 +50,7 @@ class QueryIterator:
         Args:
             client: Arkiv client instance for making queries
             query: SQL-like query string
-            limit: Number of entities to fetch per page (default: 100)
-            at_block: Block number or "latest" to pin query to
+            options: Query options including pagination and limits
         """
         self._client = client
         self._query = query
@@ -59,6 +58,7 @@ class QueryIterator:
         self._current_result: QueryPage | None = None
         self._current_index = 0
         self._exhausted = False
+        self._total_yielded = 0
 
     def __iter__(self) -> Iterator[Entity]:
         """Return the iterator instance."""
@@ -72,8 +72,13 @@ class QueryIterator:
             Next Entity in the result set
 
         Raises:
-            StopIteration: When all entities have been consumed
+            StopIteration: When all entities have been consumed or limit reached
         """
+        # Check if we've hit the max_results limit
+        max_results = self._options.max_results
+        if max_results is not None and self._total_yielded >= max_results:
+            raise StopIteration
+
         # Lazy initialization - fetch first page on first next()
         if self._current_result is None:
             logger.info(
@@ -85,12 +90,21 @@ class QueryIterator:
 
         # Yield from current page
         while self._current_index < len(self._current_result.entities):
+            # Check limit before yielding
+            if max_results is not None and self._total_yielded >= max_results:
+                raise StopIteration
+
             entity = self._current_result.entities[self._current_index]
             self._current_index += 1
+            self._total_yielded += 1
             return entity
 
-        # Fetch next page if available
+        # Fetch next page if available (and we haven't hit max_results)
         if self._current_result.has_more() and not self._exhausted:
+            # Check if we've already hit the limit
+            if max_results is not None and self._total_yielded >= max_results:
+                raise StopIteration
+
             from dataclasses import replace
 
             options = replace(
@@ -167,8 +181,7 @@ class AsyncQueryIterator:
         Args:
             client: Arkiv client instance for making queries
             query: SQL-like query string
-            limit: Number of entities to fetch per page (default: 100)
-            at_block: Block number or "latest" to pin query to
+            options: Query options including pagination and limits
         """
         self._client = client
         self._query = query
@@ -176,6 +189,7 @@ class AsyncQueryIterator:
         self._current_result: QueryPage | None = None
         self._current_index = 0
         self._exhausted = False
+        self._total_yielded = 0
 
     def __aiter__(self) -> AsyncQueryIterator:
         """Return the async iterator instance."""
@@ -189,8 +203,13 @@ class AsyncQueryIterator:
             Next Entity in the result set
 
         Raises:
-            StopAsyncIteration: When all entities have been consumed
+            StopAsyncIteration: When all entities have been consumed or limit reached
         """
+        # Check if we've hit the max_results limit
+        max_results = self._options.max_results
+        if max_results is not None and self._total_yielded >= max_results:
+            raise StopAsyncIteration
+
         # Lazy initialization - fetch first page on first next()
         if self._current_result is None:
             logger.info(
@@ -202,12 +221,21 @@ class AsyncQueryIterator:
 
         # Yield from current page
         while self._current_index < len(self._current_result.entities):
+            # Check limit before yielding
+            if max_results is not None and self._total_yielded >= max_results:
+                raise StopAsyncIteration
+
             entity = self._current_result.entities[self._current_index]
             self._current_index += 1
+            self._total_yielded += 1
             return entity
 
-        # Fetch next page if available
+        # Fetch next page if available (and we haven't hit max_results)
         if self._current_result.has_more() and not self._exhausted:
+            # Check if we've already hit the limit
+            if max_results is not None and self._total_yielded >= max_results:
+                raise StopAsyncIteration
+
             from dataclasses import replace
 
             options = replace(

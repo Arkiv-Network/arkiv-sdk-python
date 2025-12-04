@@ -10,12 +10,15 @@ from web3.types import Nonce, TxParams, Wei
 from arkiv.contract import ARKIV_ADDRESS
 from arkiv.exceptions import AttributeException, EntityKeyException
 from arkiv.types import (
+    ALL,
+    MAX_RESULTS_PER_PAGE_DEFAULT,
     Attributes,
     CreateOp,
     DeleteOp,
     EntityKey,
     ExtendOp,
     Operations,
+    QueryOptions,
     UpdateOp,
 )
 from arkiv.utils import (
@@ -24,6 +27,7 @@ from arkiv.utils import (
     rlp_encode_transaction,
     split_attributes,
     to_entity_key,
+    to_rpc_query_options,
     to_tx_params,
 )
 
@@ -482,3 +486,96 @@ class TestEntityKeyUtils:
         """Test check_entity_key with non-string value."""
         with pytest.raises(EntityKeyException):
             check_entity_key(123)
+
+
+class TestToRpcQueryOptions:
+    """Test cases for to_rpc_query_options function."""
+
+    def test_default_options(self) -> None:
+        """Test with default QueryOptions."""
+
+        options = QueryOptions()
+        rpc_options = to_rpc_query_options(options)
+
+        # Check structure
+        assert "includeData" in rpc_options
+        assert "resultsPerPage" in rpc_options
+        assert rpc_options["atBlock"] is None
+
+        # Check defaults: attributes=ALL means all includeData flags are True
+        assert options.attributes == ALL
+        include_data = rpc_options["includeData"]
+        assert include_data["key"] is True
+        assert include_data["attributes"] is True
+        assert include_data["payload"] is True
+        assert include_data["contentType"] is True
+        assert include_data["expiration"] is True
+        assert include_data["owner"] is True
+
+        # Check default page size
+        assert rpc_options["resultsPerPage"] == MAX_RESULTS_PER_PAGE_DEFAULT
+
+        # Check max_results is None (not passed to RPC, handled by iterator)
+        assert options.max_results is None
+
+    def test_page_size_explicit(self) -> None:
+        """Test explicit max_results_per_page is used."""
+        options = QueryOptions(max_results_per_page=50)
+        rpc_options = to_rpc_query_options(options)
+
+        max_results_per_page_custom = 50
+        assert max_results_per_page_custom != MAX_RESULTS_PER_PAGE_DEFAULT
+        assert rpc_options["resultsPerPage"] == max_results_per_page_custom
+
+    def test_page_size_capped_by_max_results(self) -> None:
+        """Test that page size is capped by max_results when smaller."""
+        # max_results < max_results_per_page: should use max_results
+        max_results_capped = 5
+        max_results_per_page = 100
+        assert max_results_capped < max_results_per_page
+
+        options = QueryOptions(
+            max_results=max_results_capped, max_results_per_page=max_results_per_page
+        )
+        rpc_options = to_rpc_query_options(options)
+
+        assert rpc_options["resultsPerPage"] == max_results_capped
+
+    def test_page_size_not_affected_when_max_results_larger(self) -> None:
+        """Test that page size unchanged when max_results > max_results_per_page."""
+        # max_results > max_results_per_page: should use max_results_per_page
+        max_results_capped = 200
+        max_results_per_page = 100
+        assert max_results_capped > max_results_per_page
+
+        options = QueryOptions(
+            max_results=max_results_capped, max_results_per_page=max_results_per_page
+        )
+        rpc_options = to_rpc_query_options(options)
+
+        assert rpc_options["resultsPerPage"] == max_results_per_page
+
+    def test_page_size_equal_to_max_results(self) -> None:
+        """Test when max_results equals max_results_per_page."""
+        max_results_capped = 35
+        max_results_per_page = 35
+        assert max_results_capped == max_results_per_page
+
+        options = QueryOptions(
+            max_results=max_results_capped, max_results_per_page=max_results_per_page
+        )
+        rpc_options = to_rpc_query_options(options)
+
+        assert rpc_options["resultsPerPage"] == max_results_capped
+
+    def test_page_size_with_max_results_none(self) -> None:
+        """Test that page size is unchanged when max_results is None."""
+        max_results_capped = None
+        max_results_per_page = 35
+
+        options = QueryOptions(
+            max_results=max_results_capped, max_results_per_page=max_results_per_page
+        )
+        rpc_options = to_rpc_query_options(options)
+
+        assert rpc_options["resultsPerPage"] == max_results_per_page

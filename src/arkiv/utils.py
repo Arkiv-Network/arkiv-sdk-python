@@ -342,8 +342,14 @@ def to_rpc_query_options(
     else:
         rpc_query_options["atBlock"] = None
 
-    if options.max_results_per_page is not None:
-        rpc_query_options["resultsPerPage"] = options.max_results_per_page
+    # Determine effective page size: use smaller of max_results_per_page and max_results
+    # This avoids requesting more entities than needed when max_results is small
+    effective_page_size = options.max_results_per_page
+    if options.max_results is not None:
+        effective_page_size = min(effective_page_size, options.max_results)
+
+    if effective_page_size is not None:
+        rpc_query_options["resultsPerPage"] = effective_page_size
 
     if options.cursor is not None:
         rpc_query_options["cursor"] = options.cursor

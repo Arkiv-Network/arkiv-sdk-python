@@ -67,6 +67,7 @@ class QueryOptions:
     at_block: int | None = (
         None  # Block number to pin query to specific block, or None to use latest block available
     )
+    max_results: int | None = None  # Max total results to return (None = unlimited)
     max_results_per_page: int = (
         MAX_RESULTS_PER_PAGE_DEFAULT  # Max number of entities to fetch per page
     )

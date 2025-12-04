@@ -19,6 +19,7 @@ Parts and descriptions
 - `.select(...)` **(mandatory)** starts the query chain; feeds into "fields" bitmask of QueryOptions. Empty `.select()` means "all fields"
 - `.where(...)` feeds into "query" parameter of query_entities (accepts string OR expression)
 - `.order_by(...)` (optional) feeds into "order_by" field of QueryOptions of query_entities
+- `.limit(n)` (optional) limits total results returned; feeds into "max_results" field of QueryOptions
 - `.at_block(...)` (optional) feeds into "at_block" field of QueryOptions of query_entities
 - `.fetch()` returns the QueryIterator from query_entities
 - `.count()` optimized to retrieve only entity keys, count them, and return an int
@@ -137,6 +138,47 @@ results = client.arkiv \
 - **Explicit type**: `IntSort` vs `StrSort` - immediately clear from class name
 - **Required for sorting**: Arkiv needs to know if attribute is string or numeric
 - **IDE support**: Type system knows what's available for each class
+- **Prevents errors**: Can't accidentally use wrong type
+- **Default direction**: ASC is default, only specify DESC when needed
+
+### Result Limiting
+
+Use `.limit(n)` to restrict the total number of entities returned across all pages. This is useful for:
+- Preventing accidentally fetching millions of entities
+- "Top N" queries (e.g., "10 most recent users")
+- Pagination at the application level
+
+```python
+# Get first 10 matching entities
+results = client.arkiv \
+    .select() \
+    .where('type = "user"') \
+    .limit(10) \
+    .fetch()
+
+# Top 5 users by age
+results = client.arkiv \
+    .select() \
+    .where('type = "user" AND status = "active"') \
+    .order_by(IntSort('age', DESC)) \
+    .limit(5) \
+    .fetch()
+
+# Combine with other options
+results = client.arkiv \
+    .select(KEY, ATTRIBUTES) \
+    .where('status = "active"') \
+    .order_by(StrSort('name')) \
+    .limit(100) \
+    .at_block(12345) \
+    .fetch()
+```
+
+**Implementation details:**
+- `.limit(n)` sets `max_results` in `QueryOptions`
+- The iterator stops after yielding `n` entities, even if more pages exist
+- Internally optimizes `max_results_per_page` to avoid fetching unnecessary data
+- `None` (default) means unlimited - fetch all matching entities
 - **Prevents errors**: Can't accidentally use wrong type
 - **Default direction**: ASC is default, only specify DESC when needed
 
@@ -456,6 +498,14 @@ results = client.arkiv \
     .at_block(12345) \
     .fetch()
 
+# With result limiting - get top 10
+results = client.arkiv \
+    .select() \
+    .where('type = "user"') \
+    .order_by(IntSort('age', DESC)) \
+    .limit(10) \
+    .fetch()
+
 # Quick count (select() required, but fields ignored)
 count = client.arkiv \
     .select() \
@@ -467,6 +517,7 @@ count = client.arkiv \
 - **Field selection**: `.select(KEY, ATTRIBUTES)` instead of bitmask `KEY | ATTRIBUTES`
 - **Sorting**: `.order_by()` with type-specific classes `IntSort`, `StrSort`
 - **Type-safe filters**: Expression builder with `IntAttr`, `StrAttr` (optional)
+- **Result limiting**: `.limit(n)` to cap total results (safety + "top N" queries)
 - **Block pinning**: `.at_block()` for historical queries
 - **Counting**: `.count()` convenience method
 - **Iteration**: Returns same iterator, but building the query is more readable
@@ -484,10 +535,21 @@ count = client.arkiv \
 5. **Composability**: Build queries programmatically with method chaining and `&`/`|` operators
 6. **Transparency**: Query strings are passed directly to node - what you see is what you get
 7. **Flexibility**: Choose string or expression approach based on use case
-8. **Testability**: Easy to test query building separately from execution
+8. **Safety**: `.limit(n)` prevents accidentally fetching all entities
+9. **Testability**: Easy to test query building separately from execution
 
 ## Open Questions
 
 1. **Error Messages**: How to provide clear error messages when query construction fails?
 
 2. **Performance**: Overhead of building query objects vs. direct string construction?
+
+## TODO
+
+### Missing Tests
+
+The following fluent API methods need functional tests (beyond method chaining tests):
+
+- **`.at_block(n)`** - Test that queries are actually pinned to a specific block number
+- **`.limit(n)`** - Test that iteration stops after `n` entities across pages
+- **`.max_page_size(n)`** - Test that page size is correctly applied to RPC calls
