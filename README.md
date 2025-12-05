@@ -48,10 +48,6 @@ entity_key, receipt = client.arkiv.create_entity(
 entity = client.arkiv.get_entity(entity_key)
 print(f"Creation TX: {receipt.tx_hash}")
 print(f"Entity: {entity}")
-
-# Clean up - delete entity
-client.arkiv.delete_entity(entity_key)
-print("Entity deleted")
 ```
 
 ### Asynchronous API
@@ -76,9 +72,6 @@ async def main():
         entity = await client.arkiv.get_entity(entity_key)
         exists = await client.arkiv.entity_exists(entity_key)
 
-        # Clean up - delete entity
-        await client.arkiv.delete_entity(entity_key)
-
 asyncio.run(main())
 ```
 
@@ -91,6 +84,55 @@ provider = HTTPProvider('https://mendoza.hoodi.arkiv.network/rpc')
 client = Arkiv(provider)
 balance = client.eth.get_balance(client.eth.default_account)
 tx = client.eth.get_transaction(tx_hash)
+```
+
+### Entity Operations
+
+Beyond creating and reading entities, Arkiv supports updating, extending, transferring ownership, and deleting entities.
+
+#### Update Entity
+
+Modify an entity's payload, attributes, or expiration:
+
+```python
+# Update entity with new payload and attributes
+entity_key, receipt = client.arkiv.update_entity(
+    entity_key,
+    payload=b"Updated content",
+    attributes={"type": "greeting", "version": 2},
+    expires_in=client.arkiv.to_seconds(days=7)
+)
+```
+
+#### Extend Entity Lifetime
+
+Extend an entity's expiration without modifying its content:
+
+```python
+# Extend entity lifetime by 30 days
+entity_key, receipt = client.arkiv.extend_entity(
+    entity_key,
+    extend_by=client.arkiv.to_seconds(days=30)
+)
+```
+
+#### Change Entity Owner
+
+Transfer ownership of an entity to another address:
+
+```python
+# Transfer entity to a new owner
+new_owner = "0x1234567890abcdef1234567890abcdef12345678"
+entity_key, receipt = client.arkiv.change_owner(entity_key, new_owner)
+```
+
+#### Delete Entity
+
+Permanently remove an entity (only the owner can delete):
+
+```python
+# Delete entity
+receipt = client.arkiv.delete_entity(entity_key)
 ```
 
 ## Advanced Features
@@ -235,6 +277,127 @@ results = client.arkiv.select() \
     .limit(100) \
     .max_page_size(25) \
     .fetch()
+```
+
+### Batch Operations
+
+Batch operations allow you to group multiple entity operations (create, update, extend, delete, change_owner) into a single atomic transaction. This is more efficient and ensures all operations either succeed or fail together.
+
+#### Basic Usage
+
+```python
+from arkiv import Arkiv
+
+client = Arkiv()
+
+# Using context manager (recommended)
+with client.arkiv.batch() as batch:
+    batch.create_entity(payload=b"item 1", expires_in=3600)
+    batch.create_entity(payload=b"item 2", expires_in=3600)
+    batch.create_entity(payload=b"item 3", expires_in=3600)
+
+# Batch is automatically executed on exit
+print(f"Created {len(batch.receipt.creates)} entities")
+
+# Access created entity keys
+for create_event in batch.receipt.creates:
+    print(f"Created: {create_event.key}")
+```
+
+#### Loop-Based Creation
+
+Batch operations work naturally with loops:
+
+```python
+items = [
+    {"name": "alice", "role": "admin"},
+    {"name": "bob", "role": "user"},
+    {"name": "charlie", "role": "user"},
+]
+
+with client.arkiv.batch() as batch:
+    for item in items:
+        batch.create_entity(
+            payload=item["name"].encode(),
+            attributes={"role": item["role"]},
+            expires_in=3600,
+        )
+
+print(f"Created {len(batch.receipt.creates)} users")
+```
+
+#### Mixed Operations
+
+A single batch can contain different operation types:
+
+```python
+with client.arkiv.batch() as batch:
+    # Create new entities
+    batch.create_entity(payload=b"new item", expires_in=3600)
+
+    # Update existing entities
+    batch.update_entity(existing_key, payload=b"updated", expires_in=3600)
+
+    # Extend entity lifetime
+    batch.extend_entity(another_key, extend_by=7200)
+
+    # Change ownership
+    batch.change_owner(some_key, new_owner_address)
+
+    # Delete entities
+    batch.delete_entity(old_key)
+
+# Check results
+print(f"Creates: {len(batch.receipt.creates)}")
+print(f"Updates: {len(batch.receipt.updates)}")
+print(f"Extensions: {len(batch.receipt.extensions)}")
+print(f"Deletes: {len(batch.receipt.deletes)}")
+```
+
+#### Manual Execution
+
+For more control, you can execute batches manually:
+
+```python
+batch = client.arkiv.batch()
+batch.create_entity(payload=b"data", expires_in=3600)
+batch.create_entity(payload=b"more data", expires_in=3600)
+
+# Execute explicitly
+receipt = batch.execute()
+print(f"Transaction: {receipt.tx_hash}")
+```
+
+#### Async Support
+
+Batch operations work with `AsyncArkiv`:
+
+```python
+async with AsyncArkiv() as client:
+    async with client.arkiv.batch() as batch:
+        batch.create_entity(payload=b"async item 1", expires_in=3600)
+        batch.create_entity(payload=b"async item 2", expires_in=3600)
+
+    print(f"Created {len(batch.receipt.creates)} entities")
+```
+
+#### Error Handling
+
+- If an exception occurs inside the context manager, the batch is **not** executed
+- Empty batches are silently skipped (no-op)
+- All operations in a batch are atomic: if any operation fails, the entire batch is rolled back
+
+```python
+try:
+    with client.arkiv.batch() as batch:
+        batch.create_entity(payload=b"item 1", expires_in=3600)
+        raise ValueError("Something went wrong")
+        batch.create_entity(payload=b"item 2", expires_in=3600)
+except ValueError:
+    pass
+
+# Batch was not executed - no entities created
+assert batch.receipt is None
 ```
 
 ### Provider Builder

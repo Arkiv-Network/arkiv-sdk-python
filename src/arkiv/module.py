@@ -11,6 +11,7 @@ from web3.types import TxParams, TxReceipt
 
 from arkiv.account import NamedAccount
 
+from .batch import BatchBuilder
 from .events import EventFilter
 from .module_base import ArkivModuleBase
 from .query_builder import QueryBuilder
@@ -458,6 +459,46 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
     def active_filters(self) -> list[EventFilter]:
         """Get a copy of currently active event filters."""
         return list(self._active_filters)
+
+    def batch(self) -> BatchBuilder:
+        """
+        Create a batch builder for executing multiple operations atomically.
+
+        Batch operations allow you to group multiple entity operations (create,
+        update, extend, delete, change_owner) into a single transaction. This is
+        more efficient and provides atomic execution - either all operations
+        succeed or all fail.
+
+        Returns:
+            BatchBuilder: A builder for accumulating operations. Call execute()
+                         to submit the batch, or use as a context manager.
+
+        Example:
+            Using context manager (recommended):
+                >>> with arkiv.batch() as batch:
+                ...     batch.create_entity(payload=b"item 1", expires_in=3600)
+                ...     batch.create_entity(payload=b"item 2", expires_in=3600)
+                ...     batch.update_entity(key, payload=b"updated", expires_in=3600)
+                >>> # Batch is automatically executed on exit
+                >>> print(f"Created {len(batch.receipt.creates)} entities")
+
+            Using explicit execute:
+                >>> batch = arkiv.batch()
+                >>> for i in range(100):
+                ...     batch.create_entity(
+                ...         payload=f"item {i}".encode(),
+                ...         expires_in=3600,
+                ...     )
+                >>> receipt = batch.execute()
+                >>> print(f"Created {len(receipt.creates)} entities")
+
+        Note:
+            - Operations are executed atomically in a single transaction
+            - If any operation fails, the entire batch is rolled back
+            - The batch does not execute if an exception is raised in the context
+            - Empty batches will not be executed (no-op in context manager)
+        """
+        return BatchBuilder(self)
 
     def _watch_entity_event(
         self,

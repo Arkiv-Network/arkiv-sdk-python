@@ -3,6 +3,7 @@
 from importlib.metadata import PackageNotFoundError, version
 
 from .account import NamedAccount
+from .batch import AsyncBatchBuilder, BatchBuilder
 from .client import Arkiv, AsyncArkiv
 from .events import EventFilter
 from .events_async import AsyncEventFilter
@@ -44,8 +45,10 @@ __all__ = [
     "Arkiv",
     "ArkivNode",
     "AsyncArkiv",
+    "AsyncBatchBuilder",
     "AsyncEventFilter",
     "AsyncQueryBuilder",
+    "BatchBuilder",
     "CreateEvent",
     "DeleteEvent",
     "EventFilter",
