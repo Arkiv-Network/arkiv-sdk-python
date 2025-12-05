@@ -125,7 +125,7 @@ wheels = [
 
 [[package]]
 name = "arkiv-sdk"
-version = "1.0.0a10"
+version = "1.0.0b1"
 source = { editable = "." }
 dependencies = [
     { name = "brotli" },

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0b1] - 2025-12-05
+
+### Added Features
+- Add query builder (see readme)
+- Add batch processing (see readme)
+
+### Changes
+- Iterations on AGENTS.md
+
 ## [1.0.0a10] - 2025-11-29
 
 ### Added Features
