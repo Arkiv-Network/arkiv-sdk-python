@@ -338,7 +338,7 @@ def to_rpc_query_options(
     }
 
     if options.at_block is not None:
-        rpc_query_options["atBlock"] = options.at_block
+        rpc_query_options["atBlock"] = Web3.to_hex(options.at_block)
     else:
         rpc_query_options["atBlock"] = None
 
@@ -349,7 +349,7 @@ def to_rpc_query_options(
         effective_page_size = min(effective_page_size, options.max_results)
 
     if effective_page_size is not None:
-        rpc_query_options["resultsPerPage"] = effective_page_size
+        rpc_query_options["resultsPerPage"] = Web3.to_hex(effective_page_size)
 
     if options.cursor is not None:
         rpc_query_options["cursor"] = options.cursor
@@ -819,7 +819,7 @@ def split_attributes(
                         f"Numeric attributes must be non-negative but found '{value}' for key '{key}'"
                     )
 
-                numeric_attributes.append((key, value))
+                numeric_attributes.append((key, Web3.to_hex(value)))
             else:
                 string_attributes.append((key, value))
 

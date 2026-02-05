@@ -393,7 +393,7 @@ EventType = Literal["created", "updated", "deleted", "extended", "owner_changed"
 
 # Low level attributes for RLP encoding
 StringAttributesRlp = NewType("StringAttributesRlp", list[tuple[str, str]])
-NumericAttributesRlp = NewType("NumericAttributesRlp", list[tuple[str, int]])
+NumericAttributesRlp = NewType("NumericAttributesRlp", list[tuple[str, HexStr]])
 
 # Low level attributes for entity decoding
 StringAttributes = NewType("StringAttributes", AttributeDict[str, str])

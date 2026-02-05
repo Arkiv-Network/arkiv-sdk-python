@@ -36,7 +36,6 @@ from typing import TYPE_CHECKING, Any, Generic, TypeVar
 from eth_typing import ChecksumAddress
 from web3.types import TxParams, TxReceipt
 
-
 from arkiv.types import (
     ALL,
     QUERY_OPTIONS_DEFAULT,
