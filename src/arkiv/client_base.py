@@ -6,6 +6,7 @@ import logging
 from typing import TYPE_CHECKING, Any, Literal
 
 from eth_account.signers.local import LocalAccount
+from web3.eth import AsyncEth, Eth
 from web3.providers.async_base import AsyncBaseProvider
 from web3.providers.base import BaseProvider
 
@@ -34,7 +35,7 @@ class ArkivBase:
     ACCOUNT_NAME_DEFAULT = "default"
 
     # These will be set by the Web3/AsyncWeb3 parent class
-    eth: Any
+    eth: Eth | AsyncEth
     from_wei: Any
 
     def __init__(self) -> None:
