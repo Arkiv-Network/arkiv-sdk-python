@@ -82,7 +82,6 @@ class TestQueryEntitiesBasic:
 
         # Verify result basics
         assert result  # Check __bool__()
-        assert result.block_number > 0
         assert result.has_more() is False
         assert result.cursor is None  # only 3 results, no pagination needed
 

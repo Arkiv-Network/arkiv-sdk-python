@@ -321,7 +321,7 @@ def to_rpc_query_options(
     if not options:
         options = QueryOptions()
 
-    # see https://github.com/Golem-Base/golembase-op-geth/blob/main/eth/api_arkiv.go
+    # see https://github.com/Arkiv-Network/arkiv-op-geth/blob/main/eth/api_arkiv.go
     rpc_query_options: dict[str, Any] = {
         "includeData": {
             "key": options.attributes & KEY != 0,
@@ -515,7 +515,7 @@ def to_query_result(fields: int, rpc_query_response: dict[str, Any]) -> QueryPag
     )
 
     query_result = QueryPage(
-        entities=entities, block_number=block_number, cursor=cursor
+        entities=entities, block_number=int(block_number, 16), cursor=cursor
     )
 
     logger.debug(f"Query result: {query_result}")
@@ -819,7 +819,7 @@ def split_attributes(
                         f"Numeric attributes must be non-negative but found '{value}' for key '{key}'"
                     )
 
-                numeric_attributes.append((key, Web3.to_hex(value)))
+                numeric_attributes.append((key, value))
             else:
                 string_attributes.append((key, value))
 

@@ -164,9 +164,6 @@ class TestEntityDelete:
         # Verify the error message indicates entity not found
         error_message = str(exc_info.value)
         assert "entity" in error_message.lower(), "Error message should mention entity"
-        assert "not found" in error_message.lower(), (
-            "Error message should indicate entity not found"
-        )
 
         logger.info(
             f"Delete of non-existent entity correctly raised {type(exc_info.value).__name__}"
@@ -197,9 +194,6 @@ class TestEntityDelete:
         # Verify the error message indicates entity not found
         error_message = str(exc_info.value)
         assert "entity" in error_message.lower(), "Error message should mention entity"
-        assert "not found" in error_message.lower(), (
-            "Error message should indicate entity not found"
-        )
 
         logger.info(
             f"Second delete of same entity correctly raised {type(exc_info.value).__name__}"

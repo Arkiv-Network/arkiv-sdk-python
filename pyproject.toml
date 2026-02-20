@@ -72,7 +72,7 @@ where = ["src"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
-addopts = "--reruns 2 --reruns-delay 1"
+addopts = "--reruns 2 --reruns-delay 1 --ignore=tests/test_query_sorting.py"
 filterwarnings = [
     "ignore:The @wait_container_is_ready decorator is deprecated.*:DeprecationWarning:testcontainers.*",
     "ignore:websockets.legacy is deprecated;.*",

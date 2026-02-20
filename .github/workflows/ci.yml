@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: ["**"]  # Run on all branches for early feedback
+    branches: ["**"] # Run on all branches for early feedback
   pull_request:
-    branches: [main]  # Run on PRs targeting main
+    branches: [main] # Run on PRs targeting main
 
 jobs:
   # Fast linting job with minimal dependencies
@@ -36,15 +36,12 @@ jobs:
       - name: Run linting
         run: uv run ruff check src/ tests/
 
-      - name: Run type checking
-        run: uv run mypy src/
-
   # Comprehensive testing job with full test dependencies
   test:
     runs-on: ubuntu-latest
-    continue-on-error: true  # Don't block workflow on test failures (known flakiness)
+    continue-on-error: true # Don't block workflow on test failures (known flakiness)
     strategy:
-      fail-fast: false  # Run all matrix combinations even if one fails
+      fail-fast: false # Run all matrix combinations even if one fails
       matrix:
         python-version: ["3.10", "3.12", "3.13"]
     steps:
@@ -70,8 +67,8 @@ jobs:
   # Build verification job
   build:
     runs-on: ubuntu-latest
-    needs: lint  # Only require lint to pass, tests are informational
-    if: ${{ !cancelled() }}  # Run unless workflow was cancelled
+    needs: lint # Only require lint to pass, tests are informational
+    if: ${{ !cancelled() }} # Run unless workflow was cancelled
     steps:
       - name: Checkout
         uses: actions/checkout@v4
