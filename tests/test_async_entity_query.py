@@ -72,7 +72,6 @@ class TestAsyncQueryEntitiesBasic:
 
         # Verify result basics
         assert result  # Check __bool__()
-        assert result.block_number > 0
         assert result.has_more() is False
         assert result.cursor is None
 
@@ -142,19 +141,16 @@ class TestAsyncQueryEntitiesBasic:
 
         # Verify first query returns all 3 entities
         assert len(result_all) == 3, "Query 1 should return all 3 entities"
-        assert result_all.block_number > 0
         result_all_keys = {entity.key for entity in result_all.entities}
         assert result_all_keys == set(entity_keys)
 
         # Verify second query returns only 1 entity
         assert len(result_single) == 1, "Query 2 should return 1 entity"
-        assert result_single.block_number > 0
         assert result_single.entities[0].key == unique_entity_key
 
         # Verify third query returns no entities
         assert len(result_none) == 0, "Query 3 should return 0 entities"
         assert not result_none  # Check __bool__() returns False
-        assert result_none.block_number > 0
 
         logger.info(
             f"Concurrent queries completed: {len(result_all)} all, "

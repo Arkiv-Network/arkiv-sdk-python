@@ -60,7 +60,13 @@ TX_SUCCESS = 1
 logger = logging.getLogger(__name__)
 
 # Generic type variable for the client (Arkiv or AsyncArkiv)
-ClientT = TypeVar("ClientT")
+if TYPE_CHECKING:
+    from arkiv.client import Arkiv, AsyncArkiv
+
+    ClientT = TypeVar("ClientT", Arkiv, AsyncArkiv)
+else:
+    # runtime: don't import arkiv.client (avoids circular import)
+    ClientT = TypeVar("ClientT")
 
 
 class ArkivModuleBase(Generic[ClientT]):

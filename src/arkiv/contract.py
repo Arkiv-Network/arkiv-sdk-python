@@ -157,33 +157,8 @@ EVENTS_ABI: Final[Sequence[dict[str, Any]]] = [
 
 
 FUNCTIONS_ABI: dict[str, Method[Any]] = {
-    "get_storage_value": Method(
-        json_rpc_method=RPCEndpoint("golembase_getStorageValue"),
-        mungers=[default_root_munger],
-    ),
-    "get_entity_metadata": Method(
-        json_rpc_method=RPCEndpoint("golembase_getEntityMetaData"),
-        mungers=[default_root_munger],
-    ),
-    "get_entities_to_expire_at_block": Method(
-        json_rpc_method=RPCEndpoint("golembase_getEntitiesToExpireAtBlock"),
-        mungers=[default_root_munger],
-    ),
     "get_entity_count": Method(
-        json_rpc_method=RPCEndpoint("golembase_getEntityCount"),
-        mungers=[default_root_munger],
-    ),
-    "get_all_entity_keys": Method(
-        json_rpc_method=RPCEndpoint("golembase_getAllEntityKeys"),
-        mungers=[default_root_munger],
-    ),
-    "get_entities_of_owner": Method(
-        json_rpc_method=RPCEndpoint("golembase_getEntitiesOfOwner"),
-        mungers=[default_root_munger],
-    ),
-    "query_entities": Method(
-        # TODO figure out why endpoint has the prefix "golembase_"
-        json_rpc_method=RPCEndpoint("golembase_queryEntities"),
+        json_rpc_method=RPCEndpoint("arkiv_getEntityCount"),
         mungers=[default_root_munger],
     ),
     "query": Method(

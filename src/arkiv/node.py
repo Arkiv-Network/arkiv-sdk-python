@@ -77,7 +77,7 @@ class ArkivNode:
         - Context manager works safely with both modes (no-op for external nodes)
     """
 
-    DEFAULT_IMAGE = "golemnetwork/golembase-op-geth:latest"
+    DEFAULT_IMAGE = "golemnetwork/arkiv-op-geth:latest"
     DEFAULT_HTTP_PORT = 8545
     DEFAULT_WS_PORT = 8546
 
@@ -94,7 +94,7 @@ class ArkivNode:
         Initialize the Arkiv node.
 
         Args:
-            image: Docker image to use (default: golemnetwork/golembase-op-geth:latest)
+            image: Docker image to use (default: golemnetwork/arkiv-op-geth:latest)
             http_port: Internal HTTP port (default: 8545)
             ws_port: Internal WebSocket port (default: 8546)
             http_url: External HTTP RPC URL (for external nodes, disables container)

@@ -513,7 +513,7 @@ class TestToRpcQueryOptions:
         assert include_data["owner"] is True
 
         # Check default page size
-        assert rpc_options["resultsPerPage"] == MAX_RESULTS_PER_PAGE_DEFAULT
+        assert int(rpc_options["resultsPerPage"], 16) == MAX_RESULTS_PER_PAGE_DEFAULT
 
         # Check max_results is None (not passed to RPC, handled by iterator)
         assert options.max_results is None
@@ -525,7 +525,7 @@ class TestToRpcQueryOptions:
 
         max_results_per_page_custom = 50
         assert max_results_per_page_custom != MAX_RESULTS_PER_PAGE_DEFAULT
-        assert rpc_options["resultsPerPage"] == max_results_per_page_custom
+        assert int(rpc_options["resultsPerPage"], 16) == max_results_per_page_custom
 
     def test_page_size_capped_by_max_results(self) -> None:
         """Test that page size is capped by max_results when smaller."""
@@ -539,7 +539,7 @@ class TestToRpcQueryOptions:
         )
         rpc_options = to_rpc_query_options(options)
 
-        assert rpc_options["resultsPerPage"] == max_results_capped
+        assert int(rpc_options["resultsPerPage"], 16) == max_results_capped
 
     def test_page_size_not_affected_when_max_results_larger(self) -> None:
         """Test that page size unchanged when max_results > max_results_per_page."""
@@ -553,7 +553,7 @@ class TestToRpcQueryOptions:
         )
         rpc_options = to_rpc_query_options(options)
 
-        assert rpc_options["resultsPerPage"] == max_results_per_page
+        assert int(rpc_options["resultsPerPage"], 16) == max_results_per_page
 
     def test_page_size_equal_to_max_results(self) -> None:
         """Test when max_results equals max_results_per_page."""
@@ -566,7 +566,7 @@ class TestToRpcQueryOptions:
         )
         rpc_options = to_rpc_query_options(options)
 
-        assert rpc_options["resultsPerPage"] == max_results_capped
+        assert int(rpc_options["resultsPerPage"], 16) == max_results_capped
 
     def test_page_size_with_max_results_none(self) -> None:
         """Test that page size is unchanged when max_results is None."""
@@ -578,4 +578,4 @@ class TestToRpcQueryOptions:
         )
         rpc_options = to_rpc_query_options(options)
 
-        assert rpc_options["resultsPerPage"] == max_results_per_page
+        assert int(rpc_options["resultsPerPage"], 16) == max_results_per_page

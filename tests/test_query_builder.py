@@ -606,6 +606,9 @@ class TestQueryBuilder:
             assert result.attributes["age"] >= 18
             assert result.attributes["status"] != "banned"
 
+    @pytest.mark.skip(
+        reason="Skipping order by tests for now as we miss order support in the node"
+    )
     def test_order_by_int_asc(self, arkiv_client_http: Arkiv) -> None:
         """Test .order_by() with IntSort ascending."""
         batch_id, _ = create_test_entities(
@@ -624,6 +627,9 @@ class TestQueryBuilder:
         # Each sequence value appears twice (once per name)
         assert sequences == [1, 1, 2, 2, 3, 3]
 
+    @pytest.mark.skip(
+        reason="Skipping order by tests for now as we miss order support in the node"
+    )
     def test_order_by_int_desc(self, arkiv_client_http: Arkiv) -> None:
         """Test .order_by() with IntSort descending."""
         batch_id, _ = create_test_entities(
@@ -642,6 +648,9 @@ class TestQueryBuilder:
         # Each sequence value appears twice (once per name)
         assert sequences == [3, 3, 2, 2, 1, 1]
 
+    @pytest.mark.skip(
+        reason="Skipping order by tests for now as we miss order support in the node"
+    )
     def test_order_by_str_asc(self, arkiv_client_http: Arkiv) -> None:
         """Test .order_by() with StrSort ascending."""
         batch_id, _ = create_test_entities(arkiv_client_http, 3)  # 3 names x 3 seq = 9
@@ -658,6 +667,9 @@ class TestQueryBuilder:
         # Each name appears 3 times (once per sequence)
         assert names == ["name_1"] * 3 + ["name_2"] * 3 + ["name_3"] * 3
 
+    @pytest.mark.skip(
+        reason="Skipping order by tests for now as we miss order support in the node"
+    )
     def test_order_by_str_desc(self, arkiv_client_http: Arkiv) -> None:
         """Test .order_by() with StrSort descending."""
         batch_id, _ = create_test_entities(arkiv_client_http, 3)  # 3 names x 3 seq = 9
@@ -674,6 +686,9 @@ class TestQueryBuilder:
         # Each name appears 3 times (once per sequence), descending order
         assert names == ["name_3"] * 3 + ["name_2"] * 3 + ["name_1"] * 3
 
+    @pytest.mark.skip(
+        reason="Skipping order by tests for now as we miss order support in the node"
+    )
     def test_complex_where_with_multiple_order_by(
         self, arkiv_client_http: Arkiv
     ) -> None:
@@ -772,6 +787,9 @@ class TestQueryBuilder:
 
         assert len(results) == 5
 
+    @pytest.mark.skip(
+        reason="Skipping order by tests for now as we miss order support in the node"
+    )
     def test_limit_with_order_by(self, arkiv_client_http: Arkiv) -> None:
         """Test .limit() with ORDER BY returns top N sorted results."""
         batch_id, _ = create_test_entities(arkiv_client_http, 3)  # 3 names x 3 seq = 9

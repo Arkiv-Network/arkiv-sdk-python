@@ -321,7 +321,7 @@ def to_rpc_query_options(
     if not options:
         options = QueryOptions()
 
-    # see https://github.com/Golem-Base/golembase-op-geth/blob/main/eth/api_arkiv.go
+    # see https://github.com/Arkiv-Network/arkiv-op-geth/blob/main/eth/api_arkiv.go
     rpc_query_options: dict[str, Any] = {
         "includeData": {
             "key": options.attributes & KEY != 0,
@@ -338,7 +338,7 @@ def to_rpc_query_options(
     }
 
     if options.at_block is not None:
-        rpc_query_options["atBlock"] = options.at_block
+        rpc_query_options["atBlock"] = Web3.to_hex(options.at_block)
     else:
         rpc_query_options["atBlock"] = None
 
@@ -349,7 +349,7 @@ def to_rpc_query_options(
         effective_page_size = min(effective_page_size, options.max_results)
 
     if effective_page_size is not None:
-        rpc_query_options["resultsPerPage"] = effective_page_size
+        rpc_query_options["resultsPerPage"] = Web3.to_hex(effective_page_size)
 
     if options.cursor is not None:
         rpc_query_options["cursor"] = options.cursor
@@ -515,7 +515,7 @@ def to_query_result(fields: int, rpc_query_response: dict[str, Any]) -> QueryPag
     )
 
     query_result = QueryPage(
-        entities=entities, block_number=block_number, cursor=cursor
+        entities=entities, block_number=int(block_number, 16), cursor=cursor
     )
 
     logger.debug(f"Query result: {query_result}")

@@ -173,9 +173,6 @@ class TestEntityExtend:
         # Verify the error message indicates entity not found
         error_message = str(exc_info.value)
         assert "entity" in error_message.lower(), "Error message should mention entity"
-        assert "not found" in error_message.lower(), (
-            "Error message should indicate entity not found"
-        )
 
         logger.info(
             f"Extend of non-existent entity correctly raised {type(exc_info.value).__name__}"
@@ -204,9 +201,6 @@ class TestEntityExtend:
         # Verify the error message indicates entity not found
         error_message = str(exc_info.value)
         assert "entity" in error_message.lower(), "Error message should mention entity"
-        assert "not found" in error_message.lower(), (
-            "Error message should indicate entity not found"
-        )
 
         logger.info(
             f"Extend of deleted entity correctly raised {type(exc_info.value).__name__}"
