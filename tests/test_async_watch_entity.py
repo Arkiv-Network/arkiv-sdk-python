@@ -208,7 +208,7 @@ class TestAsyncWatchOwnerChanged:
 
         async def on_owner_changed(event: ChangeOwnerEvent, tx_hash: TxHash) -> None:
             logger.info(
-                f"Async callback: Owner changed for {event.key} from {event.old_owner_address} to {event.new_owner_address}"
+                f"Async callback: Owner changed for {event.key} to {event.new_owner_address}"
             )
             events_received.append((event, tx_hash))
 
@@ -239,7 +239,6 @@ class TestAsyncWatchOwnerChanged:
             assert len(events_received) == 1
             event, event_tx_hash = events_received[0]
             assert event.key == entity_key
-            assert event.old_owner_address == original_owner
             assert event.new_owner_address == account_2.address
             assert event_tx_hash == receipt.tx_hash
 

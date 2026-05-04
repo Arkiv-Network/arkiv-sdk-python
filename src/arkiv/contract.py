@@ -8,152 +8,107 @@ from web3 import Web3
 from web3.method import Method, default_root_munger
 from web3.types import RPCEndpoint
 
-# ArkivProcessorAddress
 ARKIV_ADDRESS: Final[ChecksumAddress] = Web3.to_checksum_address(
-    "0x00000000000000000000000000000061726B6976"
+    "0x4400000000000000000000000000000000000044"
 )
 
-CREATED_EVENT: Final[str] = "ArkivEntityCreated"
-UPDATED_EVENT: Final[str] = "ArkivEntityUpdated"
-EXPIRED_EVENT: Final[str] = "ArkivEntityExpired"
-DELETED_EVENT: Final[str] = "ArkivEntityDeleted"
-EXTENDED_EVENT: Final[str] = "ArkivEntityBTLExtended"
-OWNER_CHANGED_EVENT: Final[str] = "ArkivEntityOwnerChanged"
+ENTITY_OPERATION_EVENT: Final[str] = "EntityOperation"
+CHANGESET_HASH_UPDATE_EVENT: Final[str] = "ChangeSetHashUpdate"
 
-CREATED_EVENT_LEGACY: Final[str] = "GolemBaseStorageEntityCreated"
-UPDATED_EVENT_LEGACY: Final[str] = "GolemBaseStorageEntityUpdated"
-EXTENDED_EVENT_LEGACY: Final[str] = "GolemBaseStorageEntityBTLExtended"
-DELETED_EVENT_LEGACY: Final[str] = "GolemBaseStorageEntityDeleted"
+ENTITY_KEY = "entityKey"
+OPERATION_TYPE = "operationType"
+OWNER = "owner"
+EXPIRES_AT = "expiresAt"
+ENTITY_HASH = "entityHash"
 
+OP_TYPE_CREATE   = 1
+OP_TYPE_UPDATE   = 2
+OP_TYPE_EXTEND   = 3
+OP_TYPE_TRANSFER = 4
+OP_TYPE_DELETE   = 5
+OP_TYPE_EXPIRE   = 6
 
-EVENTS: dict[str, str] = {
-    "created_legacy": CREATED_EVENT_LEGACY,
-    "updated_legacy": UPDATED_EVENT_LEGACY,
-    "extended_legacy": EXTENDED_EVENT_LEGACY,
-    "deleted_legacy": DELETED_EVENT_LEGACY,
-    "created": CREATED_EVENT,
-    "updated": UPDATED_EVENT,
-    "extended": EXTENDED_EVENT,
-    "deleted": DELETED_EVENT,
-    "expired": EXPIRED_EVENT,
-    "owner_changed": OWNER_CHANGED_EVENT,
+ATTR_UINT       = 1
+ATTR_STRING     = 2
+ATTR_ENTITY_KEY = 3
+
+# Maps EventType literal strings to operation type constants
+EVENTS: dict[str, int] = {
+    "created":      OP_TYPE_CREATE,
+    "updated":      OP_TYPE_UPDATE,
+    "extended":     OP_TYPE_EXTEND,
+    "deleted":      OP_TYPE_DELETE,
+    "owner_changed": OP_TYPE_TRANSFER,
+    "expired":      OP_TYPE_EXPIRE,
 }
 
 TYPE_EVENT = "event"
-TYPE_UINT = "uint256"
+TYPE_UINT8 = "uint8"
+TYPE_UINT32 = "uint32"
+TYPE_UINT256 = "uint256"
+TYPE_BYTES32 = "bytes32"
 TYPE_ADDRESS = "address"
-
-ENTITY_KEY = "entityKey"
-
-OWNER_ADDRESS = "ownerAddress"
-OLD_OWNER_ADDRESS = "oldOwnerAddress"
-NEW_OWNER_ADDRESS = "newOwnerAddress"
-
-EXPIRATION_BLOCK = "expirationBlock"
-OLD_EXPIRATION_BLOCK = "oldExpirationBlock"
-NEW_EXPIRATION_BLOCK = "newExpirationBlock"
-
-COST = "cost"
 
 EVENTS_ABI: Final[Sequence[dict[str, Any]]] = [
     {
         "anonymous": False,
-        "inputs": [
-            {"indexed": True, "name": ENTITY_KEY, "type": TYPE_UINT},
-            {"indexed": False, "name": EXPIRATION_BLOCK, "type": TYPE_UINT},
-        ],
-        "name": CREATED_EVENT_LEGACY,
         "type": TYPE_EVENT,
+        "name": ENTITY_OPERATION_EVENT,
+        "inputs": [
+            {"indexed": True,  "name": ENTITY_KEY,     "type": TYPE_BYTES32},
+            {"indexed": True,  "name": OPERATION_TYPE, "type": TYPE_UINT8},
+            {"indexed": True,  "name": OWNER,          "type": TYPE_ADDRESS},
+            {"indexed": False, "name": EXPIRES_AT,     "type": TYPE_UINT32},
+            {"indexed": False, "name": ENTITY_HASH,    "type": TYPE_BYTES32},
+        ],
     },
     {
         "anonymous": False,
+        "type": TYPE_EVENT,
+        "name": CHANGESET_HASH_UPDATE_EVENT,
         "inputs": [
-            {"indexed": True, "name": ENTITY_KEY, "type": TYPE_UINT},
-            {"indexed": False, "name": EXPIRATION_BLOCK, "type": TYPE_UINT},
+            {"indexed": True,  "name": ENTITY_KEY,      "type": TYPE_BYTES32},
+            {"indexed": True,  "name": "operationKey",  "type": TYPE_UINT256},
+            {"indexed": False, "name": "changeSetHash", "type": TYPE_BYTES32},
         ],
-        "name": UPDATED_EVENT_LEGACY,
-        "type": TYPE_EVENT,
-    },
-    {
-        "anonymous": False,
-        "inputs": [{"indexed": True, "name": ENTITY_KEY, "type": TYPE_UINT}],
-        "name": DELETED_EVENT_LEGACY,
-        "type": TYPE_EVENT,
-    },
-    {
-        "anonymous": False,
-        "inputs": [
-            {"indexed": True, "name": ENTITY_KEY, "type": TYPE_UINT},
-            {"indexed": False, "name": OLD_EXPIRATION_BLOCK, "type": TYPE_UINT},
-            {"indexed": False, "name": NEW_EXPIRATION_BLOCK, "type": TYPE_UINT},
-        ],
-        "name": EXTENDED_EVENT_LEGACY,
-        "type": TYPE_EVENT,
-    },
-    {
-        "anonymous": False,
-        "inputs": [
-            {"indexed": True, "name": ENTITY_KEY, "type": TYPE_UINT},
-            {"indexed": True, "name": OWNER_ADDRESS, "type": TYPE_ADDRESS},
-            {"indexed": False, "name": EXPIRATION_BLOCK, "type": TYPE_UINT},
-            {"indexed": False, "name": COST, "type": TYPE_UINT},
-        ],
-        "name": CREATED_EVENT,
-        "type": TYPE_EVENT,
-    },
-    {
-        "anonymous": False,
-        "inputs": [
-            {"indexed": True, "name": ENTITY_KEY, "type": TYPE_UINT},
-            {"indexed": True, "name": OWNER_ADDRESS, "type": TYPE_ADDRESS},
-            {"indexed": False, "name": OLD_EXPIRATION_BLOCK, "type": TYPE_UINT},
-            {"indexed": False, "name": NEW_EXPIRATION_BLOCK, "type": TYPE_UINT},
-            {"indexed": False, "name": COST, "type": TYPE_UINT},
-        ],
-        "name": UPDATED_EVENT,
-        "type": TYPE_EVENT,
-    },
-    {
-        "anonymous": False,
-        "inputs": [
-            {"indexed": True, "name": ENTITY_KEY, "type": TYPE_UINT},
-            {"indexed": True, "name": OWNER_ADDRESS, "type": TYPE_ADDRESS},
-        ],
-        "name": EXPIRED_EVENT,
-        "type": TYPE_EVENT,
-    },
-    {
-        "anonymous": False,
-        "inputs": [
-            {"indexed": True, "name": ENTITY_KEY, "type": TYPE_UINT},
-            {"indexed": True, "name": OWNER_ADDRESS, "type": TYPE_ADDRESS},
-        ],
-        "name": DELETED_EVENT,
-        "type": TYPE_EVENT,
-    },
-    {
-        "anonymous": False,
-        "inputs": [
-            {"indexed": True, "name": ENTITY_KEY, "type": TYPE_UINT},
-            {"indexed": True, "name": OWNER_ADDRESS, "type": TYPE_ADDRESS},
-            {"indexed": False, "name": OLD_EXPIRATION_BLOCK, "type": TYPE_UINT},
-            {"indexed": False, "name": NEW_EXPIRATION_BLOCK, "type": TYPE_UINT},
-            {"indexed": False, "name": COST, "type": TYPE_UINT},
-        ],
-        "name": EXTENDED_EVENT,
-        "type": TYPE_EVENT,
-    },
-    {
-        "anonymous": False,
-        "inputs": [
-            {"indexed": True, "name": ENTITY_KEY, "type": TYPE_UINT},
-            {"indexed": True, "name": OLD_OWNER_ADDRESS, "type": TYPE_ADDRESS},
-            {"indexed": True, "name": NEW_OWNER_ADDRESS, "type": TYPE_ADDRESS},
-        ],
-        "name": OWNER_CHANGED_EVENT,
-        "type": TYPE_EVENT,
     },
 ]
+
+EXECUTE_FUNCTION_ABI: Final[dict[str, Any]] = {
+    "type": "function",
+    "name": "execute",
+    "stateMutability": "nonpayable",
+    "inputs": [
+        {
+            "name": "ops",
+            "type": "tuple[]",
+            "components": [
+                {"name": "operationType", "type": TYPE_UINT8},
+                {"name": "entityKey",     "type": TYPE_BYTES32},
+                {"name": "payload",       "type": "bytes"},
+                {
+                    "name": "contentType",
+                    "type": "tuple",
+                    "components": [{"name": "data", "type": "bytes32[4]"}],
+                },
+                {
+                    "name": "attributes",
+                    "type": "tuple[]",
+                    "components": [
+                        {"name": "name",      "type": TYPE_BYTES32},
+                        {"name": "valueType", "type": TYPE_UINT8},
+                        {"name": "value",     "type": "bytes32[4]"},
+                    ],
+                },
+                {"name": "expiresAt", "type": TYPE_UINT32},
+                {"name": "newOwner",  "type": TYPE_ADDRESS},
+            ],
+        }
+    ],
+    "outputs": [],
+}
+
+FULL_ABI: Final[Sequence[dict[str, Any]]] = [*EVENTS_ABI, EXECUTE_FUNCTION_ABI]
 
 
 FUNCTIONS_ABI: dict[str, Method[Any]] = {

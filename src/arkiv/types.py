@@ -310,16 +310,13 @@ class CreateEvent(EntityOwnerEvent):
     """Event emitted when an entity is created."""
 
     expiration_block: int
-    cost: int
 
 
 @dataclass(frozen=True)
 class UpdateEvent(EntityOwnerEvent):
     """Event emitted when an entity is updated."""
 
-    old_expiration_block: int
-    new_expiration_block: int
-    cost: int
+    expiration_block: int
 
 
 @dataclass(frozen=True)
@@ -340,25 +337,14 @@ class DeleteEvent(EntityOwnerEvent):
 class ExtendEvent(EntityOwnerEvent):
     """Event emitted when an entity's lifetime is extended."""
 
-    old_expiration_block: int
-    new_expiration_block: int
-    cost: int
+    expiration_block: int
 
 
 @dataclass(frozen=True)
 class ChangeOwnerEvent(EntityEvent):
     """Event emitted when an entity's owner is changed."""
 
-    old_owner_address: ChecksumAddress
     new_owner_address: ChecksumAddress
-
-
-@dataclass(frozen=True)
-class CreateEventLegacy(EntityEvent):
-    """Event emitted when an entity is created (legacy)."""
-
-    expiration_block: int
-    cost: int
 
 
 @dataclass(frozen=True)
@@ -390,10 +376,6 @@ AsyncChangeOwnerCallback = Callable[[ChangeOwnerEvent, TxHash], Awaitable[None]]
 
 # Event type literal
 EventType = Literal["created", "updated", "deleted", "extended", "owner_changed"]
-
-# Low level attributes for RLP encoding
-StringAttributesRlp = NewType("StringAttributesRlp", list[tuple[str, str]])
-NumericAttributesRlp = NewType("NumericAttributesRlp", list[tuple[str, int]])
 
 # Low level attributes for entity decoding
 StringAttributes = NewType("StringAttributes", AttributeDict[str, str])

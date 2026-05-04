@@ -5,26 +5,30 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-import brotli  # type: ignore[import-untyped]
-import rlp  # type: ignore[import-untyped]
 from eth_typing import BlockNumber, ChecksumAddress, HexStr
 from hexbytes import HexBytes
 from web3 import Web3
 from web3.contract import Contract
 from web3.contract.base_contract import BaseContractEvent
-from web3.types import EventData, LogReceipt, TxParams, TxReceipt
+from web3.types import EventData, LogReceipt, TxReceipt
 
 from . import contract
 from .contract import (
     ARKIV_ADDRESS,
-    COST,
+    ATTR_STRING,
+    ATTR_UINT,
+    CHANGESET_HASH_UPDATE_EVENT,
     ENTITY_KEY,
-    EXPIRATION_BLOCK,
-    NEW_EXPIRATION_BLOCK,
-    NEW_OWNER_ADDRESS,
-    OLD_EXPIRATION_BLOCK,
-    OLD_OWNER_ADDRESS,
-    OWNER_ADDRESS,
+    ENTITY_OPERATION_EVENT,
+    EXPIRES_AT,
+    OPERATION_TYPE,
+    OWNER as OWNER_FIELD,
+    OP_TYPE_CREATE,
+    OP_TYPE_DELETE,
+    OP_TYPE_EXPIRE,
+    OP_TYPE_EXTEND,
+    OP_TYPE_TRANSFER,
+    OP_TYPE_UPDATE,
 )
 from .exceptions import AttributeException, EntityKeyException
 from .types import (
@@ -52,13 +56,11 @@ from .types import (
     EntityKey,
     ExpiryEvent,
     ExtendEvent,
-    NumericAttributes,
-    NumericAttributesRlp,
     Operations,
     QueryOptions,
     QueryPage,
     StringAttributes,
-    StringAttributesRlp,
+    NumericAttributes,
     TransactionReceipt,
     TxHash,
     UpdateEvent,
@@ -66,6 +68,10 @@ from .types import (
 )
 
 logger = logging.getLogger(__name__)
+
+_ZERO_BYTES32 = bytes(32)
+_ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
+_EMPTY_MIME128 = {"data": [_ZERO_BYTES32] * 4}
 
 
 def to_seconds(
@@ -114,7 +120,7 @@ def to_blocks(seconds: int = 0, minutes: int = 0, hours: int = 0, days: int = 0)
 
 def to_entity_key(entity_key_int: int) -> EntityKey:
     hex_value = Web3.to_hex(entity_key_int)
-    # ensure lenth is 66 (0x + 64 hex)
+    # ensure length is 66 (0x + 64 hex)
     if len(hex_value) < 66:
         hex_value = HexStr("0x" + hex_value[2:].zfill(64))
     return EntityKey(hex_value)
@@ -228,36 +234,111 @@ def is_hex_str(value: str) -> bool:
         return False
 
 
-def to_tx_params(
-    operations: Operations,
-    tx_params: TxParams | None = None,
-) -> TxParams:
-    """
-    Convert Operations to TxParams for Arkiv contract interaction.
+def _mime128_encode(content_type: str) -> dict[str, Any]:
+    """Encode a MIME type string into Mime128 struct (bytes32[4])."""
+    raw = content_type.encode("ascii")[:128].ljust(128, b"\x00")
+    return {"data": [raw[i * 32 : (i + 1) * 32] for i in range(4)]}
 
-    Args:
-        operations: Arkiv operations to encode
-        tx_params: Optional additional transaction parameters
 
-    Returns:
-        TxParams ready for Web3.py transaction sending to Arkiv storage contract
+def _ident32_encode(name: str) -> bytes:
+    """Encode attribute name as Ident32 (bytes32, ASCII left-aligned, zero-padded)."""
+    raw = name.encode("ascii")
+    if len(raw) > 32:
+        raise AttributeException(f"Attribute name too long (max 32 chars): {name}")
+    return raw.ljust(32, b"\x00")
 
-    Note: 'to', 'value', and 'data' from tx_params will be overridden.
-    """
-    if not tx_params:
-        tx_params = {}
 
-    # Merge provided tx_params with encoded transaction data
-    data = rlp_encode_transaction(operations)
-    data_compressed = brotli.compress(data)
+def _attr_value_encode(value: str | int) -> list[bytes]:
+    """Encode attribute value into bytes32[4] container."""
+    if isinstance(value, int):
+        raw = value.to_bytes(32, "big").ljust(128, b"\x00")
+    else:
+        raw = value.encode("utf-8")[:128].ljust(128, b"\x00")
+    return [raw[i * 32 : (i + 1) * 32] for i in range(4)]
 
-    tx_params |= {
-        "to": ARKIV_ADDRESS,
-        "value": Web3.to_wei(0, "ether"),
-        "data": data_compressed,
-    }
 
-    return tx_params
+def _encode_attributes(attributes: Attributes | None) -> list[dict[str, Any]]:
+    """Convert Attributes dict to sorted list of Attribute structs for ABI encoding."""
+    if not attributes:
+        return []
+    result = []
+    for key, value in sorted(attributes.items()):
+        if isinstance(value, int):
+            if value < 0:
+                raise AttributeException(
+                    f"Numeric attributes must be non-negative but found '{value}' for key '{key}'"
+                )
+            value_type = ATTR_UINT
+        else:
+            value_type = ATTR_STRING
+        result.append({
+            "name": _ident32_encode(key),
+            "valueType": value_type,
+            "value": _attr_value_encode(value),
+        })
+    return result
+
+
+def to_contract_ops(operations: Operations, current_block: int) -> list[dict[str, Any]]:
+    """Convert Operations to ABI-encoded ops list for EntityRegistry.execute()."""
+    ops: list[dict[str, Any]] = []
+
+    for op in operations.creates:
+        ops.append({
+            "operationType": OP_TYPE_CREATE,
+            "entityKey":     _ZERO_BYTES32,
+            "payload":       op.payload,
+            "contentType":   _mime128_encode(op.content_type),
+            "attributes":    _encode_attributes(op.attributes),
+            "expiresAt":     current_block + to_blocks(seconds=op.expires_in),
+            "newOwner":      _ZERO_ADDRESS,
+        })
+
+    for op in operations.updates:
+        ops.append({
+            "operationType": OP_TYPE_UPDATE,
+            "entityKey":     entity_key_to_bytes(op.key),
+            "payload":       op.payload,
+            "contentType":   _mime128_encode(op.content_type),
+            "attributes":    _encode_attributes(op.attributes),
+            "expiresAt":     0,
+            "newOwner":      _ZERO_ADDRESS,
+        })
+
+    for op in operations.deletes:
+        ops.append({
+            "operationType": OP_TYPE_DELETE,
+            "entityKey":     entity_key_to_bytes(op.key),
+            "payload":       b"",
+            "contentType":   _EMPTY_MIME128,
+            "attributes":    [],
+            "expiresAt":     0,
+            "newOwner":      _ZERO_ADDRESS,
+        })
+
+    for op in operations.extensions:
+        ops.append({
+            "operationType": OP_TYPE_EXTEND,
+            "entityKey":     entity_key_to_bytes(op.key),
+            "payload":       b"",
+            "contentType":   _EMPTY_MIME128,
+            "attributes":    [],
+            "expiresAt":     current_block + to_blocks(seconds=op.extend_by),
+            "newOwner":      _ZERO_ADDRESS,
+        })
+
+    for op in operations.change_owners:
+        ops.append({
+            "operationType": OP_TYPE_TRANSFER,
+            "entityKey":     entity_key_to_bytes(op.key),
+            "payload":       b"",
+            "contentType":   _EMPTY_MIME128,
+            "attributes":    [],
+            "expiresAt":     0,
+            "newOwner":      op.new_owner,
+        })
+
+    return ops
 
 
 def to_query_options(
@@ -574,75 +655,49 @@ def to_event(
     # Check if this is already processed EventData (has 'event' and 'args' keys)
     # or a raw log that needs processing
     if "event" in log and "args" in log:
-        # Already an EventData structure
         event_data: EventData = log  # type: ignore[assignment]
     else:
-        # Raw log - process it
         logger.debug("Processing raw log for event conversion")
         event_data = get_event_data(contract_, log)
 
     event_args: dict[str, Any] = event_data["args"]
     event_name = event_data["event"]
 
-    entity_key: EntityKey = to_entity_key(event_args[ENTITY_KEY])
-    logger.debug(
-        f"Processing event: {event_name}, entity_key: {entity_key}, owner_address: {event_args.get('ownerAddress')}"
-    )
-
     match event_name:
-        case contract.CREATED_EVENT:
-            return CreateEvent(
-                key=entity_key,
-                owner_address=ChecksumAddress(event_args[OWNER_ADDRESS]),
-                expiration_block=event_args[EXPIRATION_BLOCK],
-                cost=int(event_args[COST]),
+        case contract.ENTITY_OPERATION_EVENT:
+            key = EntityKey(HexStr("0x" + HexBytes(event_args[ENTITY_KEY]).hex()))
+            owner = ChecksumAddress(event_args[OWNER_FIELD])
+            expires_at = int(event_args[EXPIRES_AT])
+            logger.debug(
+                f"Processing EntityOperation: op_type={event_args[OPERATION_TYPE]}, "
+                f"key={key}, owner={owner}"
             )
-        case contract.UPDATED_EVENT:
-            return UpdateEvent(
-                key=entity_key,
-                owner_address=ChecksumAddress(event_args[OWNER_ADDRESS]),
-                old_expiration_block=event_args[OLD_EXPIRATION_BLOCK],
-                new_expiration_block=event_args[NEW_EXPIRATION_BLOCK],
-                cost=int(event_args[COST]),
-            )
-        case contract.EXPIRED_EVENT:
-            return ExpiryEvent(
-                key=entity_key,
-                owner_address=ChecksumAddress(event_args[OWNER_ADDRESS]),
-            )
-        case contract.DELETED_EVENT:
-            return DeleteEvent(
-                key=entity_key,
-                owner_address=ChecksumAddress(event_args[OWNER_ADDRESS]),
-            )
-        case contract.EXTENDED_EVENT:
-            return ExtendEvent(
-                key=entity_key,
-                owner_address=ChecksumAddress(event_args[OWNER_ADDRESS]),
-                old_expiration_block=event_args[OLD_EXPIRATION_BLOCK],
-                new_expiration_block=event_args[NEW_EXPIRATION_BLOCK],
-                cost=int(event_args[COST]),
-            )
-        case contract.OWNER_CHANGED_EVENT:
-            return ChangeOwnerEvent(
-                key=entity_key,
-                old_owner_address=event_args[OLD_OWNER_ADDRESS],
-                new_owner_address=event_args[NEW_OWNER_ADDRESS],
-            )
-        # Legacy events - skip with info log
-        case contract.CREATED_EVENT_LEGACY:
-            logger.debug(f"Skipping legacy event: {event_name}")
+            match int(event_args[OPERATION_TYPE]):
+                case contract.OP_TYPE_CREATE:
+                    return CreateEvent(
+                        key=key, owner_address=owner, expiration_block=expires_at
+                    )
+                case contract.OP_TYPE_UPDATE:
+                    return UpdateEvent(
+                        key=key, owner_address=owner, expiration_block=expires_at
+                    )
+                case contract.OP_TYPE_EXTEND:
+                    return ExtendEvent(
+                        key=key, owner_address=owner, expiration_block=expires_at
+                    )
+                case contract.OP_TYPE_DELETE:
+                    return DeleteEvent(key=key, owner_address=owner)
+                case contract.OP_TYPE_TRANSFER:
+                    return ChangeOwnerEvent(key=key, new_owner_address=owner)
+                case contract.OP_TYPE_EXPIRE:
+                    return ExpiryEvent(key=key, owner_address=owner)
+                case _:
+                    logger.warning(
+                        f"Unknown operationType: {event_args[OPERATION_TYPE]}"
+                    )
+                    return None
+        case contract.CHANGESET_HASH_UPDATE_EVENT:
             return None
-        case contract.UPDATED_EVENT_LEGACY:
-            logger.debug(f"Skipping legacy event: {event_name}")
-            return None
-        case contract.DELETED_EVENT_LEGACY:
-            logger.debug(f"Skipping legacy event: {event_name}")
-            return None
-        case contract.EXTENDED_EVENT_LEGACY:
-            logger.debug(f"Skipping legacy event: {event_name}")
-            return None
-        # Unknown events - return None with warning log
         case _:
             logger.warning(f"Unknown event type: {event_name}")
             return None
@@ -687,40 +742,21 @@ def to_receipt(
     logs: list[LogReceipt] = tx_receipt["logs"]
     for log in logs:
         try:
-            event_data: EventData = get_event_data(contract_, log)
-            event_name = event_data["event"]
             event = to_event(contract_, log)
             if event is None:
                 continue
-            match event_name:
-                case contract.CREATED_EVENT:
-                    if isinstance(event, CreateEvent):
-                        creates.append(event)
-                case contract.UPDATED_EVENT:
-                    if isinstance(event, UpdateEvent):
-                        updates.append(event)
-                case contract.EXPIRED_EVENT:
-                    logger.warning(f"Not yet implemented: {event_name}")
-                case contract.DELETED_EVENT:
-                    if isinstance(event, DeleteEvent):
-                        deletes.append(event)
-                case contract.EXTENDED_EVENT:
-                    if isinstance(event, ExtendEvent):
-                        extensions.append(event)
-                case contract.OWNER_CHANGED_EVENT:
-                    if isinstance(event, ChangeOwnerEvent):
-                        change_owners.append(event)
-                case contract.CREATED_EVENT_LEGACY:
-                    logger.debug(f"Skipping legacy event: {event_name}")
-                case contract.UPDATED_EVENT_LEGACY:
-                    logger.debug(f"Skipping legacy event: {event_name}")
-                case contract.DELETED_EVENT_LEGACY:
-                    logger.debug(f"Skipping legacy event: {event_name}")
-                case contract.EXTENDED_EVENT_LEGACY:
-                    logger.debug(f"Skipping legacy event: {event_name}")
-                # Unknown events - skip with warning log
-                case _:
-                    logger.warning(f"Unknown event type: {event_name}")
+            if isinstance(event, CreateEvent):
+                creates.append(event)
+            elif isinstance(event, UpdateEvent):
+                updates.append(event)
+            elif isinstance(event, DeleteEvent):
+                deletes.append(event)
+            elif isinstance(event, ExtendEvent):
+                extensions.append(event)
+            elif isinstance(event, ChangeOwnerEvent):
+                change_owners.append(event)
+            elif isinstance(event, ExpiryEvent):
+                logger.warning("Expiry event received in receipt (not yet handled)")
         except Exception:
             # Skip logs that don't match our contract events
             continue
@@ -751,80 +787,6 @@ def get_event_data(contract: Contract, log: LogReceipt) -> EventData:
 
     # No topic -> no event data
     raise ValueError("No topic/event data found in log")
-
-
-def rlp_encode_transaction(tx: Operations) -> bytes:
-    """Encode a transaction in RLP."""
-
-    # Turn the transaction into a list for RLP encoding
-    payload = [
-        # Create
-        [
-            [
-                to_blocks(seconds=element.expires_in),
-                element.content_type,
-                element.payload,
-                *split_attributes(element.attributes),
-            ]
-            for element in tx.creates
-        ],
-        # Update
-        [
-            [
-                entity_key_to_bytes(element.key),
-                element.content_type,
-                to_blocks(seconds=element.expires_in),
-                element.payload,
-                *split_attributes(element.attributes),
-            ]
-            for element in tx.updates
-        ],
-        # Delete
-        [entity_key_to_bytes(element.key) for element in tx.deletes],
-        # Extend
-        [
-            [
-                entity_key_to_bytes(element.key),
-                to_blocks(seconds=element.extend_by),
-            ]
-            for element in tx.extensions
-        ],
-        # ChangeOwner
-        [
-            [
-                entity_key_to_bytes(element.key),
-                bytes.fromhex(element.new_owner[2:]),  # Convert address to bytes
-            ]
-            for element in tx.change_owners
-        ],
-    ]
-    logger.debug("Payload: %s", payload)
-    encoded: bytes = rlp.encode(payload)
-    logger.debug("Encoded payload: %s", encoded)
-    return encoded
-
-
-def split_attributes(
-    attributes: Attributes | None = None,
-) -> tuple[StringAttributesRlp, NumericAttributesRlp]:
-    """Helper to split mixed attributes into string and numeric lists."""
-    string_attributes: StringAttributesRlp = StringAttributesRlp([])
-    numeric_attributes: NumericAttributesRlp = NumericAttributesRlp([])
-
-    if attributes:
-        for key, value in attributes.items():
-            if isinstance(value, int):
-                if value < 0:
-                    raise AttributeException(
-                        f"Numeric attributes must be non-negative but found '{value}' for key '{key}'"
-                    )
-
-                numeric_attributes.append((key, value))
-            else:
-                string_attributes.append((key, value))
-
-    logger.debug(f"Split attributes into {string_attributes} and {numeric_attributes}")
-    return string_attributes, numeric_attributes
 
 
 def merge_attributes(

@@ -108,11 +108,12 @@ class AsyncEventFilter(EventFilterBase[AsyncCallback]):
         Returns:
             LogFilter for async HTTP providers
         """
-        event_name = self._get_contract_event_name()
-        contract_event = self.contract.events[event_name]
+        from arkiv.contract import ENTITY_OPERATION_EVENT
+        contract_event = self.contract.events[ENTITY_OPERATION_EVENT]
         return await contract_event.create_filter(
             from_block=self.from_block,
             address=self.contract.address,
+            argument_filters={"operationType": self._get_op_type()},
         )
 
     async def start(self) -> None:

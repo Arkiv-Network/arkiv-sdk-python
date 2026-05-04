@@ -61,7 +61,6 @@ class TestWatchOwnerChanged:
 
             # Verify event data
             assert event.key == entity_key
-            assert event.old_owner_address == original_owner
             assert event.new_owner_address == account_2.address
             assert event_tx_hash == receipt.tx_hash
 
@@ -235,9 +234,6 @@ class TestWatchOwnerChanged:
             received_event = received_events[0]
             changed_event = received_event[0]
             assert changed_event.key == entity_key2, "Entity key mismatch"
-            assert changed_event.old_owner_address == account_1.address, (
-                "Old owner mismatch"
-            )
             assert changed_event.new_owner_address == account_2.address, (
                 "New owner mismatch"
             )
@@ -353,9 +349,6 @@ class TestWatchOwnerChanged:
             assert receipt1.tx_hash in events_by_tx
             event1 = events_by_tx[receipt1.tx_hash]
             assert event1.key == entity_key
-            assert event1.old_owner_address == account_1.address, (
-                f"Expected old owner {account_1.address}, got {event1.old_owner_address}"
-            )
             assert event1.new_owner_address == account_2.address, (
                 f"Expected new owner {account_2.address}, got {event1.new_owner_address}"
             )
@@ -364,9 +357,6 @@ class TestWatchOwnerChanged:
             assert receipt2.tx_hash in events_by_tx
             event2 = events_by_tx[receipt2.tx_hash]
             assert event2.key == entity_key
-            assert event2.old_owner_address == account_2.address, (
-                f"Expected old owner {account_2.address}, got {event2.old_owner_address}"
-            )
             assert event2.new_owner_address == account_1.address, (
                 f"Expected new owner {account_1.address}, got {event2.new_owner_address}"
             )
@@ -413,7 +403,6 @@ class TestWatchOwnerChanged:
             assert len(received_events) == 1
             event, tx_hash = received_events[0]
             assert event.key == entity_key
-            assert event.old_owner_address == original_owner
             assert event.new_owner_address == original_owner
             assert tx_hash == receipt.tx_hash
 

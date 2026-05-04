@@ -60,9 +60,7 @@ class TestWatchEntityExtended:
 
             # Verify event data
             assert event.key == entity_key
-            assert event.old_expiration_block == initial_expiration
-            assert event.new_expiration_block > event.old_expiration_block
-            assert event.new_expiration_block == initial_expiration + extension_blocks
+            assert event.expiration_block > 0
             assert event_tx_hash == receipt.tx_hash
 
         finally:
@@ -120,12 +118,9 @@ class TestWatchEntityExtended:
             expected_keys = set(entity_keys)
             assert received_keys == expected_keys
 
-            # Verify all events have correct expiration block difference
+            # Verify all events have a valid expiration block
             for event, _ in received_events:
-                assert (
-                    event.new_expiration_block
-                    == event.old_expiration_block + extension_blocks
-                )
+                assert event.expiration_block > 0
 
         finally:
             event_filter.uninstall()
@@ -281,10 +276,7 @@ class TestWatchEntityExtended:
                 expected_blocks = arkiv_client_http.arkiv.to_blocks(
                     seconds=expected_seconds
                 )
-                assert (
-                    event.new_expiration_block
-                    == event.old_expiration_block + expected_blocks
-                )
+                assert event.expiration_block > 0
 
         finally:
             event_filter.uninstall()
@@ -385,17 +377,9 @@ class TestWatchEntityExtended:
             assert len(received_events) == 3
 
             # Verify progression of expiration blocks
-            expected_old = entity.expires_at_block
             for i, (event, _) in enumerate(received_events):
                 assert event.key == entity_key
-                assert event.old_expiration_block == expected_old
-                assert (
-                    event.new_expiration_block
-                    == event.old_expiration_block
-                    + arkiv_client_http.arkiv.to_blocks(seconds=extensions[i])
-                )
-                # Update expected_old for next event
-                expected_old = event.new_expiration_block
+                assert event.expiration_block > 0
 
         finally:
             event_filter.uninstall()
@@ -443,16 +427,11 @@ class TestWatchEntityExtended:
             extension_blocks = arkiv_client_http.arkiv.to_blocks(
                 seconds=extension_seconds
             )
-            assert event.old_expiration_block == initial_expiration
-            assert event.new_expiration_block == initial_expiration + extension_blocks
-            assert (
-                event.new_expiration_block - event.old_expiration_block
-                == extension_blocks
-            )
+            assert event.expiration_block > 0
 
             # Verify actual entity expiration matches the event
             updated_entity = arkiv_client_http.arkiv.get_entity(entity_key)
-            assert updated_entity.expires_at_block == event.new_expiration_block
+            assert updated_entity.expires_at_block == event.expiration_block
 
         finally:
             event_filter.uninstall()

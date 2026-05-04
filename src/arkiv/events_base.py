@@ -6,7 +6,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
-from .contract import EVENTS
+from .contract import ENTITY_OPERATION_EVENT, EVENTS
 from .types import (
     CreateEvent,
     DeleteEvent,
@@ -81,8 +81,7 @@ class EventFilterBase(ABC, Generic[CallbackT]):
         """
         Get the Web3 contract event name for this event type.
 
-        Returns:
-            Contract event name (e.g., "ArkivEntityCreated")
+        All event types map to the unified EntityOperation event.
 
         Raises:
             NotImplementedError: If event type is not supported
@@ -91,40 +90,30 @@ class EventFilterBase(ABC, Generic[CallbackT]):
             raise NotImplementedError(
                 f"Event type {self.event_type} not yet implemented"
             )
+        return ENTITY_OPERATION_EVENT
+
+    def _get_op_type(self) -> int:
+        """Return the EntityRegistry operation type constant for this event type."""
         return EVENTS[self.event_type]
 
     def _create_filter(self) -> LogFilter | AsyncLogFilter:
         """
         Create a Web3 contract event filter for HTTP polling.
 
-        This method creates a LogFilter using the contract's create_filter method.
-        The filter is automatically configured to:
-        - Only receive events matching the specific event signature (topic[0])
-        - Only receive events from this contract's address
-
-        Subclasses that use different subscription mechanisms (e.g., WebSocket)
-        should override this method to return an appropriate subscription handle.
-
-        Returns:
-            LogFilter for HTTP providers, or subscription handle for WebSocket providers
-
-        Note:
-            Default implementation is for HTTP polling. WebSocket subclasses should
-            override to create subscription handles via provider-specific APIs.
+        Filters by contract address and operationType so only the relevant
+        operation variant of EntityOperation is received.
         """
-        event_name = self._get_contract_event_name()
-        contract_event: ContractEvent = self.contract.events[event_name]
+        contract_event: ContractEvent = self.contract.events[ENTITY_OPERATION_EVENT]
+        op_type = self._get_op_type()
 
-        # Create filter with explicit address filtering
-        # The ContractEvent.create_filter automatically sets the event signature
-        # as topic[0], and we explicitly filter by contract address
         filter: LogFilter | AsyncLogFilter = contract_event.create_filter(
             from_block=self.from_block,
             address=self.contract.address,
+            argument_filters={"operationType": op_type},
         )
 
         logger.info(
-            f"Created filter for event {event_name} from block {self.from_block} "
+            f"Created filter for op_type={op_type} from block {self.from_block} "
             f"at address {self.contract.address}: {filter}"
         )
         return filter

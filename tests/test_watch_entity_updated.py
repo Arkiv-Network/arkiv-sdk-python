@@ -61,8 +61,7 @@ class TestWatchEntityUpdated:
 
             # Verify event data
             assert event.key == entity_key
-            assert event.new_expiration_block > 0
-            assert event.new_expiration_block >= event.old_expiration_block
+            assert event.expiration_block > 0
             assert event_tx_hash == receipt.tx_hash
 
         finally:

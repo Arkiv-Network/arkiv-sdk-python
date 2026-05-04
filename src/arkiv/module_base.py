@@ -50,7 +50,7 @@ from arkiv.types import (
 )
 from arkiv.utils import to_receipt
 
-from .contract import ARKIV_ADDRESS, EVENTS_ABI, FUNCTIONS_ABI
+from .contract import ARKIV_ADDRESS, FULL_ABI, FUNCTIONS_ABI
 
 if TYPE_CHECKING:
     pass
@@ -97,8 +97,8 @@ class ArkivModuleBase(Generic[ClientT]):
         for method_name in FUNCTIONS_ABI.keys():
             logger.debug(f"Custom RPC method: eth.{method_name}")
 
-        # Create contract instance for events (using EVENTS_ABI)
-        self.contract = client.eth.contract(address=ARKIV_ADDRESS, abi=EVENTS_ABI)  # type: ignore[attr-defined]
+        # Create contract instance for events and execute function
+        self.contract = client.eth.contract(address=ARKIV_ADDRESS, abi=FULL_ABI)  # type: ignore[attr-defined]
         for event in self.contract.all_events():
             logger.debug(f"Entity event {event.topic}: {event.signature}")
 

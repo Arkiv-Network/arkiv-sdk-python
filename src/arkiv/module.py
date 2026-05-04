@@ -38,10 +38,10 @@ from .types import (
     UpdateCallback,
 )
 from .utils import (
+    to_contract_ops,
     to_create_op,
     to_query_result,
     to_rpc_query_options,
-    to_tx_params,
     to_update_op,
 )
 
@@ -65,11 +65,12 @@ class ArkivModule(ArkivModuleBase["Arkiv"]):
         # Check that client has a funded account configured
         self._check_has_account()
 
-        # Convert to transaction parameters and send
-        tx_params = to_tx_params(operations, tx_params)
+        # Get current block for computing absolute expiry block numbers
+        current_block: int = self.client.eth.block_number  # type: ignore[attr-defined]
+        ops = to_contract_ops(operations, current_block)
 
-        # Send transaction and get tx hash
-        tx_hash_bytes = self.client.eth.send_transaction(tx_params)
+        # Call contract's execute function
+        tx_hash_bytes = self.contract.functions.execute(ops).transact(tx_params or {})
         tx_hash = TxHash(HexStr(tx_hash_bytes.to_0x_hex()))
 
         # Wait for transaction to complete and return receipt

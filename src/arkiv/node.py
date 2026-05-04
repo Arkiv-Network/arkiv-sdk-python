@@ -77,7 +77,7 @@ class ArkivNode:
         - Context manager works safely with both modes (no-op for external nodes)
     """
 
-    DEFAULT_IMAGE = "golemnetwork/arkiv-op-geth:latest"
+    DEFAULT_IMAGE = "golemnetwork/arkiv-op-geth:v1.101605.0-2.7-pebble-test"
     DEFAULT_HTTP_PORT = 8545
     DEFAULT_WS_PORT = 8546
 

@@ -209,9 +209,8 @@ class EventFilter(EventFilterBase[SyncCallback]):
             if self._last_block is not None and current_block <= self._last_block:
                 return
 
-            # Get the contract event
-            event_name = self._get_contract_event_name()
-            contract_event = self.contract.events[event_name]
+            from arkiv.contract import ENTITY_OPERATION_EVENT
+            contract_event = self.contract.events[ENTITY_OPERATION_EVENT]
 
             # Calculate from_block for this poll
             from_block = (
@@ -220,10 +219,11 @@ class EventFilter(EventFilterBase[SyncCallback]):
                 else current_block
             )
 
-            # Get logs for new blocks
+            # Get logs for new blocks, filtered to this operation type
             logs = contract_event.get_logs(
                 from_block=from_block,
                 to_block=current_block,
+                argument_filters={"operationType": self._get_op_type()},
             )
 
             # Process each log
